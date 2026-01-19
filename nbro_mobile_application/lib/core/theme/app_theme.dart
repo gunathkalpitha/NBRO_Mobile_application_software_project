@@ -12,6 +12,7 @@ class NBROColors {
   static const Color success = Color(0xFF28A745);
   static const Color warning = Color(0xFFFFC107);
   static const Color error = Color(0xFFDC3545);
+  static const Color info = Color(0xFF17A2B8);
 
   // Neutral Colors
   static const Color white = Color(0xFFFFFFFF);
@@ -94,7 +95,7 @@ class AppTheme {
         labelStyle: const TextStyle(color: NBROColors.darkGrey),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),

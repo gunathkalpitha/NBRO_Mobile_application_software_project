@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/models/inspection.dart';
 
@@ -105,8 +106,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       // TODO: Load from local database via repository
       debugPrint('[InspectionBloc] Loading inspections...');
       
-      await Future.delayed(const Duration(seconds: 1)); // Simulate DB fetch
-      
+      // Instant load (TODO: replace with actual DB fetch)
       final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
       
       emit(
@@ -230,9 +230,4 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       emit(InspectionError('Failed to sync inspections: $e'));
     }
   }
-}
-
-// Helper for print statements
-void debugPrint(String message) {
-  print('[${DateTime.now().toIso8601String()}] $message');
 }
