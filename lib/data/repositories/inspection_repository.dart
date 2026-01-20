@@ -13,24 +13,41 @@ class InspectionRepository {
   /// Create a new inspection (site) in the database
   Future<void> createInspection(Inspection inspection) async {
     try {
+      debugPrint('[Repository] Starting inspection save...');
+      debugPrint('[Repository] Inspection ID: ${inspection.id}');
+      debugPrint('[Repository] Site address: ${inspection.siteAddress}');
+      debugPrint('[Repository] Defects count: ${inspection.defects.length}');
+      
       // Insert site data
-      await _supabase.from('sites').insert(inspection.toJson());
+      final siteJson = inspection.toJson();
+      debugPrint('[Repository] Site JSON: $siteJson');
+      
+      await _supabase.from('sites').insert(siteJson);
+      debugPrint('[Repository] ✅ Site inserted successfully');
 
       // Insert defects if any
       if (inspection.defects.isNotEmpty) {
         final defectsJson = inspection.defects
             .map((defect) => defect.toJson())
             .toList();
+        debugPrint('[Repository] Defects JSON: $defectsJson');
+        
         await _supabase.from('defects').insert(defectsJson);
+        debugPrint('[Repository] ✅ Defects inserted successfully');
 
         // Upload defect photos
         for (final defect in inspection.defects) {
           if (defect.photoPath != null) {
             await _uploadDefectPhoto(defect.id, defect.photoPath!);
+            debugPrint('[Repository] ✅ Photo uploaded for defect ${defect.id}');
           }
         }
       }
-    } catch (e) {
+      
+      debugPrint('[Repository] ✅ Inspection save completed');
+    } catch (e, stackTrace) {
+      debugPrint('[Repository] ❌ ERROR saving inspection: $e');
+      debugPrint('[Repository] Stack trace: $stackTrace');
       throw Exception('Failed to create inspection: $e');
     }
   }

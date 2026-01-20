@@ -345,60 +345,12 @@ CREATE POLICY "media_delete_policy" ON defect_media
     );
 
 -- ============================================================================
--- SAMPLE DATA
--- ============================================================================
-
-INSERT INTO sites (
-    building_reference_no, owner_name, owner_contact, site_address,
-    latitude, longitude, type_of_structure, present_condition,
-    number_of_floors, sync_status
-) VALUES 
-('H-001', 'John Doe', '+94712345678', '123 Main Street, Colombo',
- 6.9271, 79.8612, 'House', 'Permanent', 'G+2', 'synced'),
-('H-002', 'Jane Smith', '+94723456789', '456 Park Avenue, Colombo',
- 6.9319, 79.8478, 'House', 'Semi-permanent', 'G+1', 'pending'),
-('O-001', 'ABC Company', '+94734567890', '789 Business Road, Colombo',
- 6.9186, 79.8573, 'Office Building', 'Permanent', 'G+5', 'synced');
-
-INSERT INTO defects (
-    site_id, notation, defect_category, floor_level,
-    length_mm, width_mm, location_description, remarks
-) VALUES 
-((SELECT id FROM sites WHERE building_reference_no = 'H-001'),
- 'C', 'buildingFloor', 'Ground', 1500.0, 2.5, 'at dining area', 'Vertical crack on east wall'),
-((SELECT id FROM sites WHERE building_reference_no = 'H-001'),
- 'SP', 'buildingFloor', 'Ground', 200.0, 80.0, 'at verandah side', 'Concrete spalling near foundation'),
-((SELECT id FROM sites WHERE building_reference_no = 'H-002'),
- 'DP', 'buildingFloor', '1st', 300.0, 250.0, 'bedroom north wall', 'Damp patch with discoloration'),
-((SELECT id FROM sites WHERE building_reference_no = 'O-001'),
- 'BC', 'buildingFloor', '3rd', 800.0, 3.0, 'office space', 'Branch crack pattern observed');
-
--- ============================================================================
--- VERIFICATION QUERIES
--- ============================================================================
-
--- Verify tables created
-SELECT table_name FROM information_schema.tables 
-WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-ORDER BY table_name;
-
--- Verify data inserted
-SELECT 'Sites' as table_name, COUNT(*) as row_count FROM sites
-UNION ALL
-SELECT 'Defects', COUNT(*) FROM defects
-UNION ALL
-SELECT 'Media', COUNT(*) FROM defect_media;
-
--- View sample data
-SELECT * FROM sites_with_defect_count ORDER BY created_at DESC;
-
--- ============================================================================
--- SUCCESS MESSAGE
+-- SCHEMA READY FOR USE
 -- ============================================================================
 DO $$ 
 BEGIN 
-    RAISE NOTICE 'Schema created successfully! You should see:';
-    RAISE NOTICE '- 3 sites';
-    RAISE NOTICE '- 4 defects';
-    RAISE NOTICE '- 0 media files';
+    RAISE NOTICE 'Schema created successfully!';
+    RAISE NOTICE 'Tables: sites, defects, defect_media';
+    RAISE NOTICE 'Views: sites_with_defect_count, defects_with_media, inspection_details';
+    RAISE NOTICE 'RLS Policies: Enabled on all tables';
 END $$;

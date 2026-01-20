@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart';
@@ -100,7 +101,7 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
       final width = double.parse(_widthController.text);
 
       final defect = Defect(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(),
         inspectionId: '', // Will be set by parent
         notation: _selectedDefectNotation!,
         category: _selectedDefectCategory!,

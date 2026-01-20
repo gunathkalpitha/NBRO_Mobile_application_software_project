@@ -164,9 +164,9 @@ class Inspection {
       ownerName: json['owner_name'] as String,
       siteAddress: json['site_address'] as String,
       contactNo: json['owner_contact'] as String?,
-      latitude: json['latitude'] as double?,
-      longitude: json['longitude'] as double?,
-      distanceFromRow: json['distance_from_row'] as double?,
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      distanceFromRow: json['distance_from_row'] != null ? (json['distance_from_row'] as num).toDouble() : null,
       ageOfStructure: json['age_of_structure'] as int?,
       typeOfStructure: json['type_of_structure'] as String?,
       presentCondition: json['present_condition'] as String?,
@@ -234,8 +234,8 @@ class Defect {
   // Convert to JSON for Supabase
   Map<String, dynamic> toJson() {
     return {
-      'defect_id': id,
-      'building_reference_no': inspectionId,
+      'id': id,
+      'site_id': inspectionId,
       'notation': notation.code,
       'defect_category': category.name,
       'floor_level': floorLevel,
@@ -250,8 +250,8 @@ class Defect {
   // Create from JSON (from Supabase)
   factory Defect.fromJson(Map<String, dynamic> json) {
     return Defect(
-      id: json['defect_id'] as String,
-      inspectionId: json['building_reference_no'] as String,
+      id: json['id'] as String,
+      inspectionId: json['site_id'] as String,
       notation: DefectNotation.values.firstWhere(
         (e) => e.code == json['notation'],
         orElse: () => DefectNotation.c,
