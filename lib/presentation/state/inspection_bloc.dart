@@ -106,6 +106,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     _inspections.addAll([
       Inspection(
         id: '1',
+        ownerName: 'Sample Owner',
         siteAddress: '123 Main Street, City Center',
         latitude: 28.6139,
         longitude: 77.2090,
@@ -115,7 +116,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           Defect(
             id: '1',
             inspectionId: '1',
-            type: DefectType.crack,
+            notation: DefectNotation.c,
+            category: DefectCategory.buildingFloor,
+            floorLevel: 'Ground',
             lengthMm: 150.0,
             widthMm: 5.0,
             photoPath: null,
@@ -125,7 +128,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           Defect(
             id: '2',
             inspectionId: '1',
-            type: DefectType.spalling,
+            notation: DefectNotation.sp,
+            category: DefectCategory.buildingFloor,
+            floorLevel: 'Ground',
             lengthMm: 200.0,
             widthMm: 80.0,
             photoPath: null,
@@ -136,6 +141,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       ),
       Inspection(
         id: '2',
+        ownerName: 'Sample Owner 2',
         siteAddress: '456 Park Avenue, Downtown',
         latitude: 28.5244,
         longitude: 77.1855,
@@ -145,7 +151,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           Defect(
             id: '3',
             inspectionId: '2',
-            type: DefectType.efflorescence,
+            notation: DefectNotation.dp,
+            category: DefectCategory.buildingFloor,
+            floorLevel: '1st',
             lengthMm: 300.0,
             widthMm: 250.0,
             photoPath: null,
@@ -156,6 +164,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       ),
       Inspection(
         id: '3',
+        ownerName: 'Sample Owner 3',
         siteAddress: '789 Riverside Complex, Waterfront',
         latitude: 28.5355,
         longitude: 77.2315,
@@ -165,7 +174,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           Defect(
             id: '4',
             inspectionId: '3',
-            type: DefectType.dampPatch,
+            notation: DefectNotation.dp,
+            category: DefectCategory.buildingFloor,
+            floorLevel: 'Ground',
             lengthMm: 400.0,
             widthMm: 300.0,
             photoPath: null,
@@ -176,6 +187,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       ),
       Inspection(
         id: '4',
+        ownerName: 'Sample Owner 4',
         siteAddress: '321 Heritage Plaza, Historic District',
         latitude: 28.6505,
         longitude: 77.2303,
@@ -219,6 +231,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     try {
       final newInspection = Inspection(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
+        ownerName: 'New Owner', 
         siteAddress: event.siteAddress,
         latitude: event.latitude,
         longitude: event.longitude,

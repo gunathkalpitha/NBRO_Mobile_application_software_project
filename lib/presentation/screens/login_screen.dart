@@ -151,16 +151,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 100,
+                        height: 100,
                         decoration: BoxDecoration(
-                          color: NBROColors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: const Icon(
-                          Icons.shield_rounded,
-                          size: 40,
                           color: NBROColors.white,
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(38),
+                          child: Image.asset(
+                            'assets/icons/pasted-image.png',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -174,11 +184,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'NBRO Field Surveyor',
+                        'National Building Research Organization',
                         style: TextStyle(
                           fontSize: 14,
                           color: NBROColors.white,
                           fontWeight: FontWeight.w300,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Field Surveyor',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: NBROColors.white,
+                          fontWeight: FontWeight.w200,
                         ),
                       ),
                     ],

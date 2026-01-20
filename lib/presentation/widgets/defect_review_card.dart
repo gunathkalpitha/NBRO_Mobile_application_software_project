@@ -22,16 +22,16 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
   late TextEditingController _lengthController;
   late TextEditingController _widthController;
   late TextEditingController _remarksController;
-  late DefectType _selectedType;
+  late DefectNotation _selectedType;
   bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
     _lengthController = TextEditingController(text: widget.defect.lengthMm.toString());
-    _widthController = TextEditingController(text: widget.defect.widthMm.toString());
+    _widthController = TextEditingController(text: widget.defect.widthMm?.toString() ?? '0');
     _remarksController = TextEditingController(text: widget.defect.remarks ?? '');
-    _selectedType = widget.defect.type;
+    _selectedType = widget.defect.notation;
   }
 
   @override
@@ -46,9 +46,11 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
     final updatedDefect = Defect(
       id: widget.defect.id,
       inspectionId: widget.defect.inspectionId,
-      type: _selectedType,
+      notation: _selectedType,
+      category: widget.defect.category,
+      floorLevel: widget.defect.floorLevel,
       lengthMm: double.parse(_lengthController.text),
-      widthMm: double.parse(_widthController.text),
+      widthMm: double.tryParse(_widthController.text),
       photoPath: widget.defect.photoPath,
       remarks: _remarksController.text.isNotEmpty ? _remarksController.text : null,
       createdAt: widget.defect.createdAt,
@@ -80,7 +82,7 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Defect: ${widget.defect.type.displayName}',
+                        'Defect: ${widget.defect.notation.displayName}',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: NBROColors.primary,
                           fontWeight: FontWeight.bold,
@@ -121,15 +123,15 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                   // Type Dropdown
                   Text('Type', style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<DefectType>(
+                  DropdownButtonFormField<DefectNotation>(
                     initialValue: _selectedType,
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.category_outlined),
                     ),
-                    items: DefectType.values.map((type) {
+                    items: DefectNotation.values.map((notation) {
                       return DropdownMenuItem(
-                        value: type,
-                        child: Text(type.displayName),
+                        value: notation,
+                        child: Text(notation.displayName),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -216,9 +218,9 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDetailRow('Type', widget.defect.type.displayName),
+                  _buildDetailRow('Type', widget.defect.notation.displayName),
                   _buildDetailRow('Length', '${widget.defect.lengthMm.toStringAsFixed(2)} mm'),
-                  _buildDetailRow('Width', '${widget.defect.widthMm.toStringAsFixed(2)} mm'),
+                  _buildDetailRow('Width', '${widget.defect.widthMm?.toStringAsFixed(2) ?? '-'} mm'),
                   if (widget.defect.photoPath != null)
                     _buildDetailRow('Photo', widget.defect.photoPath!.split('/').last)
                   else

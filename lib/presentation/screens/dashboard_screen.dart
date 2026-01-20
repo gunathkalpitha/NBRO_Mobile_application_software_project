@@ -22,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 80,
         leading: IconButton(
           icon: const Icon(Icons.menu),
           onPressed: () {
@@ -29,7 +30,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             NavRailController.toggleVisibility();
           },
         ),
-        title: const NBROBrand(title: 'Dashboard'),
+        title: const NBROBrand(
+          title: 'Dashboard',
+          showFullName: true,
+          logoSize: 48,
+        ),
         elevation: 0,
         actions: [
           BlocBuilder<InspectionBloc, InspectionState>(
@@ -215,7 +220,7 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: NBROColors.primary, size: 24),
+        Icon(icon, color: NBROColors.primary, size: 34),
         const SizedBox(height: 8),
         Text(
           value,

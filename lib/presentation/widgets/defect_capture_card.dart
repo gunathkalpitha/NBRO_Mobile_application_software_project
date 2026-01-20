@@ -93,7 +93,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
       final defect = Defect(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         inspectionId: '', // Will be set by parent
-        type: _selectedDefectType!,
+        notation: DefectNotation.c, // Default to wall crack
+        category: DefectCategory.buildingFloor,
+        floorLevel: 'Ground',
         lengthMm: length,
         widthMm: width,
         photoPath: _skipImage ? null : _selectedImage?.path,
