@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../state/inspection_bloc.dart';
+import '../widgets/defect_capture_card.dart';
 
 /// Site Inspection Wizard matching NBRO Physical Forms
 /// Flow: Site Data Sheet → Building Profile → Defect Capture → Review
@@ -17,6 +19,7 @@ class SiteInspectionWizard extends StatefulWidget {
 
 class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   int _currentStep = 0;
+  final ScrollController _scrollController = ScrollController();
   
   // Building Reference and Owner Information (Step 1)
   final _buildingRefController = TextEditingController();
@@ -235,7 +238,21 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     _distanceController.dispose();
     _ageController.dispose();
     _numberOfFloorsController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToCurrentStep() {
+    // Use a small delay to ensure the step content is rendered before scrolling
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (_scrollController.hasClients && mounted) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   @override
@@ -245,7 +262,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
         title: const Text('Pre-Crack Survey Report'),
         elevation: 0,
       ),
-      body: Stepper(
+      body: SingleChildScrollView(
+        controller: _scrollController,
+        child: Stepper(
+        physics: const NeverScrollableScrollPhysics(),
         currentStep: _currentStep,
         controlsBuilder: (context, details) {
           return Padding(
@@ -269,10 +289,12 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           setState(() {
             _currentStep = step;
           });
+          _scrollToCurrentStep();
         },
         onStepContinue: () {
           if (_currentStep < 4) {
             setState(() => _currentStep += 1);
+            _scrollToCurrentStep();
           } else {
             _completeInspection();
           }
@@ -291,6 +313,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           _buildDefectCaptureStep(),
           _buildReviewStep(),
         ],
+      ),
       ),
     );
   }
@@ -320,14 +343,13 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
                   ),
                   const SizedBox(height: 12),
                   if (_buildingPhotoPath != null)
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: AssetImage(_buildingPhotoPath!),
-                          fit: BoxFit.cover,
-                        ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(_buildingPhotoPath!),
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
                       ),
                     )
                   else
@@ -853,41 +875,16 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           ),
           const SizedBox(height: 16),
           
-          // Defect Capture Card would go here
-          Card(
-            color: NBROColors.primary.withValues(alpha: 0.05),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Icon(Icons.add_a_photo, size: 48, color: NBROColors.primary),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Tap to Capture Defect',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Take photo → Select notation → Enter dimensions',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                     
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Defect capture coming soon')),
-                      );
-                    },
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Capture New Defect'),
-                  ),
-                ],
-              ),
-            ),
+          // Defect Capture Card
+          DefectCaptureCard(
+            onDefectCapture: (defect) {
+              setState(() {
+                _capturedDefects.add(defect);
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Defect captured successfully!')),
+              );
+            },
           ),
           const SizedBox(height: 24),
           
@@ -919,8 +916,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
                       child: defect.photoPath != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.asset(
-                                defect.photoPath!,
+                              child: Image.file(
+                                File(defect.photoPath!),
                                 fit: BoxFit.cover,
                               ),
                             )

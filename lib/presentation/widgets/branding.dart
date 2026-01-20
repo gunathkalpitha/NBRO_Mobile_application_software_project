@@ -21,12 +21,15 @@ class NBROBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Try load asset logo if present; otherwise show monogram
         _LogoDynamic(size: logoSize),
-        Padding(
+        Flexible(
+          child: Padding(
           padding: padding,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -34,11 +37,15 @@ class NBROBrand extends StatelessWidget {
             children: [
               if (showFullName)
                 Text(
-                  'National Building Research Organization',
+                  isSmallScreen 
+                    ? 'NBRO' 
+                    : 'National Building Research Organization',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: color,
                         fontWeight: FontWeight.w700,
                       ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 )
               else
                 Text(
@@ -47,6 +54,8 @@ class NBROBrand extends StatelessWidget {
                         color: color,
                         fontWeight: FontWeight.w700,
                       ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               if (showFullName && title.isNotEmpty)
                 Text(
@@ -55,9 +64,12 @@ class NBROBrand extends StatelessWidget {
                         color: color.withValues(alpha: 0.8),
                         fontWeight: FontWeight.w400,
                       ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
             ],
           ),
+        ),
         )
       ],
     );
