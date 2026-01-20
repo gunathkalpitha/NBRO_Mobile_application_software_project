@@ -23,7 +23,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
   final _widthController = TextEditingController();
   final _remarksController = TextEditingController();
 
-  DefectType? _selectedDefectType;
+  DefectNotation? _selectedDefectNotation;
+  DefectCategory? _selectedDefectCategory;
+  String? _selectedFloorLevel;
   File? _selectedImage;
   bool _skipImage = false;
   bool _isSubmitting = false;
@@ -63,9 +65,16 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
 
   Future<void> _submitDefect() async {
     // Validation
-    if (_selectedDefectType == null) {
+    if (_selectedDefectNotation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a defect type')),
+        const SnackBar(content: Text('Please select a defect notation')),
+      );
+      return;
+    }
+
+    if (_selectedDefectCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a defect category')),
       );
       return;
     }
@@ -93,9 +102,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
       final defect = Defect(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         inspectionId: '', // Will be set by parent
-        notation: DefectNotation.c, // Default to wall crack
-        category: DefectCategory.buildingFloor,
-        floorLevel: 'Ground',
+        notation: _selectedDefectNotation!,
+        category: _selectedDefectCategory!,
+        floorLevel: _selectedFloorLevel ?? 'Ground',
         lengthMm: length,
         widthMm: width,
         photoPath: _skipImage ? null : _selectedImage?.path,
@@ -109,11 +118,14 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
 
       // Reset form
       setState(() {
-        _selectedDefectType = null;
+        _selectedDefectNotation = null;
+        _selectedDefectCategory = null;
+        _selectedFloorLevel = null;
         _lengthController.clear();
         _widthController.clear();
         _remarksController.clear();
         _selectedImage = null;
+        _skipImage = false;
       });
 
       debugPrint('[DefectCaptureCard] Defect captured: ${defect.id}');
@@ -239,28 +251,79 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
               ),
               const SizedBox(height: 24),
 
-              // Defect Type Dropdown
+              // Defect Notation Dropdown
               Text(
-                'Defect Type *',
+                'Defect Notation *',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<DefectType>(
-                initialValue: _selectedDefectType,
-                decoration: InputDecoration(
-                  hintText: 'Select defect type',
-                  prefixIcon: const Icon(Icons.category_outlined),
+              DropdownButtonFormField<DefectNotation>(
+                initialValue: _selectedDefectNotation,
+                decoration: const InputDecoration(
+                  hintText: 'Select defect notation',
+                  prefixIcon: Icon(Icons.error_outline),
                 ),
-                items: DefectType.values
+                items: DefectNotation.values
                     .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type.displayName),
+                      (notation) => DropdownMenuItem(
+                        value: notation,
+                        child: Text(notation.displayName),
                       ),
                     )
                     .toList(),
                 onChanged: (value) {
-                  setState(() => _selectedDefectType = value);
+                  setState(() => _selectedDefectNotation = value);
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Defect Category Dropdown
+              Text(
+                'Defect Category *',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<DefectCategory>(
+                initialValue: _selectedDefectCategory,
+                decoration: const InputDecoration(
+                  hintText: 'Select category',
+                  prefixIcon: Icon(Icons.category),
+                ),
+                items: DefectCategory.values
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  setState(() => _selectedDefectCategory = value);
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Floor Level Dropdown
+              Text(
+                'Floor Level *',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedFloorLevel,
+                decoration: const InputDecoration(
+                  hintText: 'Select floor level',
+                  prefixIcon: Icon(Icons.layers),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Ground', child: Text('Ground Floor')),
+                  DropdownMenuItem(value: '1st', child: Text('1st Floor')),
+                  DropdownMenuItem(value: '2nd', child: Text('2nd Floor')),
+                  DropdownMenuItem(value: '3rd', child: Text('3rd Floor')),
+                  DropdownMenuItem(value: 'Roof', child: Text('Roof')),
+                ],
+                onChanged: (value) {
+                  setState(() => _selectedFloorLevel = value);
                 },
               ),
               const SizedBox(height: 20),

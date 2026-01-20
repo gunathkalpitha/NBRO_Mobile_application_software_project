@@ -1,4 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permissions for biometric authentication -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    
+    <!-- Permissions for camera -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    
+    <!-- Permissions for location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    
+    <!-- Permissions for internet (for Supabase sync) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
     <application
         android:label="nbro_mobile_application"
         android:name="${applicationName}"

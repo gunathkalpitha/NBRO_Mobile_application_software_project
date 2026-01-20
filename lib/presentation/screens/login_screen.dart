@@ -128,7 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -140,9 +141,12 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height,
-            child: Column(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Header
@@ -336,7 +340,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
+            ),
           ),
+        ),
         ),
       ),
     );

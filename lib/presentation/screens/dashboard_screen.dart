@@ -21,10 +21,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: SafeArea(
+          child: AppBar(
         toolbarHeight: 80,
+        leadingWidth: 48,
         leading: IconButton(
           icon: const Icon(Icons.menu),
+          iconSize: 24,
+          padding: EdgeInsets.zero,
           onPressed: () {
             // Toggle the side nav (desktop/tablet)
             NavRailController.toggleVisibility();
@@ -33,8 +39,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const NBROBrand(
           title: 'Dashboard',
           showFullName: true,
-          logoSize: 48,
+          logoSize: 40,
         ),
+        titleSpacing: 4,
         elevation: 0,
         actions: [
           BlocBuilder<InspectionBloc, InspectionState>(
@@ -48,8 +55,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             },
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
+      ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
