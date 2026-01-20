@@ -124,6 +124,83 @@ class Inspection {
       remarks: remarks ?? this.remarks,
     );
   }
+
+  // Convert to JSON for Supabase
+  Map<String, dynamic> toJson() {
+    return {
+      'building_reference_no': id,
+      'owner_name': ownerName,
+      'site_address': siteAddress,
+      'owner_contact': contactNo,
+      'latitude': latitude,
+      'longitude': longitude,
+      'distance_from_row': distanceFromRow,
+      'age_of_structure': ageOfStructure,
+      'type_of_structure': typeOfStructure,
+      'present_condition': presentCondition,
+      'has_pipe_borne_water': hasPipeBorneWater,
+      'water_source': waterSource,
+      'has_electricity': hasElectricity,
+      'electricity_source': electricitySource,
+      'has_sewage_waste': hasSewageWaste,
+      'sewage_type': sewageType,
+      'number_of_floors': numberOfFloors,
+      'wall_materials': wallMaterials,
+      'door_materials': doorMaterials,
+      'floor_materials': floorMaterials,
+      'roof_materials': roofMaterials,
+      'roof_covering': roofCovering,
+      'sync_status': syncStatus.name,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'remarks': remarks,
+    };
+  }
+
+  // Create from JSON (from Supabase)
+  factory Inspection.fromJson(Map<String, dynamic> json) {
+    return Inspection(
+      id: json['building_reference_no'] as String,
+      ownerName: json['owner_name'] as String,
+      siteAddress: json['site_address'] as String,
+      contactNo: json['owner_contact'] as String?,
+      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+      distanceFromRow: json['distance_from_row'] != null ? (json['distance_from_row'] as num).toDouble() : null,
+      ageOfStructure: json['age_of_structure'] as int?,
+      typeOfStructure: json['type_of_structure'] as String?,
+      presentCondition: json['present_condition'] as String?,
+      hasPipeBorneWater: json['has_pipe_borne_water'] as bool?,
+      waterSource: json['water_source'] as String?,
+      hasElectricity: json['has_electricity'] as bool?,
+      electricitySource: json['electricity_source'] as String?,
+      hasSewageWaste: json['has_sewage_waste'] as bool?,
+      sewageType: json['sewage_type'] as String?,
+      numberOfFloors: json['number_of_floors'] as String?,
+      wallMaterials: json['wall_materials'] != null
+          ? Map<String, bool>.from(json['wall_materials'] as Map)
+          : null,
+      doorMaterials: json['door_materials'] != null
+          ? Map<String, bool>.from(json['door_materials'] as Map)
+          : null,
+      floorMaterials: json['floor_materials'] != null
+          ? Map<String, bool>.from(json['floor_materials'] as Map)
+          : null,
+      roofMaterials: json['roof_materials'] != null
+          ? Map<String, bool>.from(json['roof_materials'] as Map)
+          : null,
+      roofCovering: json['roof_covering'] as String?,
+      syncStatus: SyncStatus.values.firstWhere(
+        (e) => e.name == json['sync_status'],
+        orElse: () => SyncStatus.pending,
+      ),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+      remarks: json['remarks'] as String?,
+    );
+  }
 }
 
 /// Defect model representing structural defects (Defect Inventory)
@@ -153,6 +230,45 @@ class Defect {
     required this.createdAt,
     this.photoUrl,
   });
+
+  // Convert to JSON for Supabase
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'site_id': inspectionId,
+      'notation': notation.code,
+      'defect_category': category.name,
+      'floor_level': floorLevel,
+      'length_mm': lengthMm,
+      'width_mm': widthMm,
+      'photo_path': photoPath,
+      'remarks': remarks,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  // Create from JSON (from Supabase)
+  factory Defect.fromJson(Map<String, dynamic> json) {
+    return Defect(
+      id: json['id'] as String,
+      inspectionId: json['site_id'] as String,
+      notation: DefectNotation.values.firstWhere(
+        (e) => e.code == json['notation'],
+        orElse: () => DefectNotation.c,
+      ),
+      category: DefectCategory.values.firstWhere(
+        (e) => e.name == json['defect_category'],
+        orElse: () => DefectCategory.buildingFloor,
+      ),
+      floorLevel: json['floor_level'] as String?,
+      lengthMm: (json['length_mm'] as num).toDouble(),
+      widthMm: json['width_mm'] != null ? (json['width_mm'] as num).toDouble() : null,
+      photoPath: json['photo_path'] as String?,
+      remarks: json['remarks'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      photoUrl: json['photo_url'] as String?,
+    );
+  }
 }
 
 /// Defect Category (Type of Photo Table)
@@ -251,6 +367,10 @@ enum DefectNotation {
       case DefectNotation.bwdp:
         return 'BWDP - Boundary Wall Damp Patch';
     }
+  }
+
+  String get code {
+    return name.toUpperCase();
   }
 
   String get notation {

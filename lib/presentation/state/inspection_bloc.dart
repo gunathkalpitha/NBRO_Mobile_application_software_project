@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../domain/models/inspection.dart';
+import '../../domain/models/inspection.dart';
+import '../../data/repositories/inspection_repository.dart';
 
 /// InspectionEvent - Events for Inspection BLoC
 abstract class InspectionEvent {
@@ -12,14 +13,10 @@ class LoadInspectionsEvent extends InspectionEvent {
 }
 
 class CreateInspectionEvent extends InspectionEvent {
-  final String siteAddress;
-  final double? latitude;
-  final double? longitude;
+  final Inspection inspection;
 
   const CreateInspectionEvent({
-    required this.siteAddress,
-    this.latitude,
-    this.longitude,
+    required this.inspection,
   });
 }
 
@@ -86,130 +83,37 @@ class InspectionSyncing extends InspectionState {
 
 /// InspectionBloc - Business Logic Component
 class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
+  final InspectionRepository _repository;
   final List<Inspection> _inspections = [];
 
-  InspectionBloc() : super(const InspectionInitial()) {
+  InspectionBloc({InspectionRepository? repository})
+      : _repository = repository ?? InspectionRepository(),
+        super(const InspectionInitial()) {
     on<LoadInspectionsEvent>(_onLoadInspections);
     on<CreateInspectionEvent>(_onCreateInspection);
     on<UpdateInspectionEvent>(_onUpdateInspection);
     on<AddDefectEvent>(_onAddDefect);
     on<SyncInspectionsEvent>(_onSyncInspections);
-    
-    // Initialize with sample data
-    _initializeSampleData();
   }
 
   /// Get inspection count (for debugging)
   int get inspectionCount => _inspections.length;
-
-  void _initializeSampleData() {
-    _inspections.addAll([
-      Inspection(
-        id: '1',
-        ownerName: 'Sample Owner',
-        siteAddress: '123 Main Street, City Center',
-        latitude: 28.6139,
-        longitude: 77.2090,
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        syncStatus: SyncStatus.synced,
-        defects: [
-          Defect(
-            id: '1',
-            inspectionId: '1',
-            notation: DefectNotation.c,
-            category: DefectCategory.buildingFloor,
-            floorLevel: 'Ground',
-            lengthMm: 150.0,
-            widthMm: 5.0,
-            photoPath: null,
-            remarks: 'Deep structural crack on east wall',
-            createdAt: DateTime.now().subtract(const Duration(days: 5)),
-          ),
-          Defect(
-            id: '2',
-            inspectionId: '1',
-            notation: DefectNotation.sp,
-            category: DefectCategory.buildingFloor,
-            floorLevel: 'Ground',
-            lengthMm: 200.0,
-            widthMm: 80.0,
-            photoPath: null,
-            remarks: 'Concrete spalling near foundation',
-            createdAt: DateTime.now().subtract(const Duration(days: 5)),
-          ),
-        ],
-      ),
-      Inspection(
-        id: '2',
-        ownerName: 'Sample Owner 2',
-        siteAddress: '456 Park Avenue, Downtown',
-        latitude: 28.5244,
-        longitude: 77.1855,
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        syncStatus: SyncStatus.pending,
-        defects: [
-          Defect(
-            id: '3',
-            inspectionId: '2',
-            notation: DefectNotation.dp,
-            category: DefectCategory.buildingFloor,
-            floorLevel: '1st',
-            lengthMm: 300.0,
-            widthMm: 250.0,
-            photoPath: null,
-            remarks: 'White efflorescence deposits on wall',
-            createdAt: DateTime.now().subtract(const Duration(days: 3)),
-          ),
-        ],
-      ),
-      Inspection(
-        id: '3',
-        ownerName: 'Sample Owner 3',
-        siteAddress: '789 Riverside Complex, Waterfront',
-        latitude: 28.5355,
-        longitude: 77.2315,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        syncStatus: SyncStatus.pending,
-        defects: [
-          Defect(
-            id: '4',
-            inspectionId: '3',
-            notation: DefectNotation.dp,
-            category: DefectCategory.buildingFloor,
-            floorLevel: 'Ground',
-            lengthMm: 400.0,
-            widthMm: 300.0,
-            photoPath: null,
-            remarks: 'Damp patch with discoloration',
-            createdAt: DateTime.now().subtract(const Duration(days: 1)),
-          ),
-        ],
-      ),
-      Inspection(
-        id: '4',
-        ownerName: 'Sample Owner 4',
-        siteAddress: '321 Heritage Plaza, Historic District',
-        latitude: 28.6505,
-        longitude: 77.2303,
-        createdAt: DateTime.now(),
-        syncStatus: SyncStatus.synced,
-        defects: [],
-      ),
-    ]);
-    debugPrint('[InspectionBloc] Initialized with ${_inspections.length} sample inspections');
-  }
 
   Future<void> _onLoadInspections(
     LoadInspectionsEvent event,
     Emitter<InspectionState> emit,
   ) async {
     try {
-      debugPrint('[InspectionBloc] Loading inspections... Total: ${_inspections.length}');
+      debugPrint('[InspectionBloc] Loading inspections from database...');
       
-      // Instant load - data is already in memory
+      // Load from Supabase
+      final inspections = await _repository.getInspections();
+      _inspections.clear();
+      _inspections.addAll(inspections);
+      
       final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
       
-      debugPrint('[InspectionBloc] Pending count: $pendingCount, Synced: ${_inspections.length - pendingCount}');
+      debugPrint('[InspectionBloc] Loaded ${_inspections.length} inspections. Pending: $pendingCount');
       
       emit(
         InspectionLoaded(
@@ -217,9 +121,8 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           pendingCount: pendingCount,
         ),
       );
-      debugPrint('[InspectionBloc] Emitted InspectionLoaded with ${_inspections.length} inspections');
     } catch (e) {
-      debugPrint('[InspectionBloc] Error in _onLoadInspections: $e');
+      debugPrint('[InspectionBloc] Error loading inspections: $e');
       emit(InspectionError('Failed to load inspections: $e'));
     }
   }
@@ -229,18 +132,19 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     Emitter<InspectionState> emit,
   ) async {
     try {
-      final newInspection = Inspection(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerName: 'New Owner', 
-        siteAddress: event.siteAddress,
-        latitude: event.latitude,
-        longitude: event.longitude,
-        createdAt: DateTime.now(),
-        syncStatus: SyncStatus.pending,
-      );
+      final newInspection = event.inspection;
 
-      _inspections.add(newInspection);
       debugPrint('[InspectionBloc] Inspection created: ${newInspection.id}');
+      debugPrint('[InspectionBloc] Attempting to save to database...');
+      debugPrint('[InspectionBloc] Defects count: ${newInspection.defects.length}');
+      
+      // Save to Supabase
+      await _repository.createInspection(newInspection);
+      
+      debugPrint('[InspectionBloc] ✅ Inspection saved successfully to database');
+      _inspections.add(newInspection);
+      
+      debugPrint('[InspectionBloc] Inspection created and saved: ${newInspection.id}');
       
       // Emit updated state
       final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
@@ -250,7 +154,9 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
           pendingCount: pendingCount,
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[InspectionBloc] ❌ ERROR creating inspection: $e');
+      debugPrint('[InspectionBloc] Stack trace: $stackTrace');
       emit(InspectionError('Failed to create inspection: $e'));
     }
   }

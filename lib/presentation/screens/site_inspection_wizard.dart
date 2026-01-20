@@ -188,8 +188,25 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       return;
     }
 
+    // Update all defects with the inspection ID
+    final inspectionId = _buildingRefController.text;
+    final defectsWithInspectionId = _capturedDefects.map((defect) {
+      return Defect(
+        id: defect.id,
+        inspectionId: inspectionId,
+        notation: defect.notation,
+        category: defect.category,
+        floorLevel: defect.floorLevel,
+        lengthMm: defect.lengthMm,
+        widthMm: defect.widthMm,
+        photoPath: defect.photoPath,
+        remarks: defect.remarks,
+        createdAt: defect.createdAt,
+      );
+    }).toList();
+
     final inspection = Inspection(
-      id: _buildingRefController.text,
+      id: inspectionId,
       ownerName: _ownerNameController.text,
       siteAddress: _addressController.text,
       contactNo: _contactController.text.isEmpty ? null : _contactController.text,
@@ -211,15 +228,13 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       floorMaterials: _buildingElements['Floors'],
       roofMaterials: _buildingElements['Roof'],
       roofCovering: _roofCovering,
-      defects: _capturedDefects,
+      defects: defectsWithInspectionId,
       syncStatus: SyncStatus.pending,
       createdAt: DateTime.now(),
     );
 
     context.read<InspectionBloc>().add(CreateInspectionEvent(
-          siteAddress: inspection.siteAddress,
-          latitude: inspection.latitude,
-          longitude: inspection.longitude,
+          inspection: inspection,
         ));
 
     ScaffoldMessenger.of(context).showSnackBar(
