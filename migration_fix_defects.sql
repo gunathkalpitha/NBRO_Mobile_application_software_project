@@ -171,7 +171,7 @@ CREATE TABLE defect_media (
     storage_url TEXT,
     file_name TEXT NOT NULL,
     file_size INTEGER CHECK (file_size IS NULL OR file_size > 0),
-    mime_type TEXT DEFAULT 'image/jpeg',
+    mime_type TEXT DEFAULT 'image/jpg',
     
     width_px INTEGER,
     height_px INTEGER,
@@ -217,14 +217,13 @@ GROUP BY s.id;
 CREATE VIEW defects_with_media AS
 SELECT 
     d.*,
-    s.building_reference_no,
     s.site_address,
     COUNT(dm.id) as media_count,
     ARRAY_AGG(dm.storage_url) FILTER (WHERE dm.storage_url IS NOT NULL) as photo_urls
 FROM defects d
 JOIN sites s ON d.building_reference_no = s.building_reference_no
 LEFT JOIN defect_media dm ON d.defect_id = dm.defect_id
-GROUP BY d.defect_id, s.building_reference_no, s.site_address;
+GROUP BY d.defect_id, d.building_reference_no, s.site_address;
 
 CREATE VIEW inspection_details AS
 SELECT 
@@ -270,12 +269,12 @@ CREATE POLICY "sites_update_policy" ON sites
 CREATE POLICY "sites_delete_policy" ON sites
     FOR DELETE USING (created_by = auth.uid() OR created_by IS NULL);
 
--- Defects policies
+-- Defects policies (updated to use building_reference_no)
 CREATE POLICY "defects_select_policy" ON defects
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
+            WHERE sites.building_reference_no = defects.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -284,7 +283,7 @@ CREATE POLICY "defects_insert_policy" ON defects
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
+            WHERE sites.building_reference_no = defects.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -293,7 +292,7 @@ CREATE POLICY "defects_update_policy" ON defects
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
+            WHERE sites.building_reference_no = defects.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -302,17 +301,17 @@ CREATE POLICY "defects_delete_policy" ON defects
     FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
+            WHERE sites.building_reference_no = defects.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
 
--- Media policies
+-- Media policies (updated to use building_reference_no)
 CREATE POLICY "media_select_policy" ON defect_media
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -321,7 +320,7 @@ CREATE POLICY "media_insert_policy" ON defect_media
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -330,7 +329,7 @@ CREATE POLICY "media_update_policy" ON defect_media
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
@@ -339,10 +338,65 @@ CREATE POLICY "media_delete_policy" ON defect_media
     FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
             AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
         )
     );
+
+-- ============================================================================
+-- STORAGE CONFIGURATION
+-- ============================================================================
+
+-- Create storage bucket for inspection photos if it doesn't exist
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'inspection-photos', 
+    'inspection-photos', 
+    true,
+    10485760,  -- 10 MB
+    NULL  -- NULL allows all MIME types
+)
+ON CONFLICT (id) DO UPDATE 
+SET 
+    public = true,
+    file_size_limit = 10485760,
+    allowed_mime_types = NULL;
+
+-- Drop existing storage policies to avoid conflicts
+DROP POLICY IF EXISTS "Allow public uploads to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public access to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public deletes to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public updates to inspection-photos" ON storage.objects;
+
+-- Create storage policies for inspection-photos bucket
+-- Allow anyone to upload (INSERT)
+CREATE POLICY "Allow public uploads to inspection-photos"
+ON storage.objects
+FOR INSERT
+TO public
+WITH CHECK (bucket_id = 'inspection-photos');
+
+-- Allow anyone to view/download (SELECT)
+CREATE POLICY "Allow public access to inspection-photos"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'inspection-photos');
+
+-- Allow anyone to update (UPDATE)
+CREATE POLICY "Allow public updates to inspection-photos"
+ON storage.objects
+FOR UPDATE
+TO public
+USING (bucket_id = 'inspection-photos')
+WITH CHECK (bucket_id = 'inspection-photos');
+
+-- Allow anyone to delete (DELETE)
+CREATE POLICY "Allow public deletes to inspection-photos"
+ON storage.objects
+FOR DELETE
+TO public
+USING (bucket_id = 'inspection-photos');
 
 -- ============================================================================
 -- SCHEMA READY FOR USE
@@ -353,4 +407,6 @@ BEGIN
     RAISE NOTICE 'Tables: sites, defects, defect_media';
     RAISE NOTICE 'Views: sites_with_defect_count, defects_with_media, inspection_details';
     RAISE NOTICE 'RLS Policies: Enabled on all tables';
+    RAISE NOTICE 'Storage: inspection-photos bucket configured with public access';
+    RAISE NOTICE 'IMPORTANT: defects table now uses defect_id (TEXT) and building_reference_no (TEXT) instead of UUIDs';
 END $$;
