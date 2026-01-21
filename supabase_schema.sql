@@ -2,6 +2,7 @@
 -- NBRO Site Inspection Database Schema for Supabase (PostgreSQL)
 -- ============================================================================
 -- Clean installation script - Run this in Supabase SQL Editor
+-- With STRICT USER ISOLATION - No NULL bypass
 -- ============================================================================
 
 -- Drop existing tables if they exist (clean slate)
@@ -89,7 +90,7 @@ CREATE TABLE sites (
     
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID
+    created_by UUID NOT NULL DEFAULT auth.uid()
 );
 
 CREATE INDEX idx_sites_building_ref ON sites(building_reference_no);
@@ -217,14 +218,13 @@ GROUP BY s.id;
 CREATE VIEW defects_with_media AS
 SELECT 
     d.*,
-    s.building_reference_no,
     s.site_address,
     COUNT(dm.id) as media_count,
     ARRAY_AGG(dm.storage_url) FILTER (WHERE dm.storage_url IS NOT NULL) as photo_urls
 FROM defects d
 JOIN sites s ON d.building_reference_no = s.building_reference_no
 LEFT JOIN defect_media dm ON d.defect_id = dm.defect_id
-GROUP BY d.defect_id, s.building_reference_no, s.site_address;
+GROUP BY d.defect_id, d.building_reference_no, s.site_address;
 
 CREATE VIEW inspection_details AS
 SELECT 
@@ -250,33 +250,33 @@ LEFT JOIN defect_media dm ON d.defect_id = dm.defect_id
 GROUP BY s.id, d.defect_id;
 
 -- ============================================================================
--- ROW LEVEL SECURITY
+-- ROW LEVEL SECURITY (STRICT - NO NULL BYPASS)
 -- ============================================================================
 
 ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE defects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE defect_media ENABLE ROW LEVEL SECURITY;
 
--- Sites policies
+-- Sites policies - STRICT: Only access your own data
 CREATE POLICY "sites_select_policy" ON sites
-    FOR SELECT USING (created_by = auth.uid() OR created_by IS NULL);
+    FOR SELECT USING (created_by = auth.uid());
 
 CREATE POLICY "sites_insert_policy" ON sites
-    FOR INSERT WITH CHECK (created_by = auth.uid() OR created_by IS NULL);
+    FOR INSERT WITH CHECK (created_by = auth.uid());
 
 CREATE POLICY "sites_update_policy" ON sites
-    FOR UPDATE USING (created_by = auth.uid() OR created_by IS NULL);
+    FOR UPDATE USING (created_by = auth.uid());
 
 CREATE POLICY "sites_delete_policy" ON sites
-    FOR DELETE USING (created_by = auth.uid() OR created_by IS NULL);
+    FOR DELETE USING (created_by = auth.uid());
 
--- Defects policies
+-- Defects policies - STRICT: Access only if parent site belongs to you
 CREATE POLICY "defects_select_policy" ON defects
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defects.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -284,8 +284,8 @@ CREATE POLICY "defects_insert_policy" ON defects
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defects.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -293,8 +293,8 @@ CREATE POLICY "defects_update_policy" ON defects
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defects.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -302,18 +302,18 @@ CREATE POLICY "defects_delete_policy" ON defects
     FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defects.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defects.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
--- Media policies
+-- Media policies - STRICT: Access only if parent site belongs to you
 CREATE POLICY "media_select_policy" ON defect_media
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -321,8 +321,8 @@ CREATE POLICY "media_insert_policy" ON defect_media
     FOR INSERT WITH CHECK (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -330,8 +330,8 @@ CREATE POLICY "media_update_policy" ON defect_media
     FOR UPDATE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
 
@@ -339,18 +339,85 @@ CREATE POLICY "media_delete_policy" ON defect_media
     FOR DELETE USING (
         EXISTS (
             SELECT 1 FROM sites 
-            WHERE sites.id = defect_media.site_id 
-            AND (sites.created_by = auth.uid() OR sites.created_by IS NULL)
+            WHERE sites.building_reference_no = defect_media.building_reference_no 
+            AND sites.created_by = auth.uid()
         )
     );
+
+-- ============================================================================
+-- STORAGE CONFIGURATION
+-- ============================================================================
+
+-- Create storage bucket for inspection photos if it doesn't exist
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'inspection-photos', 
+    'inspection-photos', 
+    true,
+    10485760,  -- 10 MB
+    NULL  -- NULL allows all MIME types
+)
+ON CONFLICT (id) DO UPDATE 
+SET 
+    public = true,
+    file_size_limit = 10485760,
+    allowed_mime_types = NULL;
+
+-- Drop existing storage policies to avoid conflicts
+DROP POLICY IF EXISTS "Allow public uploads to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public access to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public deletes to inspection-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public updates to inspection-photos" ON storage.objects;
+
+-- Create storage policies for inspection-photos bucket
+-- Allow anyone to upload (INSERT)
+CREATE POLICY "Allow public uploads to inspection-photos"
+ON storage.objects
+FOR INSERT
+TO public
+WITH CHECK (bucket_id = 'inspection-photos');
+
+-- Allow anyone to view/download (SELECT)
+CREATE POLICY "Allow public access to inspection-photos"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'inspection-photos');
+
+-- Allow anyone to update (UPDATE)
+CREATE POLICY "Allow public updates to inspection-photos"
+ON storage.objects
+FOR UPDATE
+TO public
+USING (bucket_id = 'inspection-photos')
+WITH CHECK (bucket_id = 'inspection-photos');
+
+-- Allow anyone to delete (DELETE)
+CREATE POLICY "Allow public deletes to inspection-photos"
+ON storage.objects
+FOR DELETE
+TO public
+USING (bucket_id = 'inspection-photos');
 
 -- ============================================================================
 -- SCHEMA READY FOR USE
 -- ============================================================================
 DO $$ 
 BEGIN 
+    RAISE NOTICE '========================================';
     RAISE NOTICE 'Schema created successfully!';
+    RAISE NOTICE '========================================';
     RAISE NOTICE 'Tables: sites, defects, defect_media';
     RAISE NOTICE 'Views: sites_with_defect_count, defects_with_media, inspection_details';
-    RAISE NOTICE 'RLS Policies: Enabled on all tables';
+    RAISE NOTICE 'RLS Policies: STRICT USER ISOLATION ENABLED';
+    RAISE NOTICE '  - Users can ONLY see their own inspections';
+    RAISE NOTICE '  - No NULL bypass - created_by is required';
+    RAISE NOTICE 'Storage: inspection-photos bucket configured with public access';
+    RAISE NOTICE 'IMPORTANT: defects table uses defect_id (TEXT) and building_reference_no (TEXT)';
+    RAISE NOTICE '========================================';
+    RAISE NOTICE 'Next Steps:';
+    RAISE NOTICE '1. Ensure app code sets created_by field';
+    RAISE NOTICE '2. Create test users in Supabase Auth';
+    RAISE NOTICE '3. Test user isolation by logging in as different users';
+    RAISE NOTICE '========================================';
 END $$;

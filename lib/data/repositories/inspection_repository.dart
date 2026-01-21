@@ -18,8 +18,20 @@ class InspectionRepository {
       debugPrint('[Repository] Site address: ${inspection.siteAddress}');
       debugPrint('[Repository] Defects count: ${inspection.defects.length}');
       
+      // Get current user ID
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('No authenticated user found');
+      }
+      debugPrint('[Repository] Current user ID: ${currentUser.id}');
+      
+      // Add user ID to inspection
+      final inspectionWithUser = inspection.copyWith(
+        createdBy: currentUser.id,
+      );
+      
       // Insert site data
-      final siteJson = inspection.toJson();
+      final siteJson = inspectionWithUser.toJson();
       debugPrint('[Repository] Site JSON: $siteJson');
       
       await _supabase.from('sites').insert(siteJson);
@@ -44,7 +56,13 @@ class InspectionRepository {
         }
       }
       
-      debugPrint('[Repository] ✅ Inspection save completed');
+      // Update sync status to 'synced' since save was successful
+      await _supabase
+          .from('sites')
+          .update({'sync_status': 'synced'})
+          .eq('building_reference_no', inspection.id);
+      
+      debugPrint('[Repository] ✅ Inspection save completed and marked as synced');
     } catch (e, stackTrace) {
       debugPrint('[Repository] ❌ ERROR saving inspection: $e');
       debugPrint('[Repository] Stack trace: $stackTrace');

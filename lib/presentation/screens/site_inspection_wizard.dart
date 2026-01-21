@@ -229,7 +229,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       roofMaterials: _buildingElements['Roof'],
       roofCovering: _roofCovering,
       defects: defectsWithInspectionId,
-      syncStatus: SyncStatus.pending,
+      syncStatus: SyncStatus.synced,
       createdAt: DateTime.now(),
     );
 
