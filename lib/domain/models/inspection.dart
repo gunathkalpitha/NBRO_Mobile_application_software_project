@@ -34,6 +34,7 @@ class Inspection {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? remarks;
+  final String? createdBy; // User ID from Supabase Auth
 
   Inspection({
     required this.id,
@@ -63,6 +64,7 @@ class Inspection {
     required this.createdAt,
     this.updatedAt,
     this.remarks,
+    this.createdBy,
   });
 
   Inspection copyWith({
@@ -93,6 +95,7 @@ class Inspection {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? remarks,
+    String? createdBy,
   }) {
     return Inspection(
       id: id ?? this.id,
@@ -122,6 +125,7 @@ class Inspection {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       remarks: remarks ?? this.remarks,
+      createdBy: createdBy ?? this.createdBy,
     );
   }
 
@@ -154,6 +158,7 @@ class Inspection {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'remarks': remarks,
+      'created_by': createdBy,
     };
   }
 
@@ -199,6 +204,7 @@ class Inspection {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       remarks: json['remarks'] as String?,
+      createdBy: json['created_by'] as String?,
     );
   }
 }

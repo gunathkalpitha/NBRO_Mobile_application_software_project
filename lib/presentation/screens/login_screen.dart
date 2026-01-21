@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -76,28 +77,36 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Hardcoded credentials for testing (before database implementation)
-      const String defaultEmail = 'test@gmail.com';
-      const String defaultPassword = '123';
-      
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       
       debugPrint('[LoginScreen] Attempting login with email: $email');
       
-      // Validate credentials
-      if (email == defaultEmail && password == defaultPassword) {
-        debugPrint('[LoginScreen] Login successful');
+      // Authenticate with Supabase
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (response.user != null) {
+        debugPrint('[LoginScreen] Login successful for user: ${response.user!.id}');
         if (mounted) {
           _navigateToDashboard();
         }
       } else {
-        debugPrint('[LoginScreen] Invalid credentials');
+        debugPrint('[LoginScreen] Login failed - no user returned');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid email or password. Use test@gmail.com / 123')),
+            const SnackBar(content: Text('Invalid email or password')),
           );
         }
+      }
+    } on AuthException catch (e) {
+      debugPrint('[LoginScreen] Authentication error: ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: ${e.message}')),
+        );
       }
     } catch (e) {
       debugPrint('[LoginScreen] Login error: $e');
