@@ -142,9 +142,14 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       await _repository.createInspection(newInspection);
       
       debugPrint('[InspectionBloc] ✅ Inspection saved successfully to database');
-      _inspections.add(newInspection);
       
-      debugPrint('[InspectionBloc] Inspection created and saved: ${newInspection.id}');
+      // Reload all inspections from database to ensure consistency
+      debugPrint('[InspectionBloc] Reloading inspections from database...');
+      final inspections = await _repository.getInspections();
+      _inspections.clear();
+      _inspections.addAll(inspections);
+      
+      debugPrint('[InspectionBloc] Inspection created and reloaded: ${newInspection.id}');
       
       // Emit updated state
       final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;

@@ -234,8 +234,8 @@ class Defect {
   // Convert to JSON for Supabase
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'site_id': inspectionId,
+      'defect_id': id,
+      'building_reference_no': inspectionId,
       'notation': notation.code,
       'defect_category': category.name,
       'floor_level': floorLevel,
@@ -250,8 +250,8 @@ class Defect {
   // Create from JSON (from Supabase)
   factory Defect.fromJson(Map<String, dynamic> json) {
     return Defect(
-      id: json['id'] as String,
-      inspectionId: json['site_id'] as String,
+      id: json['defect_id'] as String,
+      inspectionId: json['building_reference_no'] as String,
       notation: DefectNotation.values.firstWhere(
         (e) => e.code == json['notation'],
         orElse: () => DefectNotation.c,
