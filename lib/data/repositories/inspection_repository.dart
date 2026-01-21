@@ -44,7 +44,13 @@ class InspectionRepository {
         }
       }
       
-      debugPrint('[Repository] ✅ Inspection save completed');
+      // Update sync status to 'synced' since save was successful
+      await _supabase
+          .from('sites')
+          .update({'sync_status': 'synced'})
+          .eq('building_reference_no', inspection.id);
+      
+      debugPrint('[Repository] ✅ Inspection save completed and marked as synced');
     } catch (e, stackTrace) {
       debugPrint('[Repository] ❌ ERROR saving inspection: $e');
       debugPrint('[Repository] Stack trace: $stackTrace');
