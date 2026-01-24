@@ -7,6 +7,9 @@ import '../widgets/sync_status_indicator.dart';
 import '../widgets/branding.dart';
 import '../widgets/app_shell.dart';
 import 'site_inspection_wizard.dart';
+import 'inspection_detail_screen.dart';
+import 'inspections_screen.dart';
+import 'inspection_map_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -256,6 +259,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => InspectionMapScreen(
+                                        inspections: state.inspections,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -316,9 +329,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                             ),
                             if (state.inspections.isNotEmpty)
                               TextButton.icon(
-                                onPressed: () {},
-                                icon: const Icon(Icons.filter_list, size: 18),
-                                label: const Text('Filter'),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const InspectionsScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.view_list, size: 18),
+                                label: const Text('View All'),
                                 style: TextButton.styleFrom(
                                   foregroundColor: NBROColors.primary,
                                 ),
@@ -448,6 +467,7 @@ class _ModernStatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Gradient gradient;
+  final VoidCallback? onTap;
 
   const _ModernStatCard({
     required this.label,
@@ -455,24 +475,27 @@ class _ModernStatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.gradient,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: NBROColors.white, size: 28),
@@ -495,6 +518,7 @@ class _ModernStatCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -521,10 +545,11 @@ class _EnhancedInspectionCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('View inspection details'),
-              behavior: SnackBarBehavior.floating,
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => InspectionDetailScreen(
+                inspection: inspection,
+              ),
             ),
           );
         },

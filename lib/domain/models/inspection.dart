@@ -35,6 +35,7 @@ class Inspection {
   final DateTime? updatedAt;
   final String? remarks;
   final String? createdBy; // User ID from Supabase Auth
+  final String? buildingPhotoUrl; // Front view building image URL
 
   Inspection({
     required this.id,
@@ -65,6 +66,7 @@ class Inspection {
     this.updatedAt,
     this.remarks,
     this.createdBy,
+    this.buildingPhotoUrl,
   });
 
   Inspection copyWith({
@@ -96,6 +98,7 @@ class Inspection {
     DateTime? updatedAt,
     String? remarks,
     String? createdBy,
+    String? buildingPhotoUrl,
   }) {
     return Inspection(
       id: id ?? this.id,
@@ -126,6 +129,7 @@ class Inspection {
       updatedAt: updatedAt ?? this.updatedAt,
       remarks: remarks ?? this.remarks,
       createdBy: createdBy ?? this.createdBy,
+      buildingPhotoUrl: buildingPhotoUrl ?? this.buildingPhotoUrl,
     );
   }
 
@@ -159,6 +163,7 @@ class Inspection {
       'updated_at': updatedAt?.toIso8601String(),
       'remarks': remarks,
       'created_by': createdBy,
+      'building_photo_url': buildingPhotoUrl,
     };
   }
 
@@ -205,6 +210,7 @@ class Inspection {
           : null,
       remarks: json['remarks'] as String?,
       createdBy: json['created_by'] as String?,
+      buildingPhotoUrl: json['building_photo_url'] as String?,
     );
   }
 }

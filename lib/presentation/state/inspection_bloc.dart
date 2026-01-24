@@ -14,9 +14,11 @@ class LoadInspectionsEvent extends InspectionEvent {
 
 class CreateInspectionEvent extends InspectionEvent {
   final Inspection inspection;
+  final String? buildingPhotoPath;
 
   const CreateInspectionEvent({
     required this.inspection,
+    this.buildingPhotoPath,
   });
 }
 
@@ -137,9 +139,10 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       debugPrint('[InspectionBloc] Inspection created: ${newInspection.id}');
       debugPrint('[InspectionBloc] Attempting to save to database...');
       debugPrint('[InspectionBloc] Defects count: ${newInspection.defects.length}');
+      debugPrint('[InspectionBloc] Building photo path: ${event.buildingPhotoPath}');
       
-      // Save to Supabase
-      await _repository.createInspection(newInspection);
+      // Save to Supabase with building photo
+      await _repository.createInspection(newInspection, buildingPhotoPath: event.buildingPhotoPath);
       
       debugPrint('[InspectionBloc] ✅ Inspection saved successfully to database');
       

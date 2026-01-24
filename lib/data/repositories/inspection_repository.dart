@@ -11,12 +11,13 @@ class InspectionRepository {
       : _supabase = supabase ?? Supabase.instance.client;
 
   /// Create a new inspection (site) in the database
-  Future<void> createInspection(Inspection inspection) async {
+  Future<void> createInspection(Inspection inspection, {String? buildingPhotoPath}) async {
     try {
       debugPrint('[Repository] Starting inspection save...');
       debugPrint('[Repository] Inspection ID: ${inspection.id}');
       debugPrint('[Repository] Site address: ${inspection.siteAddress}');
       debugPrint('[Repository] Defects count: ${inspection.defects.length}');
+      debugPrint('[Repository] Building photo path: $buildingPhotoPath');
       
       // Get current user ID
       final currentUser = _supabase.auth.currentUser;
@@ -25,9 +26,17 @@ class InspectionRepository {
       }
       debugPrint('[Repository] Current user ID: ${currentUser.id}');
       
-      // Add user ID to inspection
+      // Upload building photo if provided
+      String? buildingPhotoUrl;
+      if (buildingPhotoPath != null) {
+        buildingPhotoUrl = await _uploadBuildingPhoto(inspection.id, buildingPhotoPath);
+        debugPrint('[Repository] ✅ Building photo uploaded: $buildingPhotoUrl');
+      }
+      
+      // Add user ID and building photo URL to inspection
       final inspectionWithUser = inspection.copyWith(
         createdBy: currentUser.id,
+        buildingPhotoUrl: buildingPhotoUrl,
       );
       
       // Insert site data
@@ -92,9 +101,38 @@ class InspectionRepository {
               .eq('building_reference_no', inspection.id)
               .order('created_at', ascending: true) as List<dynamic>;
 
-          final defects = defectsResponse
-              .map((json) => Defect.fromJson(json as Map<String, dynamic>))
-              .toList();
+          // Fetch photo URLs from defect_media table
+          final defects = <Defect>[];
+          for (final defectJson in defectsResponse) {
+            final defect = Defect.fromJson(defectJson as Map<String, dynamic>);
+            
+            // Get photo URL from defect_media table
+            final mediaResponse = await _supabase
+                .from('defect_media')
+                .select('storage_url')
+                .eq('defect_id', defect.id)
+                .limit(1)
+                .maybeSingle();
+            
+            if (mediaResponse != null) {
+              final photoUrl = mediaResponse['storage_url'] as String?;
+              defects.add(Defect(
+                id: defect.id,
+                inspectionId: defect.inspectionId,
+                notation: defect.notation,
+                category: defect.category,
+                floorLevel: defect.floorLevel,
+                lengthMm: defect.lengthMm,
+                widthMm: defect.widthMm,
+                photoPath: defect.photoPath,
+                remarks: defect.remarks,
+                createdAt: defect.createdAt,
+                photoUrl: photoUrl,
+              ));
+            } else {
+              defects.add(defect);
+            }
+          }
           
           debugPrint('[Repository] Loaded ${defects.length} defects for inspection ${inspection.id}');
           
@@ -135,10 +173,38 @@ class InspectionRepository {
 
       final inspection = Inspection.fromJson(siteResponse);
       
-      // Add defects to inspection
-      final defects = defectsResponse
-          .map((json) => Defect.fromJson(json as Map<String, dynamic>))
-          .toList();
+      // Add defects to inspection with photo URLs from defect_media
+      final defects = <Defect>[];
+      for (final defectJson in defectsResponse) {
+        final defect = Defect.fromJson(defectJson as Map<String, dynamic>);
+        
+        // Get photo URL from defect_media table
+        final mediaResponse = await _supabase
+            .from('defect_media')
+            .select('storage_url')
+            .eq('defect_id', defect.id)
+            .limit(1)
+            .maybeSingle();
+        
+        if (mediaResponse != null) {
+          final photoUrl = mediaResponse['storage_url'] as String?;
+          defects.add(Defect(
+            id: defect.id,
+            inspectionId: defect.inspectionId,
+            notation: defect.notation,
+            category: defect.category,
+            floorLevel: defect.floorLevel,
+            lengthMm: defect.lengthMm,
+            widthMm: defect.widthMm,
+            photoPath: defect.photoPath,
+            remarks: defect.remarks,
+            createdAt: defect.createdAt,
+            photoUrl: photoUrl,
+          ));
+        } else {
+          defects.add(defect);
+        }
+      }
       
       return inspection.copyWith(defects: defects);
     } catch (e) {
@@ -317,6 +383,48 @@ class InspectionRepository {
       };
     } catch (e) {
       throw Exception('Failed to get inspection stats: $e');
+    }
+  }
+
+  /// Upload building photo to Supabase Storage
+  Future<String> _uploadBuildingPhoto(String buildingReferenceNo, String photoPath) async {
+    try {
+      final file = File(photoPath);
+      if (!await file.exists()) {
+        throw Exception('Photo file not found: $photoPath');
+      }
+
+      // Create a unique file name
+      final fileName = 'building_${buildingReferenceNo}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final storagePath = 'buildings/$buildingReferenceNo/$fileName';
+
+      debugPrint('[Repository] Uploading building photo: $fileName');
+      
+      // Upload to Supabase Storage with proper content type
+      await _supabase.storage
+          .from('inspection-photos')
+          .upload(
+            storagePath, 
+            file,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+            ),
+          );
+
+      debugPrint('[Repository] ✅ Building photo uploaded to storage');
+
+      // Get public URL
+      final publicUrl = _supabase.storage
+          .from('inspection-photos')
+          .getPublicUrl(storagePath);
+
+      debugPrint('[Repository] Building photo URL: $publicUrl');
+
+      return publicUrl;
+    } catch (e, stackTrace) {
+      debugPrint('[Repository] ❌ ERROR uploading building photo: $e');
+      debugPrint('[Repository] Stack trace: $stackTrace');
+      throw Exception('Failed to upload building photo: $e');
     }
   }
 
