@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../../data/services/pdf_report_service.dart';
+import 'inspection_map_screen.dart';
 
 class InspectionDetailScreen extends StatefulWidget {
   final Inspection inspection;
@@ -681,10 +682,24 @@ class _KeyInformationSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (inspection.latitude != null && inspection.longitude != null)
-            _InfoCard(
-              label: 'GPS Coordinates',
-              value: '${inspection.latitude!.toStringAsFixed(6)}, ${inspection.longitude!.toStringAsFixed(6)}',
-              icon: Icons.location_on,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InspectionMapScreen(
+                      inspections: [inspection],
+                      selectedInspection: inspection,
+                    ),
+                  ),
+                );
+              },
+              child: _InfoCard(
+                label: 'GPS Coordinates',
+                value: '${inspection.latitude!.toStringAsFixed(6)}, ${inspection.longitude!.toStringAsFixed(6)}',
+                icon: Icons.location_on,
+                isClickable: true,
+              ),
             ),
         ],
       ),
@@ -1278,11 +1293,13 @@ class _InfoCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final bool isClickable;
 
   const _InfoCard({
     required this.label,
     required this.value,
     required this.icon,
+    this.isClickable = false,
   });
 
   @override
@@ -1293,7 +1310,9 @@ class _InfoCard extends StatelessWidget {
         color: NBROColors.light,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: NBROColors.grey.withValues(alpha: 0.2),
+          color: isClickable 
+              ? NBROColors.primary.withValues(alpha: 0.3)
+              : NBROColors.grey.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1312,14 +1331,22 @@ class _InfoCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              if (isClickable) ...[
+                const Spacer(),
+                Icon(
+                  Icons.open_in_new,
+                  size: 14,
+                  color: NBROColors.primary.withValues(alpha: 0.7),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: NBROColors.black,
+              color: isClickable ? NBROColors.primary : NBROColors.black,
               fontWeight: FontWeight.bold,
             ),
             maxLines: 2,
