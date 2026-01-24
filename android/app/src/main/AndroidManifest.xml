@@ -13,6 +13,13 @@
     <!-- Permissions for internet (for Supabase sync) -->
     <uses-permission android:name="android.permission.INTERNET"/>
     
+    <!-- Permissions for storage (PDF download) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    
     <application
         android:label="nbro_mobile_application"
         android:name="${applicationName}"

@@ -7,6 +7,8 @@ import '../widgets/sync_status_indicator.dart';
 import '../widgets/branding.dart';
 import '../widgets/app_shell.dart';
 import 'site_inspection_wizard.dart';
+import 'inspection_detail_screen.dart';
+import 'inspections_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -316,9 +318,15 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                             ),
                             if (state.inspections.isNotEmpty)
                               TextButton.icon(
-                                onPressed: () {},
-                                icon: const Icon(Icons.filter_list, size: 18),
-                                label: const Text('Filter'),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const InspectionsScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.view_list, size: 18),
+                                label: const Text('View All'),
                                 style: TextButton.styleFrom(
                                   foregroundColor: NBROColors.primary,
                                 ),
@@ -521,10 +529,11 @@ class _EnhancedInspectionCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('View inspection details'),
-              behavior: SnackBarBehavior.floating,
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => InspectionDetailScreen(
+                inspection: inspection,
+              ),
             ),
           );
         },

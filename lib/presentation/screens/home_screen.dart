@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/app_shell.dart';
 import 'dashboard_screen.dart';
+import 'inspections_screen.dart';
 import 'analysis_screen.dart';
 import 'settings_screen.dart';
 import '../state/inspection_bloc.dart';
@@ -45,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case NavItem.dashboard:
         return const DashboardScreen();
       case NavItem.inspection:
-        return const DashboardScreen(); // Inspection is part of dashboard
+        return const InspectionsScreen();
       case NavItem.analysis:
         return const AnalysisScreen();
       case NavItem.settings:

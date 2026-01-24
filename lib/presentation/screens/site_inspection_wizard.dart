@@ -235,6 +235,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
 
     context.read<InspectionBloc>().add(CreateInspectionEvent(
           inspection: inspection,
+          buildingPhotoPath: _buildingPhotoPath,
         ));
 
     ScaffoldMessenger.of(context).showSnackBar(
