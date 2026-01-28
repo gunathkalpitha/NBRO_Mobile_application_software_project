@@ -13,25 +13,46 @@ import '../../domain/models/inspection.dart';
 class PDFReportService {
   /// Generate a Pre-Crack Survey Report PDF matching NBRO format
   static Future<File> generateInspectionReport(Inspection inspection) async {
-    final pdf = pw.Document();
-    
-    // Load NBRO logo (if available)
-    // final logo = await rootBundle.load('assets/icons/icon.png');
-    // final logoImage = pw.MemoryImage(logo.buffer.asUint8List());
+    try {
+      if (kDebugMode) {
+        print('Starting PDF generation for inspection: ${inspection.id}');
+      }
+      
+      final pdf = pw.Document();
+      
+      // Load NBRO logo (if available)
+      // final logo = await rootBundle.load('assets/icons/icon.png');
+      // final logoImage = pw.MemoryImage(logo.buffer.asUint8List());
 
-    // Add pages
-    _addCoverPage(pdf, inspection);
-    _addSiteDataSheet(pdf, inspection);
-    _addBuildingDetailsPage(pdf, inspection);
-    if (inspection.defects.isNotEmpty) {
-      _addDefectsPages(pdf, inspection);
+      // Add pages
+      _addCoverPage(pdf, inspection);
+      _addSiteDataSheet(pdf, inspection);
+      _addBuildingDetailsPage(pdf, inspection);
+      if (inspection.defects.isNotEmpty) {
+        _addDefectsPages(pdf, inspection);
+      }
+
+      if (kDebugMode) {
+        print('PDF pages created, now saving...');
+      }
+
+      // Save PDF
+      final output = await _getOutputFile(inspection.id);
+      final bytes = await pdf.save();
+      await output.writeAsBytes(bytes);
+      
+      if (kDebugMode) {
+        print('PDF saved successfully to: ${output.path}');
+        print('File size: ${bytes.length} bytes');
+      }
+      
+      return output;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error generating PDF: $e');
+      }
+      rethrow;
     }
-
-    // Save PDF
-    final output = await _getOutputFile(inspection.id);
-    await output.writeAsBytes(await pdf.save());
-    
-    return output;
   }
 
   /// Get output file path
@@ -40,19 +61,38 @@ class PDFReportService {
     final fileName = 'NBRO_Inspection_${buildingRef}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
     
     if (Platform.isAndroid) {
-      // Request storage permission for Android
-      var status = await Permission.storage.status;
-      if (!status.isGranted) {
-        status = await Permission.storage.request();
-      }
-      
-      // For Android 10+, use app-specific directory or Downloads
-      if (await Permission.manageExternalStorage.isGranted || 
-          await Directory('/storage/emulated/0/Download').exists()) {
-        directory = Directory('/storage/emulated/0/Download');
-      } else {
-        // Fallback to external storage directory
-        directory = (await getExternalStorageDirectory()) ?? await getApplicationDocumentsDirectory();
+      try {
+        // For Android 13+ (API 33+), we don't need storage permissions for app-specific directories
+        // For Android 10-12, request storage permission
+        if (await Permission.storage.isDenied) {
+          final status = await Permission.storage.request();
+          if (kDebugMode) {
+            print('Storage permission status: $status');
+          }
+        }
+        
+        // Try to use Downloads directory
+        final downloadsPath = '/storage/emulated/0/Download';
+        final downloadsDir = Directory(downloadsPath);
+        
+        if (await downloadsDir.exists()) {
+          directory = downloadsDir;
+          if (kDebugMode) {
+            print('Using Downloads directory: ${directory.path}');
+          }
+        } else {
+          // Fallback to app's external storage directory (no permissions needed)
+          directory = await getApplicationDocumentsDirectory();
+          if (kDebugMode) {
+            print('Using app documents directory: ${directory.path}');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error getting storage directory: $e');
+        }
+        // Final fallback
+        directory = await getApplicationDocumentsDirectory();
       }
     } else if (Platform.isIOS) {
       directory = await getApplicationDocumentsDirectory();
@@ -60,7 +100,12 @@ class PDFReportService {
       directory = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
     }
     
-    return File('${directory.path}/$fileName');
+    final filePath = '${directory.path}/$fileName';
+    if (kDebugMode) {
+      print('PDF will be saved to: $filePath');
+    }
+    
+    return File(filePath);
   }
 
   /// Add cover page
@@ -645,20 +690,36 @@ class PDFReportService {
 
   /// Preview PDF before saving
   static Future<void> previewPDF(Inspection inspection) async {
-    final pdf = pw.Document();
-    
-    _addCoverPage(pdf, inspection);
-    _addSiteDataSheet(pdf, inspection);
-    _addBuildingDetailsPage(pdf, inspection);
-    if (inspection.defects.isNotEmpty) {
-      _addDefectsPages(pdf, inspection);
-    }
+    try {
+      if (kDebugMode) {
+        print('Starting PDF preview for inspection: ${inspection.id}');
+      }
+      
+      final pdf = pw.Document();
+      
+      _addCoverPage(pdf, inspection);
+      _addSiteDataSheet(pdf, inspection);
+      _addBuildingDetailsPage(pdf, inspection);
+      if (inspection.defects.isNotEmpty) {
+        _addDefectsPages(pdf, inspection);
+      }
 
-    await Printing.layoutPdf(
-      onLayout: (format) async => pdf.save(),
-      name: 'NBRO_Inspection_${inspection.id}.pdf',
-      format: PdfPageFormat.a4,
-    );
+      // Show preview with save/print/share options
+      await Printing.layoutPdf(
+        onLayout: (format) async => pdf.save(),
+        name: 'NBRO_Inspection_${inspection.id}.pdf',
+        format: PdfPageFormat.a4,
+      );
+      
+      if (kDebugMode) {
+        print('PDF preview closed');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error in PDF preview: $e');
+      }
+      rethrow;
+    }
   }
 
   /// Share PDF file

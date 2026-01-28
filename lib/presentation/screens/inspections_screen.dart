@@ -363,8 +363,8 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                               },
                               child: _InspectionListItem(
                                 inspection: filtered[index],
-                                onTap: () {
-                                  Navigator.of(context).push(
+                                onTap: () async {
+                                  final result = await Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (context) =>
                                           InspectionDetailScreen(
@@ -372,6 +372,12 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                                           ),
                                     ),
                                   );
+                                  // Refresh the list if inspection was edited
+                                  if (result == true && mounted) {
+                                    if (context.mounted) {
+                                      context.read<InspectionBloc>().add(LoadInspectionsEvent());
+                                    }
+                                  }
                                 },
                               ),
                             );
