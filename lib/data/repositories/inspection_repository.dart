@@ -215,11 +215,20 @@ class InspectionRepository {
   /// Update an existing inspection
   Future<void> updateInspection(Inspection inspection) async {
     try {
+      debugPrint('[Repository] Updating inspection ${inspection.id}...');
+      final updateData = inspection.copyWith(
+        updatedAt: DateTime.now(),
+      ).toJson();
+      debugPrint('[Repository] Update data: $updateData');
+      
       await _supabase
           .from('sites')
-          .update(inspection.toJson())
+          .update(updateData)
           .eq('building_reference_no', inspection.id);
+      
+      debugPrint('[Repository] ✅ Inspection updated successfully in database');
     } catch (e) {
+      debugPrint('[Repository] ❌ ERROR updating inspection: $e');
       throw Exception('Failed to update inspection: $e');
     }
   }
