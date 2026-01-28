@@ -21,7 +21,7 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     
     <application
-        android:label="nbro_mobile_application"
+        android:label="NBRO"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
