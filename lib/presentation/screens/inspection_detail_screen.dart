@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../../data/services/pdf_report_service.dart';
+import '../../data/repositories/inspection_repository.dart';
 import 'inspection_map_screen.dart';
+import 'edit_inspection_screen.dart';
 
 class InspectionDetailScreen extends StatefulWidget {
   final Inspection inspection;
@@ -21,10 +23,13 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Inspection _currentInspection;
+  final InspectionRepository _repository = InspectionRepository();
 
   @override
   void initState() {
     super.initState();
+    _currentInspection = widget.inspection;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -95,7 +100,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                         ),
                       ),
                       Text(
-                        'Inspection ${widget.inspection.id}',
+                        'Inspection ${_currentInspection.id}',
                         style: TextStyle(
                           fontSize: 13,
                           color: NBROColors.grey,
@@ -110,22 +115,11 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
             _PDFOptionButton(
               icon: Icons.visibility,
               label: 'Preview PDF',
-              subtitle: 'View before download or share',
+              subtitle: 'View and download PDF',
               color: NBROColors.accent,
               onTap: () async {
                 Navigator.of(context).pop();
                 await _previewPDF(context);
-              },
-            ),
-            const SizedBox(height: 12),
-            _PDFOptionButton(
-              icon: Icons.download,
-              label: 'Download PDF',
-              subtitle: 'Save to device storage',
-              color: NBROColors.primary,
-              onTap: () async {
-                Navigator.of(context).pop();
-                await _downloadPDF(context);
               },
             ),
             const SizedBox(height: 12),
@@ -169,78 +163,44 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     );
 
     try {
-      // Generate PDF
-      await PDFReportService.previewPDF(widget.inspection);
-      
+      // Close loading dialog before showing PDF preview
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
+      }
+      
+      // Generate and preview PDF
+      await PDFReportService.previewPDF(_currentInspection);
+      
+      // Show helpful message after preview closes
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.download, color: NBROColors.white, size: 20),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Tip: Use the save/download button in the preview to save PDF to your device',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: NBROColors.info,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        // Make sure loading dialog is closed
+        Navigator.of(context).popUntil((route) => route.isFirst || !route.willHandlePopInternally);
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error previewing PDF: $e'),
-            backgroundColor: NBROColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _downloadPDF(BuildContext context) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Downloading PDF...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      final file = await PDFReportService.generateInspectionReport(widget.inspection);
-      
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('PDF saved to: ${file.path}'),
-            backgroundColor: NBROColors.success,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'OPEN',
-              textColor: NBROColors.white,
-              onPressed: () async {
-                await PDFReportService.openPDF(file);
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error downloading PDF: $e'),
             backgroundColor: NBROColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -263,7 +223,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Preparing PDF...'),
+                Text('Preparing PDF to share...'),
               ],
             ),
           ),
@@ -272,13 +232,24 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     );
 
     try {
-      final file = await PDFReportService.generateInspectionReport(widget.inspection);
+      final file = await PDFReportService.generateInspectionReport(_currentInspection);
       
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
-        // Share the PDF
-        await PDFReportService.sharePDF(file, 'NBRO_Inspection_${widget.inspection.id}.pdf');
+      }
+      
+      // Share the PDF
+      await PDFReportService.sharePDF(file, 'NBRO_Inspection_${_currentInspection.id}.pdf');
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ PDF ready to share'),
+            backgroundColor: NBROColors.success,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -289,6 +260,188 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
             content: Text('Error sharing PDF: $e'),
             backgroundColor: NBROColors.error,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showDeleteDialog() async {
+    final confirmationController = TextEditingController();
+    final buildingRefNo = _currentInspection.id;
+    bool canDelete = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.warning, color: Colors.red, size: 28),
+              const SizedBox(width: 12),
+              const Text('Delete Inspection'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This action cannot be undone!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'This will permanently delete:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text('• Inspection data for $buildingRefNo'),
+                Text('• All ${_currentInspection.defects.length} associated defects'),
+                const Text('• All uploaded photos and documents'),
+                const SizedBox(height: 20),
+                const Text(
+                  'To confirm deletion, please type the Building Reference Number:',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: SelectableText(
+                    buildingRefNo,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmationController,
+                  decoration: InputDecoration(
+                    labelText: 'Type Building Reference Number',
+                    hintText: buildingRefNo,
+                    border: const OutlineInputBorder(),
+                    errorText: canDelete == false && confirmationController.text.isNotEmpty
+                        ? 'Building Reference Number does not match'
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      canDelete = value.trim() == buildingRefNo;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                confirmationController.dispose();
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: canDelete
+                  ? () async {
+                      confirmationController.dispose();
+                      Navigator.pop(context);
+                      await _deleteInspection();
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey.shade300,
+              ),
+              child: const Text('Delete Permanently'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteInspection() async {
+    // Show loading dialog
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Deleting inspection...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await _repository.deleteInspection(_currentInspection.id);
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Inspection deleted successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Pop back to list with refresh signal
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting inspection: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -329,35 +482,95 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
               ),
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
                     'Inspection Details',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: NBROColors.white,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
-                    'ID: ${widget.inspection.id}',
+                    'ID: ${_currentInspection.id}',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: NBROColors.white.withValues(alpha: 0.9),
+                      fontSize: 13,
+                      color: NBROColors.white.withValues(alpha: 0.95),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.picture_as_pdf, color: NBROColors.white),
-                  onPressed: () {
-                    _generatePDFReport(context);
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: NBROColors.white),
+                  tooltip: 'More actions',
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'edit':
+                        final result = await Navigator.push<Inspection>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditInspectionScreen(
+                              inspection: _currentInspection,
+                              onInspectionUpdated: (updatedInspection) {
+                                setState(() {
+                                  _currentInspection = updatedInspection;
+                                });
+                              },
+                            ),
+                          ),
+                        );
+                        if (result != null) {
+                          setState(() {
+                            _currentInspection = result;
+                          });
+                        }
+                        break;
+                      case 'delete':
+                        _showDeleteDialog();
+                        break;
+                      case 'pdf':
+                        _generatePDFReport(context);
+                        break;
+                    }
                   },
-                  tooltip: 'Generate PDF Report',
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 20, color: NBROColors.info),
+                          SizedBox(width: 12),
+                          Text('Edit Inspection'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf, size: 20, color: NBROColors.primary),
+                          SizedBox(width: 12),
+                          Text('PDF Report'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 20, color: NBROColors.error),
+                          SizedBox(width: 12),
+                          Text('Delete Inspection'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                _StatusBadge(status: widget.inspection.syncStatus),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
               ],
             ),
           ),
@@ -370,59 +583,59 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
           slivers: [
             // Profile Header
             SliverToBoxAdapter(
-              child: _ProfileHeader(inspection: widget.inspection),
+              child: _ProfileHeader(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // Key Information Section
             SliverToBoxAdapter(
-              child: _KeyInformationSection(inspection: widget.inspection),
+              child: _KeyInformationSection(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // Timestamps Section
             SliverToBoxAdapter(
-              child: _TimestampsSection(inspection: widget.inspection),
+              child: _TimestampsSection(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // General Observations Section
             SliverToBoxAdapter(
-              child: _GeneralObservationsSection(inspection: widget.inspection),
+              child: _GeneralObservationsSection(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // External Services Section
             SliverToBoxAdapter(
-              child: _ExternalServicesSection(inspection: widget.inspection),
+              child: _ExternalServicesSection(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // Building Profile Section
             SliverToBoxAdapter(
-              child: _BuildingProfileSection(inspection: widget.inspection),
+              child: _BuildingProfileSection(inspection: _currentInspection),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // Defects Section
-            if (widget.inspection.defects.isNotEmpty)
+            if (_currentInspection.defects.isNotEmpty)
               SliverToBoxAdapter(
-                child: _DefectsSection(defects: widget.inspection.defects),
+                child: _DefectsSection(defects: _currentInspection.defects),
               ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
             // Remarks Section
-            if (widget.inspection.remarks != null &&
-                widget.inspection.remarks!.isNotEmpty)
+            if (_currentInspection.remarks != null &&
+                _currentInspection.remarks!.isNotEmpty)
               SliverToBoxAdapter(
-                child: _RemarksSection(remarks: widget.inspection.remarks!),
+                child: _RemarksSection(remarks: _currentInspection.remarks!),
               ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -488,19 +701,46 @@ class _ProfileHeader extends StatelessWidget {
                       inspection.siteAddress,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: 17,
                         color: NBROColors.black,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Owner: ${inspection.ownerName}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: NBROColors.grey,
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: NBROColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
                       ),
+                      child: Text(
+                        'ID: ${inspection.id}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: NBROColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Owner: ${inspection.ownerName}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: NBROColors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _StatusBadge(status: inspection.syncStatus),
+                      ],
                     ),
                   ],
                 ),
