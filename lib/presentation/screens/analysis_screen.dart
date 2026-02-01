@@ -14,189 +14,117 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => NavRailController.toggleVisibility(),
-        ),
-        title: const NBROBrand(title: 'Analysis'),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Summary Cards
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: 'Total Inspections',
-                    value: '24',
-                    icon: Icons.assignment,
-                    color: NBROColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: 'Total Defects',
-                    value: '87',
-                    icon: Icons.warning_amber,
-                    color: NBROColors.warning,
-                  ),
+      backgroundColor: NBROColors.light,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [NBROColors.primary, NBROColors.primaryDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: NBROColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: 'Pending Sync',
-                    value: '5',
-                    icon: Icons.cloud_upload,
-                    color: NBROColors.info,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: 'Synced',
-                    value: '19',
-                    icon: Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Defect Analysis
-            Text(
-              'Defect Distribution',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+            child: AppBar(
+              toolbarHeight: 80,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leadingWidth: 48,
+              leading: IconButton(
+                icon: const Icon(Icons.menu, color: NBROColors.white),
+                iconSize: 24,
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  NavRailController.toggleVisibility();
+                },
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildDefectTypeRow('Crack', 34, 0.35),
-                    const Divider(),
-                    _buildDefectTypeRow('Spalling', 28, 0.29),
-                    const Divider(),
-                    _buildDefectTypeRow('Efflorescence', 15, 0.15),
-                    const Divider(),
-                    _buildDefectTypeRow('Corrosion', 10, 0.10),
-                  ],
-                ),
+              title: const NBROBrand(
+                title: 'Analytics',
+                showFullName: true,
+                logoSize: 60,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               ),
+              titleSpacing: 4,
             ),
-            const SizedBox(height: 32),
-
-            // Recent Inspections
-            Text(
-              'Recent Activity',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: const Icon(Icons.assignment, color: NBROColors.primary),
-                    title: Text('Inspection #${24 - index}'),
-                    subtitle: Text('3 defects • 2 hours ago'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  ),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSummaryCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDefectTypeRow(String type, int count, double percentage) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                type,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: NBROColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.analytics_rounded,
+                  size: 80,
+                  color: NBROColors.primary.withValues(alpha: 0.5),
                 ),
               ),
+              const SizedBox(height: 32),
               Text(
-                '$count (${(percentage * 100).toStringAsFixed(0)}%)',
+                'Analytics Coming Soon',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.darkGrey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'We\'re working on bringing you detailed insights and analytics for your inspection data. Stay tuned!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
+                  color: NBROColors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: NBROColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: NBROColors.info.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: NBROColors.info,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Future features will include inspection trends, defect analytics, and performance metrics.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: NBROColors.info,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: percentage,
-              minHeight: 8,
-              backgroundColor: Colors.grey[200],
-              valueColor: const AlwaysStoppedAnimation<Color>(NBROColors.primary),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

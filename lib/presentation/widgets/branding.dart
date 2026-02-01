@@ -25,51 +25,54 @@ class NBROBrand extends StatelessWidget {
     
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Try load asset logo if present; otherwise show monogram
         _LogoDynamic(size: logoSize),
         Flexible(
           child: Padding(
-          padding: padding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (showFullName)
-                Text(
-                  isSmallScreen 
-                    ? 'NBRO' 
-                    : 'National Building Research Organization',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w700,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              else
-                Text(
-                  'NBRO $title',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w700,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              if (showFullName && title.isNotEmpty)
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: color.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w400,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-            ],
+            padding: padding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (showFullName)
+                  Text(
+                    isSmallScreen 
+                        ? 'NBRO' 
+                        : 'National Building Research Organization',
+                    style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                          fontSize: isSmallScreen ? 15 : 14,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Text(
+                    'NBRO $title',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (showFullName && title.isNotEmpty)
+                  Text(
+                    title,
+                    style: TextStyle(
+                          color: color.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
           ),
-        ),
         )
       ],
     );

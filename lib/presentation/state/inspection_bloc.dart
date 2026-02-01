@@ -229,7 +229,7 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
         
        
         debugPrint('[InspectionBloc] Syncing inspection ${i + 1}/${pendingInspections.length}');
-        await Future.delayed(const Duration(seconds: 1)); // Simulate sync
+        // Instant sync - no artificial delay
         
         final index = _inspections.indexWhere((x) => x.id == pendingInspections[i].id);
         if (index >= 0) {

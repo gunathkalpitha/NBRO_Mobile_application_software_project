@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
+import '../../domain/models/notice.dart';
 import '../state/inspection_bloc.dart';
-import '../widgets/sync_status_indicator.dart';
+//import '../widgets/sync_status_indicator.dart';
 import '../widgets/branding.dart';
 import '../widgets/app_shell.dart';
 import 'site_inspection_wizard.dart';
 import 'inspection_detail_screen.dart';
-import 'inspections_screen.dart';
 import 'inspection_map_screen.dart';
+import 'notice_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final Function(NavItem)? onNavItemSelected;
+  
+  const DashboardScreen({super.key, this.onNavItemSelected});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -80,22 +84,51 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               title: const NBROBrand(
                 title: 'Dashboard',
                 showFullName: true,
-                logoSize: 40,
+                logoSize: 60,
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               ),
               titleSpacing: 4,
               actions: [
-                BlocBuilder<InspectionBloc, InspectionState>(
-                  builder: (context, state) {
-                    return SyncStatusIndicator(
-                      onSyncPressed: () {
-                        context
-                            .read<InspectionBloc>()
-                            .add(const SyncInspectionsEvent());
-                      },
-                    );
-                  },
+                // Online/Offline indicator
+                Tooltip(
+                  message: 'Online',
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.cloud_done,
+                      color: NBROColors.success,
+                      size: 24,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
+                // Notification Bell
+                Tooltip(
+                  message: 'Notifications',
+                  child: IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
+                    iconSize: 24,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: NBROColors.white),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text('Notifications feature coming soon!'),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: NBROColors.info,
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
               ],
             ),
           ),
@@ -104,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       body: RefreshIndicator(
         onRefresh: () async {
           context.read<InspectionBloc>().add(const LoadInspectionsEvent());
-          await Future.delayed(const Duration(seconds: 1));
+          // Instant refresh - no artificial delay
         },
         child: BlocBuilder<InspectionBloc, InspectionState>(
           builder: (context, state) {
@@ -181,65 +214,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
-                    // Welcome Header
+                    // Welcome Header with Greeting
                     SliverToBoxAdapter(
-                      child: Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              NBROColors.primary.withValues(alpha: 0.05),
-                              NBROColors.primaryLight.withValues(alpha: 0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: NBROColors.primary.withValues(alpha: 0.1),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: NBROColors.primary,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.business,
-                                color: NBROColors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Welcome back!',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: NBROColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Manage your site inspections',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: NBROColors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: _WelcomeSection(),
+                    ),
+
+                    // Notice Bar
+                    SliverToBoxAdapter(
+                      child: _NoticeBar(),
                     ),
 
                     // Stats Cards
@@ -330,11 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                             if (state.inspections.isNotEmpty)
                               TextButton.icon(
                                 onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const InspectionsScreen(),
-                                    ),
-                                  );
+                                  widget.onNavItemSelected?.call(NavItem.inspection);
                                 },
                                 icon: const Icon(Icons.view_list, size: 18),
                                 label: const Text('View All'),
@@ -428,7 +406,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                 ),
                               );
                             },
-                            childCount: state.inspections.length,
+                            childCount: state.inspections.length > 5 ? 5 : state.inspections.length,
                           ),
                         ),
                       ),
@@ -737,5 +715,300 @@ class _ModernSyncBadge extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// Welcome Section Widget with Time-based Greeting
+class _WelcomeSection extends StatelessWidget {
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    String userName = 'Guest';
+    
+    if (user != null) {
+      userName = user.userMetadata?['full_name'] ?? 
+                 user.userMetadata?['name'] ?? 
+                 user.email?.split('@').first ?? 
+                 'User';
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            NBROColors.primary.withValues(alpha: 0.08),
+            NBROColors.primaryLight.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: NBROColors.primary.withValues(alpha: 0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: NBROColors.primary.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getGreeting(),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: NBROColors.grey.withValues(alpha: 0.8),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Welcome back, $userName!',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: NBROColors.primary,
+                    fontSize: 20,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Manage your site inspections',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: NBROColors.grey,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            )
+    );
+  }
+}
+
+// Notice Bar Widget
+class _NoticeBar extends StatefulWidget {
+  @override
+  State<_NoticeBar> createState() => _NoticeBarState();
+}
+
+class _NoticeBarState extends State<_NoticeBar> {
+  bool _isExpanded = false;
+
+ 
+  final Notice _latestNotice = Notice(
+    id: '1',
+    title: 'Welcome to NBRO Mobile',
+    message: 'Welcome to the NBRO Mobile Inspection Application! This platform helps you manage site inspections efficiently. If you need any assistance, please contact support.',
+    publishedAt: DateTime.now().subtract(const Duration(hours: 5)),
+    publishedBy: 'Admin',
+    priority: NoticePriority.normal,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            NBROColors.accent.withValues(alpha: 0.1),
+            NBROColors.warning.withValues(alpha: 0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: NBROColors.accent.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: NBROColors.accent.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _isExpanded = !_isExpanded;
+            });
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: NBROColors.accent.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.campaign,
+                        color: NBROColors.accent,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _latestNotice.title,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: NBROColors.black,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'By ${_latestNotice.publishedBy} • ${_formatDate(_latestNotice.publishedAt)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: NBROColors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: NBROColors.accent,
+                      ),
+                    ),
+                  ],
+                ),
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      Text(
+                        _latestNotice.message,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: NBROColors.darkGrey,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: NBROColors.accent.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.priority_high,
+                                  size: 14,
+                                  color: NBROColors.accent,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _latestNotice.priority.displayName.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: NBROColors.accent,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const NoticeScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.open_in_new, size: 16),
+                            label: const Text('View All'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: NBROColors.accent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  crossFadeState: _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 300),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else {
+      return '${difference.inDays} days ago';
+    }
   }
 }
