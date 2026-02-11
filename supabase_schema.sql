@@ -1,23 +1,42 @@
 -- ============================================================================
 -- NBRO Site Inspection Database Schema for Supabase (PostgreSQL)
 -- ============================================================================
--- Clean installation script - Run this in Supabase SQL Editor
--- With STRICT USER ISOLATION - No NULL bypass
+-- COMPLETE SCHEMA: Base tables + Admin features + RLS policies
+-- 
+-- USAGE:
+-- 1. Open Supabase Dashboard → SQL Editor
+-- 2. Copy and paste this ENTIRE file
+-- 3. Click "Run" to execute
+-- 4. Wait for success message
+-- 5. Create admin user in Supabase Auth (email: admin@gmail.com)
+-- 6. Login to mobile app as admin@gmail.com
+--
+-- NOTE: This is a CLEAN INSTALL - drops existing tables and recreates everything
 -- ============================================================================
 
--- Drop existing tables if they exist (clean slate)
+-- Drop existing tables if they exist (clean installation)
 DROP TABLE IF EXISTS defect_media CASCADE;
 DROP TABLE IF EXISTS defects CASCADE;
+DROP TABLE IF EXISTS inspections CASCADE;
 DROP TABLE IF EXISTS sites CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
 
 -- Drop existing views
+DROP VIEW IF EXISTS admin_officer_stats CASCADE;
 DROP VIEW IF EXISTS inspection_details CASCADE;
 DROP VIEW IF EXISTS defects_with_media CASCADE;
 DROP VIEW IF EXISTS sites_with_defect_count CASCADE;
 
 -- Drop existing functions
+DROP FUNCTION IF EXISTS update_inspection_defect_counts() CASCADE;
+DROP FUNCTION IF EXISTS handle_new_user() CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 DROP FUNCTION IF EXISTS update_site_location() CASCADE;
+DROP FUNCTION IF EXISTS is_admin() CASCADE;
+DROP FUNCTION IF EXISTS get_user_role(UUID) CASCADE;
+
+-- Drop existing triggers
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -46,7 +65,47 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- TABLE 1: sites
+-- SET ADMIN ROLE (if admin@gmail.com exists)
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@gmail.com') THEN
+        UPDATE auth.users 
+        SET raw_user_meta_data = raw_user_meta_data || '{"role": "admin", "full_name": "Administrator"}'::jsonb
+        WHERE email = 'admin@gmail.com';
+        RAISE NOTICE 'Updated admin@gmail.com with admin role metadata';
+    END IF;
+END $$;
+
+-- ============================================================================
+-- TABLE 1: profiles (User Profiles - NEW FOR ADMIN)
+-- ============================================================================
+
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    full_name TEXT,
+    role TEXT NOT NULL DEFAULT 'officer' CHECK (role IN ('admin', 'officer')),
+    phone TEXT,
+    department TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_role ON profiles(role);
+CREATE INDEX idx_profiles_is_active ON profiles(is_active);
+CREATE INDEX idx_profiles_created_at ON profiles(created_at DESC);
+
+CREATE TRIGGER update_profiles_updated_at 
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- TABLE 2: sites
 -- ============================================================================
 
 CREATE TABLE sites (
@@ -110,7 +169,7 @@ CREATE TRIGGER update_site_location_trigger
     EXECUTE FUNCTION update_site_location();
 
 -- ============================================================================
--- TABLE 2: defects
+-- TABLE 3: defects
 -- ============================================================================
 
 CREATE TABLE defects (
@@ -159,7 +218,7 @@ CREATE TRIGGER update_defects_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- TABLE 3: defect_media
+-- TABLE 4: defect_media
 -- ============================================================================
 
 CREATE TABLE defect_media (
@@ -201,6 +260,164 @@ CREATE INDEX idx_defect_media_defect_id ON defect_media(defect_id);
 CREATE INDEX idx_defect_media_building_ref ON defect_media(building_reference_no);
 CREATE INDEX idx_defect_media_uploaded_at ON defect_media(uploaded_at DESC);
 CREATE INDEX idx_defect_media_uploaded_by ON defect_media(uploaded_by);
+
+-- ============================================================================
+-- TABLE 5: inspections (NEW FOR ADMIN)
+-- ============================================================================
+
+CREATE TABLE inspections (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    building_reference_no TEXT NOT NULL,
+    
+    site_name TEXT,
+    site_location TEXT,
+    inspection_date DATE DEFAULT CURRENT_DATE,
+    
+    total_defects INTEGER DEFAULT 0,
+    defects_with_photos INTEGER DEFAULT 0,
+    
+    sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CONSTRAINT fk_inspections_building_ref 
+        FOREIGN KEY (building_reference_no) 
+        REFERENCES sites(building_reference_no) 
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_inspections_user_id ON inspections(user_id);
+CREATE INDEX idx_inspections_site_id ON inspections(site_id);
+CREATE INDEX idx_inspections_building_ref ON inspections(building_reference_no);
+CREATE INDEX idx_inspections_sync_status ON inspections(sync_status);
+CREATE INDEX idx_inspections_date ON inspections(inspection_date DESC);
+CREATE INDEX idx_inspections_created_at ON inspections(created_at DESC);
+
+CREATE TRIGGER update_inspections_updated_at 
+    BEFORE UPDATE ON inspections
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- ADMIN FUNCTIONS
+-- ============================================================================
+
+-- Helper function to get user role (bypasses RLS to prevent infinite recursion)
+CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+    user_role TEXT;
+BEGIN
+    SELECT role INTO user_role FROM public.profiles WHERE id = user_id;
+    RETURN user_role;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function to check if current user is admin (with better error handling)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+DECLARE
+    user_role TEXT;
+    user_active BOOLEAN;
+BEGIN
+    -- Get role and active status
+    SELECT role, is_active INTO user_role, user_active
+    FROM public.profiles
+    WHERE id = auth.uid();
+    
+    -- Return true only if admin and active
+    RETURN (user_role = 'admin' AND user_active = true);
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- Auto-create profile when new user is created
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, full_name, role)
+    VALUES (
+        NEW.id, 
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'role', 'officer')
+    )
+    ON CONFLICT (id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Update inspection defect counts when defects change
+CREATE OR REPLACE FUNCTION public.update_inspection_defect_counts()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE inspections i
+    SET 
+        total_defects = (
+            SELECT COUNT(*) 
+            FROM defects d 
+            WHERE d.building_reference_no = i.building_reference_no
+        ),
+        defects_with_photos = (
+            SELECT COUNT(*) 
+            FROM defects d 
+            WHERE d.building_reference_no = i.building_reference_no 
+            AND d.photo_path IS NOT NULL
+        ),
+        updated_at = NOW()
+    WHERE i.building_reference_no = COALESCE(NEW.building_reference_no, OLD.building_reference_no);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER update_inspection_counts_on_defect_change
+    AFTER INSERT OR UPDATE OR DELETE ON defects
+    FOR EACH ROW 
+    EXECUTE FUNCTION public.update_inspection_defect_counts();
+
+-- ============================================================================
+-- FIX ADMIN PROFILE AND MISSING USER PROFILES
+-- ============================================================================
+
+-- Ensure admin@gmail.com has a profile with admin role
+INSERT INTO public.profiles (id, email, full_name, role, is_active)
+SELECT 
+    id,
+    email,
+    COALESCE(raw_user_meta_data->>'full_name', 'Administrator'),
+    'admin',
+    true
+FROM auth.users
+WHERE email = 'admin@gmail.com'
+ON CONFLICT (id) DO UPDATE
+SET 
+    role = 'admin',
+    is_active = true,
+    full_name = COALESCE(EXCLUDED.full_name, profiles.full_name);
+
+-- Create profiles for any auth users that don't have one yet
+INSERT INTO public.profiles (id, email, full_name, role, is_active)
+SELECT 
+    u.id,
+    u.email,
+    COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', 'Officer'),
+    COALESCE(u.raw_user_meta_data->>'role', 'officer'),
+    true
+FROM auth.users u
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.profiles p WHERE p.id = u.id
+)
+AND u.email != 'admin@gmail.com';
 
 -- ============================================================================
 -- VIEWS
@@ -249,113 +466,114 @@ LEFT JOIN defects d ON s.building_reference_no = d.building_reference_no
 LEFT JOIN defect_media dm ON d.defect_id = dm.defect_id
 GROUP BY s.id, d.defect_id;
 
+CREATE VIEW admin_officer_stats AS
+SELECT 
+    p.id,
+    p.email,
+    p.full_name,
+    p.phone,
+    p.department,
+    p.is_active,
+    p.created_at,
+    COUNT(DISTINCT i.id) as total_inspections,
+    COUNT(DISTINCT s.id) as total_sites,
+    COUNT(DISTINCT d.defect_id) as total_defects,
+    MAX(i.created_at) as last_inspection_date
+FROM profiles p
+LEFT JOIN inspections i ON i.user_id = p.id
+LEFT JOIN sites s ON s.created_by = p.id
+LEFT JOIN defects d ON d.building_reference_no = s.building_reference_no
+WHERE p.role = 'officer'
+GROUP BY p.id
+ORDER BY p.created_at DESC;
+
 -- ============================================================================
--- ROW LEVEL SECURITY (STRICT - NO NULL BYPASS)
+-- ROW LEVEL SECURITY (RLS)
 -- ============================================================================
 
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE defects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE defect_media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 
--- Sites policies - STRICT: Only access your own data
-CREATE POLICY "sites_select_policy" ON sites
-    FOR SELECT USING (created_by = auth.uid());
+-- Profiles policies
+CREATE POLICY "profiles_select_all" ON profiles FOR SELECT USING (true);
+CREATE POLICY "profiles_update_own" ON profiles FOR UPDATE USING (id = auth.uid());
+CREATE POLICY "profiles_insert_own" ON profiles FOR INSERT WITH CHECK (id = auth.uid());
+CREATE POLICY "profiles_admin_all" ON profiles FOR ALL USING (public.is_admin());
 
-CREATE POLICY "sites_insert_policy" ON sites
-    FOR INSERT WITH CHECK (created_by = auth.uid());
+-- Sites policies - officers
+CREATE POLICY "sites_select_policy" ON sites FOR SELECT USING (created_by = auth.uid());
+CREATE POLICY "sites_insert_policy" ON sites FOR INSERT WITH CHECK (created_by = auth.uid());
+CREATE POLICY "sites_update_policy" ON sites FOR UPDATE USING (created_by = auth.uid());
+CREATE POLICY "sites_delete_policy" ON sites FOR DELETE USING (created_by = auth.uid());
 
-CREATE POLICY "sites_update_policy" ON sites
-    FOR UPDATE USING (created_by = auth.uid());
+-- Sites policy - admins
+CREATE POLICY "sites_admin_all" ON sites FOR ALL USING (public.is_admin());
 
-CREATE POLICY "sites_delete_policy" ON sites
-    FOR DELETE USING (created_by = auth.uid());
+-- Defects policies - officers
+CREATE POLICY "defects_select_policy" ON defects FOR SELECT USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defects.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "defects_insert_policy" ON defects FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defects.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "defects_update_policy" ON defects FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defects.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "defects_delete_policy" ON defects FOR DELETE USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defects.building_reference_no AND sites.created_by = auth.uid())
+);
 
--- Defects policies - STRICT: Access only if parent site belongs to you
-CREATE POLICY "defects_select_policy" ON defects
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defects.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Defects policy - admins
+CREATE POLICY "defects_admin_all" ON defects FOR ALL USING (public.is_admin());
 
-CREATE POLICY "defects_insert_policy" ON defects
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defects.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Media policies - officers
+CREATE POLICY "media_select_policy" ON defect_media FOR SELECT USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defect_media.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "media_insert_policy" ON defect_media FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defect_media.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "media_update_policy" ON defect_media FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defect_media.building_reference_no AND sites.created_by = auth.uid())
+);
+CREATE POLICY "media_delete_policy" ON defect_media FOR DELETE USING (
+    EXISTS (SELECT 1 FROM sites WHERE sites.building_reference_no = defect_media.building_reference_no AND sites.created_by = auth.uid())
+);
 
-CREATE POLICY "defects_update_policy" ON defects
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defects.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Media policy - admins
+CREATE POLICY "media_admin_all" ON defect_media FOR ALL USING (public.is_admin());
 
-CREATE POLICY "defects_delete_policy" ON defects
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defects.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Inspections policies - officers (own data only)
+CREATE POLICY "inspections_select_own" ON inspections FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "inspections_insert_own" ON inspections FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "inspections_update_own" ON inspections FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY "inspections_delete_own" ON inspections FOR DELETE USING (user_id = auth.uid());
 
--- Media policies - STRICT: Access only if parent site belongs to you
-CREATE POLICY "media_select_policy" ON defect_media
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defect_media.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Inspections policies - admins (all data)
+CREATE POLICY "inspections_admin_select" ON inspections FOR SELECT USING (public.is_admin());
+CREATE POLICY "inspections_admin_insert" ON inspections FOR INSERT WITH CHECK (public.is_admin());
+CREATE POLICY "inspections_admin_update" ON inspections FOR UPDATE USING (public.is_admin());
+CREATE POLICY "inspections_admin_delete" ON inspections FOR DELETE USING (public.is_admin());
 
-CREATE POLICY "media_insert_policy" ON defect_media
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defect_media.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
-
-CREATE POLICY "media_update_policy" ON defect_media
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defect_media.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
-
-CREATE POLICY "media_delete_policy" ON defect_media
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM sites 
-            WHERE sites.building_reference_no = defect_media.building_reference_no 
-            AND sites.created_by = auth.uid()
-        )
-    );
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 
 -- ============================================================================
 -- STORAGE CONFIGURATION
 -- ============================================================================
 
--- Create storage bucket for inspection photos if it doesn't exist
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
     'inspection-photos', 
     'inspection-photos', 
     true,
-    10485760,  -- 10 MB
-    NULL  -- NULL allows all MIME types
+    10485760,
+    NULL
 )
 ON CONFLICT (id) DO UPDATE 
 SET 
@@ -363,61 +581,144 @@ SET
     file_size_limit = 10485760,
     allowed_mime_types = NULL;
 
--- Drop existing storage policies to avoid conflicts
 DROP POLICY IF EXISTS "Allow public uploads to inspection-photos" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public access to inspection-photos" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public deletes to inspection-photos" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public updates to inspection-photos" ON storage.objects;
 
--- Create storage policies for inspection-photos bucket
--- Allow anyone to upload (INSERT)
 CREATE POLICY "Allow public uploads to inspection-photos"
-ON storage.objects
-FOR INSERT
-TO public
+ON storage.objects FOR INSERT TO public
 WITH CHECK (bucket_id = 'inspection-photos');
 
--- Allow anyone to view/download (SELECT)
 CREATE POLICY "Allow public access to inspection-photos"
-ON storage.objects
-FOR SELECT
-TO public
+ON storage.objects FOR SELECT TO public
 USING (bucket_id = 'inspection-photos');
 
--- Allow anyone to update (UPDATE)
 CREATE POLICY "Allow public updates to inspection-photos"
-ON storage.objects
-FOR UPDATE
-TO public
+ON storage.objects FOR UPDATE TO public
 USING (bucket_id = 'inspection-photos')
 WITH CHECK (bucket_id = 'inspection-photos');
 
--- Allow anyone to delete (DELETE)
 CREATE POLICY "Allow public deletes to inspection-photos"
-ON storage.objects
-FOR DELETE
-TO public
+ON storage.objects FOR DELETE TO public
 USING (bucket_id = 'inspection-photos');
 
 -- ============================================================================
--- SCHEMA READY FOR USE
+-- AUTO-CREATE INSPECTIONS FROM SITES
 -- ============================================================================
+-- When officers upload sites, automatically create inspection records
+-- This keeps the inspections table synced with sites
+
+CREATE OR REPLACE FUNCTION public.auto_create_inspection()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert inspection record when a new site is created
+    INSERT INTO inspections (
+        site_id,
+        user_id,
+        building_reference_no,
+        site_name,
+        site_location,
+        inspection_date,
+        total_defects,
+        defects_with_photos,
+        sync_status
+    ) VALUES (
+        NEW.id,
+        NEW.created_by,
+        NEW.building_reference_no,
+        NEW.owner_name,
+        NEW.site_address,
+        CURRENT_DATE,
+        0,
+        0,
+        NEW.sync_status
+    )
+    ON CONFLICT (building_reference_no) DO NOTHING;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Add unique constraint to prevent duplicates
+ALTER TABLE inspections DROP CONSTRAINT IF EXISTS uk_inspections_building_ref;
+ALTER TABLE inspections ADD CONSTRAINT uk_inspections_building_ref 
+    UNIQUE (building_reference_no);
+
+-- Create trigger to auto-create inspections
+DROP TRIGGER IF EXISTS auto_create_inspection_trigger ON sites;
+CREATE TRIGGER auto_create_inspection_trigger
+    AFTER INSERT ON sites
+    FOR EACH ROW 
+    EXECUTE FUNCTION public.auto_create_inspection();
+
+-- ============================================================================
+-- VERIFY AND CREATE ADMIN PROFILE
+-- ============================================================================
+
+DO $$
+DECLARE
+    admin_user_id UUID;
+BEGIN
+    SELECT id INTO admin_user_id FROM auth.users WHERE email = 'admin@gmail.com';
+    
+    IF admin_user_id IS NOT NULL THEN
+        INSERT INTO profiles (id, email, full_name, role, is_active)
+        VALUES (admin_user_id, 'admin@gmail.com', 'Administrator', 'admin', true)
+        ON CONFLICT (id) DO UPDATE SET role = 'admin', full_name = 'Administrator', is_active = true;
+        
+        RAISE NOTICE '✓ Admin profile created for admin@gmail.com (ID: %)', admin_user_id;
+    ELSE
+        RAISE NOTICE '⚠ admin@gmail.com not found - create user first in Supabase Auth';
+    END IF;
+END $$;
+
+-- ============================================================================
+-- SYNC EXISTING SITES TO INSPECTIONS (if any exist)
+-- ============================================================================
+
+INSERT INTO inspections (
+    site_id,
+    user_id,
+    building_reference_no,
+    site_name,
+    site_location,
+    inspection_date,
+    total_defects,
+    defects_with_photos,
+    sync_status
+)
+SELECT 
+    s.id,
+    s.created_by,
+    s.building_reference_no,
+    s.owner_name,
+    s.site_address,
+    CURRENT_DATE,
+    COALESCE(COUNT(DISTINCT d.defect_id), 0),
+    COALESCE(COUNT(DISTINCT CASE WHEN d.photo_path IS NOT NULL THEN d.defect_id END), 0),
+    s.sync_status
+FROM sites s
+LEFT JOIN defects d ON d.building_reference_no = s.building_reference_no
+WHERE NOT EXISTS (
+    SELECT 1 FROM inspections i 
+    WHERE i.building_reference_no = s.building_reference_no
+)
+GROUP BY s.id, s.created_by, s.building_reference_no, s.owner_name, s.site_address, s.sync_status;
+
+-- ============================================================================
+-- COMPLETION
+-- ============================================================================
+
 DO $$ 
 BEGIN 
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'Schema created successfully!';
+    RAISE NOTICE '✓✓✓ SCHEMA COMPLETE! ✓✓✓';
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'Tables: sites, defects, defect_media';
-    RAISE NOTICE 'Views: sites_with_defect_count, defects_with_media, inspection_details';
-    RAISE NOTICE 'RLS Policies: STRICT USER ISOLATION ENABLED';
-    RAISE NOTICE '  - Users can ONLY see their own inspections';
-    RAISE NOTICE '  - No NULL bypass - created_by is required';
-    RAISE NOTICE 'Storage: inspection-photos bucket configured with public access';
-    RAISE NOTICE 'IMPORTANT: defects table uses defect_id (TEXT) and building_reference_no (TEXT)';
-    RAISE NOTICE '========================================';
-    RAISE NOTICE 'Next Steps:';
-    RAISE NOTICE '1. Ensure app code sets created_by field';
-    RAISE NOTICE '2. Create test users in Supabase Auth';
-    RAISE NOTICE '3. Test user isolation by logging in as different users';
+    RAISE NOTICE 'Tables: profiles, sites, defects, defect_media, inspections';
+    RAISE NOTICE 'RLS: STRICT user isolation + admin bypass';
+    RAISE NOTICE 'Storage: inspection-photos bucket ready';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Next: Login with admin@gmail.com in Flutter app!';
     RAISE NOTICE '========================================';
 END $$;
