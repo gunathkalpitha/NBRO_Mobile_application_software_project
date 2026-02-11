@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Controls the NavigationRail expanded/collapsed state from child screens
-class NavRailController {
-  // Whether the rail panel is visible at all
+/// Controls the NavigationRail expanded/collapsed state for Admin
+class AdminNavRailController {
   static final ValueNotifier<bool> isVisible = ValueNotifier<bool>(false);
-  // Whether the rail shows labels (extended) when visible
   static final ValueNotifier<bool> isExtended = ValueNotifier<bool>(true);
 
   static void toggleVisibility() => isVisible.value = !isVisible.value;
@@ -17,14 +15,14 @@ class NavRailController {
   static void setExtended(bool value) => isExtended.value = value;
 }
 
-enum NavItem { dashboard, inspection, analysis, reports, help, settings }
+enum AdminNavItem { dashboard, officers, inspections, profile }
 
-class AppShell extends StatefulWidget {
+class AdminAppShell extends StatefulWidget {
   final Widget child;
-  final NavItem currentItem;
-  final Function(NavItem) onNavItemSelected;
+  final AdminNavItem currentItem;
+  final Function(AdminNavItem) onNavItemSelected;
 
-  const AppShell({
+  const AdminAppShell({
     super.key,
     required this.child,
     required this.currentItem,
@@ -32,34 +30,33 @@ class AppShell extends StatefulWidget {
   });
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  State<AdminAppShell> createState() => _AdminAppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AdminAppShellState extends State<AdminAppShell> {
   @override
   Widget build(BuildContext context) {
-    // Unified layout with slide-in side navigation for all devices
     return Stack(
       children: [
-        // Main content - directly render without Positioned.fill
+        // Main content
         widget.child,
 
-        // Optional dimmed scrim when rail is visible (click to close)
+        // Optional dimmed scrim when rail is visible
         ValueListenableBuilder<bool>(
-          valueListenable: NavRailController.isVisible,
+          valueListenable: AdminNavRailController.isVisible,
           builder: (_, visible, __) => visible
               ? Positioned.fill(
                   child: GestureDetector(
-                    onTap: NavRailController.hide,
+                    onTap: AdminNavRailController.hide,
                     child: Container(color: Colors.black.withValues(alpha: 0.3)),
                   ),
                 )
               : const SizedBox.shrink(),
         ),
 
-        // Slide-in side navigation rail (all devices)
+        // Slide-in side navigation rail
         ValueListenableBuilder<bool>(
-          valueListenable: NavRailController.isVisible,
+          valueListenable: AdminNavRailController.isVisible,
           builder: (_, visible, __) => AnimatedPositioned(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOut,
@@ -71,7 +68,7 @@ class _AppShellState extends State<AppShell> {
               elevation: 16,
               shadowColor: NBROColors.primary.withValues(alpha: 0.3),
               child: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -133,7 +130,7 @@ class _AppShellState extends State<AppShell> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Field Surveyor',
+                              'Admin Panel',
                               style: TextStyle(
                                 color: NBROColors.white.withValues(alpha: 0.85),
                                 fontSize: 13,
@@ -152,40 +149,31 @@ class _AppShellState extends State<AppShell> {
                         child: ListView(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           children: [
-                            _NavItem(
+                            _AdminNavItem(
                               icon: Icons.dashboard_rounded,
                               label: 'Dashboard',
-                              isSelected: widget.currentItem == NavItem.dashboard,
+                              isSelected: widget.currentItem == AdminNavItem.dashboard,
                               onTap: () {
-                                widget.onNavItemSelected(NavItem.dashboard);
-                                NavRailController.hide();
+                                widget.onNavItemSelected(AdminNavItem.dashboard);
+                                AdminNavRailController.hide();
                               },
                             ),
-                            _NavItem(
+                            _AdminNavItem(
+                              icon: Icons.people_rounded,
+                              label: 'Officers',
+                              isSelected: widget.currentItem == AdminNavItem.officers,
+                              onTap: () {
+                                widget.onNavItemSelected(AdminNavItem.officers);
+                                AdminNavRailController.hide();
+                              },
+                            ),
+                            _AdminNavItem(
                               icon: Icons.assignment_rounded,
                               label: 'Inspections',
-                              isSelected: widget.currentItem == NavItem.inspection,
+                              isSelected: widget.currentItem == AdminNavItem.inspections,
                               onTap: () {
-                                widget.onNavItemSelected(NavItem.inspection);
-                                NavRailController.hide();
-                              },
-                            ),
-                            _NavItem(
-                              icon: Icons.analytics_rounded,
-                              label: 'Analytics',
-                              isSelected: widget.currentItem == NavItem.analysis,
-                              onTap: () {
-                                widget.onNavItemSelected(NavItem.analysis);
-                                NavRailController.hide();
-                              },
-                            ),
-                            _NavItem(
-                              icon: Icons.folder_rounded,
-                              label: 'Reports',
-                              isSelected: widget.currentItem == NavItem.reports,
-                              onTap: () {
-                                NavRailController.hide();
-                                widget.onNavItemSelected(NavItem.reports);
+                                widget.onNavItemSelected(AdminNavItem.inspections);
+                                AdminNavRailController.hide();
                               },
                             ),
                             const SizedBox(height: 16),
@@ -197,22 +185,13 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            _NavItem(
-                              icon: Icons.help_rounded,
-                              label: 'Help & Support',
-                              isSelected: widget.currentItem == NavItem.help,
+                            _AdminNavItem(
+                              icon: Icons.admin_panel_settings_rounded,
+                              label: 'Profile',
+                              isSelected: widget.currentItem == AdminNavItem.profile,
                               onTap: () {
-                                NavRailController.hide();
-                                widget.onNavItemSelected(NavItem.help);
-                              },
-                            ),
-                            _NavItem(
-                              icon: Icons.settings_rounded,
-                              label: 'Settings',
-                              isSelected: widget.currentItem == NavItem.settings,
-                              onTap: () {
-                                widget.onNavItemSelected(NavItem.settings);
-                                NavRailController.hide();
+                                widget.onNavItemSelected(AdminNavItem.profile);
+                                AdminNavRailController.hide();
                               },
                             ),
                           ],
@@ -230,7 +209,7 @@ class _AppShellState extends State<AppShell> {
                             ),
                           ),
                         ),
-                        child: _UserInfoSection(),
+                        child: const _AdminUserInfoSection(),
                       ),
                     ],
                   ),
@@ -245,13 +224,13 @@ class _AppShellState extends State<AppShell> {
 }
 
 // Custom Navigation Item Widget
-class _NavItem extends StatelessWidget {
+class _AdminNavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _NavItem({
+  const _AdminNavItem({
     required this.icon,
     required this.label,
     required this.isSelected,
@@ -323,29 +302,23 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// User Info Section Widget
-class _UserInfoSection extends StatelessWidget {
-  const _UserInfoSection();
+// Admin User Info Section Widget
+class _AdminUserInfoSection extends StatelessWidget {
+  const _AdminUserInfoSection();
 
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     
-    // Get user name and email
-    String userName = 'Guest User';
-    String userEmail = '';
-    String initials = 'GU';
+    String userName = 'Admin';
+    String initials = 'AD';
     
     if (user != null) {
-      // Try to get name from user metadata first
       userName = user.userMetadata?['full_name'] ?? 
                  user.userMetadata?['name'] ?? 
                  user.email?.split('@').first ?? 
-                 'User';
+                 'Admin';
       
-      userEmail = user.email ?? '';
-      
-      // Generate initials from name
       final nameParts = userName.split(' ');
       if (nameParts.length >= 2) {
         initials = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
@@ -361,7 +334,7 @@ class _UserInfoSection extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(
-              color: NBROColors.accent.withValues(alpha: 0.5),
+              color: NBROColors.white.withValues(alpha: 0.5),
               width: 2,
             ),
           ),
@@ -395,26 +368,15 @@ class _UserInfoSection extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              if (userEmail.isNotEmpty)
-                Text(
-                  userEmail,
-                  style: TextStyle(
-                    color: NBROColors.white.withValues(alpha: 0.7),
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              else
-                Text(
-                  'Field Officer',
-                  style: TextStyle(
-                    color: NBROColors.white.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Text(
+                'Administrator',
+                style: TextStyle(
+                  color: NBROColors.white.withValues(alpha: 0.7),
+                  fontSize: 11,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -430,7 +392,7 @@ class _UserInfoSection extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),
             onPressed: () async {
-              NavRailController.hide();
+              AdminNavRailController.hide();
               await Supabase.instance.client.auth.signOut();
               if (context.mounted) {
                 Navigator.of(context).pushReplacementNamed('/login');

@@ -23,13 +23,12 @@ void main() async {
 
 Future<void> _initSupabaseAsync() async {
   try {
-    await Future.delayed(Duration.zero); // Non-blocking
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
       debug: false,
     ).timeout(
-      const Duration(seconds: 5),
+      const Duration(seconds: 2),
     );
     debugPrint('[Main] Supabase initialized');
   } catch (e) {
