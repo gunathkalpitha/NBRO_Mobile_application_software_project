@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import 'change_password_screen.dart';
 
 class AdminProfileScreen extends StatefulWidget {
-  const AdminProfileScreen({super.key});
+  final bool embedded;
+  
+  const AdminProfileScreen({super.key, this.embedded = false});
 
   @override
   State<AdminProfileScreen> createState() => _AdminProfileScreenState();
@@ -61,8 +64,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile updated successfully!'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: NBROColors.white),
+                SizedBox(width: 12),
+                Text('Profile updated successfully!'),
+              ],
+            ),
             backgroundColor: NBROColors.success,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -71,8 +81,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: NBROColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error updating profile: $e')),
+              ],
+            ),
             backgroundColor: NBROColors.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -85,7 +102,16 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
+        title: Row(
+          children: [
+            Icon(
+              Icons.logout,
+              color: NBROColors.error,
+            ),
+            const SizedBox(width: 12),
+            const Text('Sign Out'),
+          ],
+        ),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
@@ -114,8 +140,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error signing out: $e'),
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: NBROColors.white),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('Error signing out: $e')),
+                ],
+              ),
               backgroundColor: NBROColors.error,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -153,6 +186,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 icon: const Icon(Icons.arrow_back, color: NBROColors.white),
                 onPressed: () => Navigator.pop(context),
               ),
+              automaticallyImplyLeading: true,
               title: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -352,10 +386,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             subtitle: const Text('Update your password'),
                             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                             onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Password change feature coming soon'),
-                                  behavior: SnackBarBehavior.floating,
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const ChangePasswordScreen(),
                                 ),
                               );
                             },

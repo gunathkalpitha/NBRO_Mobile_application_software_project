@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import 'dart:math';
 
 class AdminOfficersScreen extends StatefulWidget {
-  const AdminOfficersScreen({super.key});
+  final bool embedded;
+  
+  const AdminOfficersScreen({super.key, this.embedded = false});
 
   @override
   State<AdminOfficersScreen> createState() => _AdminOfficersScreenState();
@@ -14,6 +17,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   bool _isLoading = true;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _isAutoGeneratePassword = true;
 
   @override
   void initState() {
@@ -25,6 +31,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   void dispose() {
     _emailController.dispose();
     _nameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -48,8 +55,15 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading officers: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: NBROColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error loading officers: $e')),
+              ],
+            ),
             backgroundColor: NBROColors.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -57,58 +71,374 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   }
 
   Future<void> _addOfficer() async {
+    // Validate inputs
     if (_emailController.text.trim().isEmpty || _nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter both email and name'),
-          backgroundColor: NBROColors.warning,
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_outlined, color: NBROColors.white),
+              SizedBox(width: 12),
+              Text('Please enter email and name'),
+            ],
+          ),
+          backgroundColor: NBROColors.darkGrey,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
+    // Generate or use provided password
+    final password = _isAutoGeneratePassword 
+        ? _generateRandomPassword() 
+        : _passwordController.text.trim();
+
+    if (!_isAutoGeneratePassword && password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_outlined, color: NBROColors.white),
+              SizedBox(width: 12),
+              Text('Please enter a password'),
+            ],
+          ),
+          backgroundColor: NBROColors.darkGrey,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_outlined, color: NBROColors.white),
+              SizedBox(width: 12),
+              Text('Password must be at least 6 characters'),
+            ],
+          ),
+          backgroundColor: NBROColors.darkGrey,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Close add officer dialog and show loading
+    Navigator.pop(context);
+    
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Creating officer account...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     try {
       final supabase = Supabase.instance.client;
       
-      // In a real app, you would send an invitation email
-      // For now, we'll create a profile entry
-      await supabase.from('profiles').insert({
-        'email': _emailController.text.trim(),
-        'full_name': _nameController.text.trim(),
-        'role': 'officer',
-      });
-
-      _emailController.clear();
-      _nameController.clear();
-      
-      if (!mounted) return;
-      Navigator.pop(context);
-      _loadOfficers();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Officer added successfully!'),
-          backgroundColor: NBROColors.success,
-        ),
+      // Call Supabase Edge Function to create officer
+      final response = await supabase.functions.invoke(
+        'create-officer',
+        body: {
+          'email': _emailController.text.trim(),
+          'fullName': _nameController.text.trim(),
+          'password': password,
+        },
       );
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      if (response.status == 200) {
+        _showPasswordDialog(
+          _emailController.text.trim(),
+          password,
+        );
+
+        _emailController.clear();
+        _nameController.clear();
+        _passwordController.clear();
+        await _loadOfficers();
+      } else {
+        final error = response.data['error'] ?? 'Unknown error occurred';
+        throw Exception(error);
+      }
+      
     } catch (e) {
       debugPrint('Error adding officer: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding officer: $e'),
-          backgroundColor: NBROColors.error,
-        ),
-      );
+      Navigator.pop(context); // Close loading dialog
+      
+      // Check if it's an edge function not found error
+      final errorMessage = e.toString();
+      if (errorMessage.contains('FunctionsRelayError') || 
+          errorMessage.contains('not found') ||
+          errorMessage.contains('404')) {
+        _showEdgeFunctionSetupDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: NBROColors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: NBROColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
+  }
+
+  String _generateRandomPassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#\$%^&*';
+    final random = Random.secure();
+    return List.generate(12, (_) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  void _showEdgeFunctionSetupDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: NBROColors.info),
+            SizedBox(width: 12),
+            Text('Edge Function Setup Required'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The create-officer Edge Function needs to be deployed.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text('Follow these steps:'),
+              const SizedBox(height: 12),
+              const Text('1. Install Supabase CLI:'),
+              Container(
+                margin: const EdgeInsets.only(left: 16, top: 4),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: NBROColors.darkGrey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'npm install -g supabase',
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('2. Deploy the function:'),
+              Container(
+                margin: const EdgeInsets.only(left: 16, top: 4),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: NBROColors.darkGrey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'supabase functions deploy create-officer',
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: NBROColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'See EDGE_FUNCTION_SETUP.md for detailed instructions.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                'Alternative: Create manually in Supabase Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Go to Dashboard → Authentication → Users → Add user',
+                style: TextStyle(fontSize: 12, color: NBROColors.grey),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPasswordDialog(String email, String password) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: NBROColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.check_circle, color: NBROColors.success),
+            ),
+            const SizedBox(width: 12),
+            const Text('Officer Created'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Officer account created successfully!',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: NBROColors.light,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: NBROColors.grey.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Login Credentials',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: NBROColors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.email, size: 16, color: NBROColors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          email,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.lock, size: 16, color: NBROColors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          password,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: NBROColors.info.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: NBROColors.info,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Share these credentials with the officer. They can change their password after first login.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: NBROColors.info,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _removeOfficer(String officerId, String officerName) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Officer'),
-        content: Text('Are you sure you want to remove $officerName?'),
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_outlined,
+              color: NBROColors.error,
+            ),
+            const SizedBox(width: 12),
+            const Text('Remove Officer'),
+          ],
+        ),
+        content: Text('Are you sure you want to remove $officerName? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -128,6 +458,15 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     if (confirmed == true) {
       try {
         final supabase = Supabase.instance.client;
+        
+        // Delete user from auth (requires admin privileges)
+        try {
+          await supabase.auth.admin.deleteUser(officerId);
+        } catch (e) {
+          debugPrint('Note: Could not delete from auth (admin privilege may be required): $e');
+        }
+        
+        // Delete from profiles table
         await supabase
             .from('profiles')
             .delete()
@@ -138,8 +477,15 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Officer removed successfully'),
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: NBROColors.white),
+                  SizedBox(width: 12),
+                  Text('Officer removed successfully'),
+                ],
+              ),
               backgroundColor: NBROColors.success,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -148,8 +494,15 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error removing officer: $e'),
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: NBROColors.white),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('Error removing officer: $e')),
+                ],
+              ),
               backgroundColor: NBROColors.error,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
@@ -158,47 +511,127 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   }
 
   void _showAddOfficerDialog() {
+    // Reset controllers
+    _emailController.clear();
+    _nameController.clear();
+    _passwordController.clear();
+    _isAutoGeneratePassword = true;
+    _obscurePassword = true;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Officer'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: Icon(Icons.person),
-                border: OutlineInputBorder(),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: NBROColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.person_add, color: NBROColors.primary),
               ),
+              const SizedBox(width: 12),
+              const Text('Add New Officer'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name',
+                    prefixIcon: const Icon(Icons.person),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: NBROColors.light,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: NBROColors.light,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                
+                // Password generation option
+                SwitchListTile(
+                  title: const Text('Auto-generate password'),
+                  subtitle: const Text('System will create a secure password'),
+                  value: _isAutoGeneratePassword,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      _isAutoGeneratePassword = value;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+                
+                if (!_isAutoGeneratePassword) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: NBROColors.light,
+                      helperText: 'Minimum 6 characters',
+                    ),
+                    obscureText: _obscurePassword,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _emailController.clear();
+                _nameController.clear();
+                _passwordController.clear();
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: _addOfficer,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Officer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: NBROColors.primary,
               ),
-              keyboardType: TextInputType.emailAddress,
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _emailController.clear();
-              _nameController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: _addOfficer,
-            child: const Text('Add Officer'),
-          ),
-        ],
       ),
     );
   }
@@ -233,6 +666,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 icon: const Icon(Icons.arrow_back, color: NBROColors.white),
                 onPressed: () => Navigator.pop(context),
               ),
+              automaticallyImplyLeading: true,
               title: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
