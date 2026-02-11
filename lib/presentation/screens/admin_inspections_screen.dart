@@ -57,6 +57,17 @@ class _AdminInspectionsScreenState extends State<AdminInspectionsScreen> {
       
       debugPrint('Admin Inspections: Starting to load officers...');
       
+      // First, test if admin can see ANY inspections
+      try {
+        final testAllInspections = await supabase
+            .from('inspections')
+            .select('id, user_id')
+            .limit(10);
+        debugPrint('Admin Inspections: TEST - Can see ${(testAllInspections as List).length} total inspections');
+      } catch (e) {
+        debugPrint('Admin Inspections: TEST FAILED - Cannot query inspections: $e');
+      }
+      
       // Get all officers
       final officersResponse = await supabase
           .from('profiles')
@@ -72,20 +83,28 @@ class _AdminInspectionsScreenState extends State<AdminInspectionsScreen> {
 
       // Get all inspections grouped by officer
       for (var officer in _officers) {
-        debugPrint('Admin Inspections: Loading inspections for ${officer['full_name']}...');
+        debugPrint('Admin Inspections: Loading inspections for ${officer['full_name']} (${officer['email']}) - ID: ${officer['id']}');
         
         try {
           final inspectionsResponse = await supabase
               .from('inspections')
-              .select('id, site_name, site_location, inspection_date, sync_status, total_defects, created_at')
+              .select('id, site_name, site_location, inspection_date, sync_status, total_defects, created_at, user_id')
               .eq('user_id', officer['id'])
               .order('inspection_date', ascending: false);
 
           final inspections = List<Map<String, dynamic>>.from(inspectionsResponse as List);
           _inspectionsByOfficer[officer['id']] = inspections;
-          debugPrint('Admin Inspections: Found ${inspections.length} inspections for ${officer['full_name']}');
+          
+          if (inspections.isNotEmpty) {
+            debugPrint('Admin Inspections: ✓ Found ${inspections.length} inspections for ${officer['full_name']}');
+            for (var insp in inspections) {
+              debugPrint('  - ${insp['site_name']} (${insp['inspection_date']})');
+            }
+          } else {
+            debugPrint('Admin Inspections: ✗ Found 0 inspections for ${officer['full_name']}');
+          }
         } catch (e) {
-          debugPrint('Admin Inspections: Error loading inspections for officer ${officer['id']}: $e');
+          debugPrint('Admin Inspections: ERROR loading inspections for officer ${officer['id']}: $e');
           _inspectionsByOfficer[officer['id']] = [];
         }
       }
