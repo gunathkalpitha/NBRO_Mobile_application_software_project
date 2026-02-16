@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
-import '../widgets/admin_app_shell.dart';
-import 'admin_officers_screen.dart';
-import 'admin_inspections_screen.dart';
-import 'admin_profile_screen.dart';
+import 'admin/officers_screen.dart';
+import 'admin/inspections_management_screen.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   const AdminDashboardMain({super.key});
@@ -14,47 +12,6 @@ class AdminDashboardMain extends StatefulWidget {
 }
 
 class _AdminDashboardMainState extends State<AdminDashboardMain> {
-  AdminNavItem _currentNavItem = AdminNavItem.dashboard;
-
-  void _onNavItemSelected(AdminNavItem item) {
-    setState(() {
-      _currentNavItem = item;
-    });
-  }
-
-  Widget _getCurrentScreen() {
-    switch (_currentNavItem) {
-      case AdminNavItem.dashboard:
-        return AdminDashboardContent(onNavigate: _onNavItemSelected);
-      case AdminNavItem.officers:
-        return const AdminOfficersScreen(embedded: true);
-      case AdminNavItem.inspections:
-        return const AdminInspectionsScreen(embedded: true);
-      case AdminNavItem.profile:
-        return const AdminProfileScreen(embedded: true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AdminAppShell(
-      currentItem: _currentNavItem,
-      onNavItemSelected: _onNavItemSelected,
-      child: _getCurrentScreen(),
-    );
-  }
-}
-
-class AdminDashboardContent extends StatefulWidget {
-  final Function(AdminNavItem) onNavigate;
-  
-  const AdminDashboardContent({super.key, required this.onNavigate});
-
-  @override
-  State<AdminDashboardContent> createState() => _AdminDashboardContentState();
-}
-
-class _AdminDashboardContentState extends State<AdminDashboardContent> {
   int _totalOfficers = 0;
   int _totalInspections = 0;
   int _pendingInspections = 0;
@@ -124,15 +81,7 @@ class _AdminDashboardContentState extends State<AdminDashboardContent> {
               toolbarHeight: 80,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leadingWidth: 48,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: NBROColors.white),
-                iconSize: 24,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  AdminNavRailController.toggleVisibility();
-                },
-              ),
+              leadingWidth: 0,
               title: Row(
                 children: [
                   Container(
@@ -261,7 +210,7 @@ class _AdminDashboardContentState extends State<AdminDashboardContent> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const AdminOfficersScreen(embedded: false),
+                            builder: (context) => const AdminOfficersScreen(),
                           ),
                         );
                       },
@@ -276,7 +225,7 @@ class _AdminDashboardContentState extends State<AdminDashboardContent> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const AdminInspectionsScreen(embedded: false),
+                            builder: (context) => const AdminInspectionsManagementScreen(),
                           ),
                         );
                       },
