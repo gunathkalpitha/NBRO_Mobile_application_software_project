@@ -8,29 +8,29 @@ import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/state/inspection_bloc.dart';
 
-
 const supabaseUrl = 'https://bazelkzuwxcrmapbuzyp.supabase.co';
-const supabaseAnonKey = 'sb_publishable_5Bnp_FgN1eleESr03wE6tg_ZqrRqptl';
+const supabaseAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhemVsa3p1d3hjcm1hcGJ1enlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MjY0NTYsImV4cCI6MjA4NDQwMjQ1Nn0.bCuiTsDIXKKQaqPRVBcTfrp44APXtCAp8QpovVaBywk';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase in background (non-blocking)
-  _initSupabaseAsync();
+  // ✅ CRITICAL FIX: Must AWAIT Supabase init before runApp.
+  // Without await, currentSession is null when officers_screen calls the
+  // Edge Function, which sends "Bearer " with no token → 401 error.
+  await _initSupabase();
 
   runApp(const MyApp());
 }
 
-Future<void> _initSupabaseAsync() async {
+Future<void> _initSupabase() async {
   try {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
       debug: false,
-    ).timeout(
-      const Duration(seconds: 2),
     );
-    debugPrint('[Main] Supabase initialized');
+    debugPrint('[Main] Supabase initialized successfully');
   } catch (e) {
     debugPrint('[Main] Supabase init error: $e');
   }

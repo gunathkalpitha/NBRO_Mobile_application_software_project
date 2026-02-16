@@ -154,32 +154,36 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
 
     try {
       final supabase = Supabase.instance.client;
+      final email = _emailController.text.trim();
+      final fullName = _nameController.text.trim();
       
-      // Call Supabase Edge Function to create officer
+      debugPrint('Creating officer: email=$email, fullName=$fullName');
+      
+      // Use Supabase functions.invoke() - the proper SDK method
       final response = await supabase.functions.invoke(
         'create-officer',
         body: {
-          'email': _emailController.text.trim(),
-          'fullName': _nameController.text.trim(),
+          'email': email,
+          'fullName': fullName,
           'password': password,
         },
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog
+      Navigator.pop(context);
 
-      if (response.status == 200) {
-        _showPasswordDialog(
-          _emailController.text.trim(),
-          password,
-        );
-
+      // FunctionResponse has a 'data' property that contains the body
+      final Map<String, dynamic> data = response.data is Map ? response.data : {};
+      
+      if (data['success'] == true) {
+        debugPrint('Officer created successfully');
+        _showPasswordDialog(email, password);
         _emailController.clear();
         _nameController.clear();
         _passwordController.clear();
         await _loadOfficers();
       } else {
-        final error = response.data['error'] ?? 'Unknown error occurred';
+        final error = data['error'] ?? 'Unknown error';
         throw Exception(error);
       }
       

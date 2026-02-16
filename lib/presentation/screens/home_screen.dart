@@ -8,7 +8,7 @@ import 'analysis_screen.dart';
 import 'reports_screen.dart';
 import 'help_support_screen.dart';
 import 'settings_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'admin_dashboard_main.dart';
 import '../state/inspection_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Show admin dashboard if user is admin
     if (_isAdmin) {
-      return const AdminDashboardScreen();
+      return const AdminDashboardMain();
     }
 
     // Show regular officer dashboard
