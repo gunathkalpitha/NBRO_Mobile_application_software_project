@@ -40,6 +40,7 @@ dependencies:
 
   # Backend & Sync
   supabase_flutter: ^2.12.0
+  http: ^1.1.0
   
   # Override problematic transitive dependency
   sign_in_with_apple: ^6.1.3
