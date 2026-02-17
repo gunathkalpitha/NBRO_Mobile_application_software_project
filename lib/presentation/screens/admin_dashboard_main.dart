@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
+import '../widgets/app_shell.dart';
 import 'admin/officers_screen.dart';
 import 'admin/inspections_management_screen.dart';
 
 class AdminDashboardMain extends StatefulWidget {
-  const AdminDashboardMain({super.key});
+  final void Function(AdminNavItem)? onNavItemSelected;
+
+  const AdminDashboardMain({super.key, this.onNavItemSelected});
 
   @override
   State<AdminDashboardMain> createState() => _AdminDashboardMainState();
@@ -27,11 +30,12 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     try {
       final supabase = Supabase.instance.client;
       
-      // Get total officers count
+      // Get total active officers count
       final officersResponse = await supabase
           .from('profiles')
           .select('id')
-          .eq('role', 'officer');
+          .eq('role', 'officer')
+          .eq('is_active', true);
       _totalOfficers = (officersResponse as List).length;
 
       // Get total inspections count
@@ -81,7 +85,15 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
               toolbarHeight: 80,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leadingWidth: 0,
+              leadingWidth: 48,
+              leading: IconButton(
+                icon: const Icon(Icons.menu, color: NBROColors.white),
+                iconSize: 24,
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  NavRailController.toggleVisibility();
+                },
+              ),
               title: Row(
                 children: [
                   Container(
@@ -149,7 +161,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                            'Total Officers',
+                            'Total Active Officers',
                             _totalOfficers.toString(),
                             Icons.people,
                             NBROColors.primary,
@@ -207,12 +219,19 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                       Icons.manage_accounts,
                       NBROColors.primary,
                       () {
+                        if (widget.onNavItemSelected != null) {
+                          widget.onNavItemSelected!(AdminNavItem.officers);
+                          return;
+                        }
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const AdminOfficersScreen(),
                           ),
-                        );
+                        ).then((_) {
+                          // Refresh stats when returning from officers screen
+                          _loadAdminStats();
+                        });
                       },
                     ),
                     const SizedBox(height: 12),
@@ -222,6 +241,10 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                       Icons.assignment,
                       NBROColors.info,
                       () {
+                        if (widget.onNavItemSelected != null) {
+                          widget.onNavItemSelected!(AdminNavItem.inspections);
+                          return;
+                        }
                         Navigator.push(
                           context,
                           MaterialPageRoute(

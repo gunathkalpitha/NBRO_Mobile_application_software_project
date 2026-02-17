@@ -20,6 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <!-- Google Sign-In Web Client ID -->
+  <meta name="google-signin-client_id" content="72791835292-n95befiuoss0nbtfmg3lbbuotg8f19lg.apps.googleusercontent.com">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -31,6 +34,22 @@
 
   <title>nbro_mobile_application</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Handle Supabase auth callback by redirecting to /auth-callback route
+    // This preserves the hash parameters that Supabase uses for token exchange
+    window.addEventListener('load', function() {
+      const url = new URL(window.location);
+      const hash = url.hash;
+      
+      // Check if this is a Supabase auth callback (has access_token in hash)
+      if (hash.includes('access_token') || hash.includes('error')) {
+        // Redirect to our auth-callback route while preserving hash for Supabase SDK
+        if (!window.location.pathname.includes('/auth-callback')) {
+          window.location.href = '/auth-callback' + hash;
+        }
+      }
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
