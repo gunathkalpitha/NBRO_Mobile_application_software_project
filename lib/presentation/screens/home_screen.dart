@@ -9,6 +9,8 @@ import 'reports_screen.dart';
 import 'help_support_screen.dart';
 import 'settings_screen.dart';
 import 'admin_dashboard_main.dart';
+import 'admin/officers_screen.dart';
+import 'admin/inspections_management_screen.dart';
 import '../state/inspection_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   NavItem _currentItem = NavItem.dashboard;
+  AdminNavItem _currentAdminItem = AdminNavItem.dashboard;
   bool _isAdmin = false;
   bool _isCheckingRole = true;
 
@@ -69,7 +72,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Show admin dashboard if user is admin
     if (_isAdmin) {
-      return const AdminDashboardMain();
+      return AdminAppShell(
+        currentItem: _currentAdminItem,
+        onNavItemSelected: (item) {
+          setState(() {
+            _currentAdminItem = item;
+          });
+        },
+        child: _buildAdminScreen(_currentAdminItem),
+      );
     }
 
     // Show regular officer dashboard
@@ -104,6 +115,23 @@ class _HomeScreenState extends State<HomeScreen> {
         return const HelpSupportScreen();
       case NavItem.settings:
         return const SettingsScreen();
+    }
+  }
+
+  Widget _buildAdminScreen(AdminNavItem item) {
+    switch (item) {
+      case AdminNavItem.dashboard:
+        return AdminDashboardMain(
+          onNavItemSelected: (adminItem) {
+            setState(() {
+              _currentAdminItem = adminItem;
+            });
+          },
+        );
+      case AdminNavItem.officers:
+        return const AdminOfficersScreen(embedded: true);
+      case AdminNavItem.inspections:
+        return const AdminInspectionsManagementScreen(embedded: true);
     }
   }
 }
