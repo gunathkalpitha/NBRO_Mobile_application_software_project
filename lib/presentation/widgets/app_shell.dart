@@ -19,6 +19,8 @@ class NavRailController {
 
 enum NavItem { dashboard, inspection, analysis, reports, help, settings }
 
+enum AdminNavItem { dashboard, officers, inspections }
+
 class AppShell extends StatefulWidget {
   final Widget child;
   final NavItem currentItem;
@@ -33,6 +35,183 @@ class AppShell extends StatefulWidget {
 
   @override
   State<AppShell> createState() => _AppShellState();
+}
+
+class AdminAppShell extends StatefulWidget {
+  final Widget child;
+  final AdminNavItem currentItem;
+  final Function(AdminNavItem) onNavItemSelected;
+
+  const AdminAppShell({
+    super.key,
+    required this.child,
+    required this.currentItem,
+    required this.onNavItemSelected,
+  });
+
+  @override
+  State<AdminAppShell> createState() => _AdminAppShellState();
+}
+
+class _AdminAppShellState extends State<AdminAppShell> {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        widget.child,
+        ValueListenableBuilder<bool>(
+          valueListenable: NavRailController.isVisible,
+          builder: (_, visible, __) => visible
+              ? Positioned.fill(
+                  child: GestureDetector(
+                    onTap: NavRailController.hide,
+                    child: Container(color: Colors.black.withValues(alpha: 0.3)),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: NavRailController.isVisible,
+          builder: (_, visible, __) => AnimatedPositioned(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            top: 0,
+            bottom: 0,
+            left: visible ? 0 : -264,
+            width: 264,
+            child: Material(
+              elevation: 16,
+              shadowColor: NBROColors.primary.withValues(alpha: 0.3),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      NBROColors.primary,
+                      NBROColors.primaryDark,
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: NBROColors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/icons/pasted-image.png',
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'NBRO',
+                              style: TextStyle(
+                                color: NBROColors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Administration',
+                              style: TextStyle(
+                                color: NBROColors.white.withValues(alpha: 0.85),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          children: [
+                            _NavItem(
+                              icon: Icons.dashboard_rounded,
+                              label: 'Dashboard',
+                              isSelected: widget.currentItem == AdminNavItem.dashboard,
+                              onTap: () {
+                                widget.onNavItemSelected(AdminNavItem.dashboard);
+                                NavRailController.hide();
+                              },
+                            ),
+                            _NavItem(
+                              icon: Icons.manage_accounts_rounded,
+                              label: 'Officers',
+                              isSelected: widget.currentItem == AdminNavItem.officers,
+                              onTap: () {
+                                widget.onNavItemSelected(AdminNavItem.officers);
+                                NavRailController.hide();
+                              },
+                            ),
+                            _NavItem(
+                              icon: Icons.assignment_rounded,
+                              label: 'Inspections',
+                              isSelected: widget.currentItem == AdminNavItem.inspections,
+                              onTap: () {
+                                widget.onNavItemSelected(AdminNavItem.inspections);
+                                NavRailController.hide();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: const _UserInfoSection(roleLabel: 'Administrator'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _AppShellState extends State<AppShell> {
@@ -325,7 +504,9 @@ class _NavItem extends StatelessWidget {
 
 // User Info Section Widget
 class _UserInfoSection extends StatelessWidget {
-  const _UserInfoSection();
+  final String roleLabel;
+
+  const _UserInfoSection({this.roleLabel = 'Field Officer'});
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +588,7 @@ class _UserInfoSection extends StatelessWidget {
                 )
               else
                 Text(
-                  'Field Officer',
+                  roleLabel,
                   style: TextStyle(
                     color: NBROColors.white.withValues(alpha: 0.7),
                     fontSize: 12,

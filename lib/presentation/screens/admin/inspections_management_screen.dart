@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../widgets/app_shell.dart';
 
 class AdminInspectionsManagementScreen extends StatefulWidget {
-  const AdminInspectionsManagementScreen({super.key});
+  final bool embedded;
+
+  const AdminInspectionsManagementScreen({super.key, this.embedded = false});
 
   @override
   State<AdminInspectionsManagementScreen> createState() =>
@@ -203,8 +206,17 @@ class _AdminInspectionsManagementScreenState
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: NBROColors.white),
-                onPressed: () => Navigator.pop(context),
+                icon: Icon(
+                  widget.embedded ? Icons.menu : Icons.arrow_back,
+                  color: NBROColors.white,
+                ),
+                onPressed: () {
+                  if (widget.embedded) {
+                    NavRailController.toggleVisibility();
+                    return;
+                  }
+                  Navigator.pop(context);
+                },
               ),
               title: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
