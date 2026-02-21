@@ -178,10 +178,15 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
 
       if (response.status == 200) {
         final data = response.data as Map<String, dynamic>;
+        debugPrint('[AddOfficer] Success flag: ${data['success']}');
+        debugPrint('[AddOfficer] Password: ${data['password']}');
+        
         if (data['success'] == true) {
           _emailController.clear();
           _nameController.clear();
-          _showInvitationSentDialog(email);
+          final password = data['password'] ?? 'N/A';
+          debugPrint('[AddOfficer] Showing dialog with password: $password');
+          _showInvitationSentDialog(email, password, fullName);
           await _loadOfficers();
         } else {
           throw Exception(data['error'] ?? 'Unknown error');
@@ -711,9 +716,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
-  void _showInvitationSentDialog(String email) {
+  void _showInvitationSentDialog(String email, String password, String fullName) {
     showDialog(
       context: context,
+      barrierDismissible: false,  // Prevent accidental dismissal
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -727,7 +733,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   const Icon(Icons.check_circle, color: NBROColors.success),
             ),
             const SizedBox(width: 12),
-            const Text('Invitation Sent'),
+            const Text('Officer Created'),
           ],
         ),
         content: Column(
@@ -735,34 +741,141 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Invitation email sent successfully!',
+              'Officer account created successfully!',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: NBROColors.info.withValues(alpha: 0.1),
+                color: NBROColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: NBROColors.primary.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Next Steps:',
+                    'LOGIN CREDENTIALS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: NBROColors.primary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.email, size: 16, color: NBROColors.darkGrey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Email:',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: NBROColors.darkGrey,
+                              ),
+                            ),
+                            Text(
+                              email,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: NBROColors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.lock, size: 16, color: NBROColors.darkGrey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Password:',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: NBROColors.darkGrey,
+                              ),
+                            ),
+                            Text(
+                              password,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: NBROColors.primary,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: NBROColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: NBROColors.warning.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber, color: NBROColors.warning, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No email sent! You must share these credentials with the officer manually.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: NBROColors.warning,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: NBROColors.info.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Instructions:',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: NBROColors.info,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
-                    '1. Officer receives email at: $email\n'
-                    '2. They click the invitation link\n'
-                    '3. They sign in with their Google account\n'
-                    '4. Account is automatically activated',
-                    style: const TextStyle(
+                    '1. Copy or note down these credentials\n'
+                    '2. Share with the officer via SMS/WhatsApp/Call\n'
+                    '3. Officer opens the mobile app\n'
+                    '4. Officer logs in with email and password',
+                    style: TextStyle(
                       fontSize: 12,
                       color: NBROColors.info,
                     ),
@@ -774,8 +887,28 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         ),
         actions: [
           TextButton(
+            onPressed: () {
+              // Copy credentials to clipboard
+              final credentials = 'NBRO Login Credentials\n\nName: $fullName\nEmail: $email\nPassword: $password\n\nPlease log in to the NBRO Field Surveyor mobile app using these credentials.';
+              // Simple text copy (you can add clipboard package for better UX)
+              debugPrint('Credentials: $credentials');
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Credentials logged to console. Copy them to share with officer.'),
+                  backgroundColor: NBROColors.info,
+                ),
+              );
+            },
+            child: const Text('Copy Info'),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            style: TextButton.styleFrom(
+              backgroundColor: NBROColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Done'),
           ),
         ],
       ),
