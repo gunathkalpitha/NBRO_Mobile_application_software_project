@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -64,114 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(content: Text('Biometric authentication failed: $e')),
         );
       }
-    }
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
-
-    try {
-      debugPrint('[LoginScreen] Starting Google Sign-In');
-      
-      // For Android, GoogleSignIn automatically uses the OAuth client configured in Google Cloud
-      // For web, client ID is read from meta tag in index.html
-      final googleSignIn = GoogleSignIn(
-        scopes: [
-          'email',
-          'profile',
-          'openid', // Required for ID token
-        ],
-      );
-
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        debugPrint('[LoginScreen] Google Sign-In cancelled by user');
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      debugPrint('[LoginScreen] Google user signed in: ${googleUser.email}');
-
-      final googleAuth = await googleUser.authentication;
-      final accessToken = googleAuth.accessToken;
-      final idToken = googleAuth.idToken;
-
-      debugPrint('[LoginScreen] Access Token: ${accessToken != null ? 'present (${accessToken.substring(0, 20)}...)' : 'NULL'}');
-      debugPrint('[LoginScreen] ID Token: ${idToken != null ? 'present (${idToken.substring(0, 20)}...)' : 'NULL'}');
-
-      if (idToken == null) {
-        throw Exception('Failed to get ID token from Google. This might be an OAuth client configuration issue.');
-      }
-
-      debugPrint('[LoginScreen] Got Google tokens, signing in to Supabase');
-
-      // Sign in to Supabase with Google OAuth
-      final response = await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-
-      if (response.user != null) {
-        debugPrint('[LoginScreen] Google OAuth successful for user: ${response.user!.id}');
-        
-        // Check if account is active
-        try {
-          final profileResponse = await Supabase.instance.client
-              .from('profiles')
-              .select('is_active, role')
-              .eq('id', response.user!.id)
-              .single();
-
-          final isActive = profileResponse['is_active'] as bool? ?? true;
-
-          if (!isActive) {
-            await Supabase.instance.client.auth.signOut();
-            debugPrint('[LoginScreen] Account is disabled - signing out user');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Your account has been disabled. Please contact an administrator.'),
-                  duration: Duration(seconds: 5),
-                ),
-              );
-            }
-            return;
-          }
-
-          if (mounted) {
-            _navigateToDashboard();
-          }
-        } catch (e) {
-          debugPrint('[LoginScreen] Error checking account status: $e');
-          // If we can't check profile, this might be a first-time sign-in without invitation
-          await Supabase.instance.client.auth.signOut();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No invitation found. Please contact an administrator.'),
-                duration: Duration(seconds: 5),
-              ),
-            );
-          }
-        }
-      }
-    } on AuthException catch (e) {
-      debugPrint('[LoginScreen] Google OAuth error: ${e.message}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.message}')),
-        );
-      }
-    } catch (e) {
-      debugPrint('[LoginScreen] Google Sign-In error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -446,56 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 )
                               : const Text('Sign In'),
                         ),
-                        const SizedBox(height: 16),
-
-                        // OR Divider
-                        Row(
-                          children: [
-                            const Expanded(child: Divider(color: NBROColors.light)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'OR',
-                                style: TextStyle(
-                                  color: NBROColors.grey.withValues(alpha: 0.7),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            const Expanded(child: Divider(color: NBROColors.light)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Google Sign-In Button
-                        OutlinedButton.icon(
-                          onPressed: _isLoading ? null : _handleGoogleSignIn,
-                          icon: Image.asset(
-                            'assets/images/google_logo.png',
-                            height: 20,
-                            width: 20,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(
-                                Icons.login,
-                                color: NBROColors.primary,
-                              );
-                            },
-                          ),
-                          label: const Text(
-                            'Sign in with Google',
-                            style: TextStyle(color: NBROColors.black),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            side: const BorderSide(color: NBROColors.light),
-                            backgroundColor: NBROColors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
 
                         // Biometric Login
                         if (_biometricAvailable)
