@@ -50,10 +50,11 @@ serve(async (req: Request) => {
 
     console.log('Inviting user:', email)
     // Invite user via email
+    // Don't specify redirectTo - let it use the default verification URL
+    // The mobile app will handle the deep link through Android/iOS configuration
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(
       email,
       {
-        redirectTo: 'http://localhost:5173/auth-callback', // Web app redirect URL
         data: {
           full_name: fullName,
           role: 'officer',
