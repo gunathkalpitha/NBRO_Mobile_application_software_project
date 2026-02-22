@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/notice.dart';
 import '../widgets/branding.dart';
@@ -11,8 +12,124 @@ class NoticeScreen extends StatefulWidget {
 }
 
 class _NoticeScreenState extends State<NoticeScreen> {
- 
-  final List<Notice> _notices = [];
+  List<Notice> _notices = [];
+  final Map<String, String> _noticeTargetType = {};
+  final Map<String, bool> _recipientReadState = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotices();
+  }
+
+  Future<void> _loadNotices() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() {
+          _notices = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final noticesResponse = await Supabase.instance.client
+          .from('notices')
+          .select('id, title, message, priority, published_at, published_by_name, target_type')
+          .order('published_at', ascending: false);
+
+      final recipientsResponse = await Supabase.instance.client
+          .from('notice_recipients')
+          .select('notice_id, is_read')
+          .eq('officer_id', user.id);
+
+      final recipientMap = <String, bool>{};
+      for (final row in (recipientsResponse as List)) {
+        final noticeId = row['notice_id'] as String?;
+        if (noticeId != null) {
+          recipientMap[noticeId] = row['is_read'] as bool? ?? false;
+        }
+      }
+
+      final List<Notice> parsed = [];
+      final Map<String, String> targetTypeMap = {};
+
+      for (final row in (noticesResponse as List)) {
+        final json = row as Map<String, dynamic>;
+        final noticeId = json['id'] as String;
+        final targetType = (json['target_type'] as String?) ?? 'all';
+
+        final isVisible = targetType == 'all' || recipientMap.containsKey(noticeId);
+        if (!isVisible) continue;
+
+        targetTypeMap[noticeId] = targetType;
+        parsed.add(
+          Notice(
+            id: noticeId,
+            title: json['title'] as String,
+            message: json['message'] as String,
+            publishedAt: DateTime.parse(json['published_at'] as String),
+            publishedBy: json['published_by_name'] as String? ?? 'Admin',
+            priority: NoticePriority.values.firstWhere(
+              (e) => e.name == (json['priority'] as String? ?? 'normal'),
+              orElse: () => NoticePriority.normal,
+            ),
+            isRead: recipientMap[noticeId] ?? true,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _recipientReadState
+          ..clear()
+          ..addAll(recipientMap);
+        _noticeTargetType
+          ..clear()
+          ..addAll(targetTypeMap);
+        _notices = parsed;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load notices: $e'),
+          backgroundColor: NBROColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _markAsRead(Notice notice) async {
+    setState(() {
+      _notices = _notices
+          .map((n) => n.id == notice.id ? n.copyWith(isRead: true) : n)
+          .toList();
+    });
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      await Supabase.instance.client
+          .from('notice_recipients')
+          .update({'is_read': true, 'read_at': DateTime.now().toIso8601String()})
+          .eq('notice_id', notice.id)
+          .eq('officer_id', user.id);
+    } catch (_) {
+      // Keep optimistic UI state; ignore update errors for UX continuity.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +198,13 @@ class _NoticeScreenState extends State<NoticeScreen> {
           ),
         ),
       ),
-      body: _notices.isEmpty
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(NBROColors.primary),
+              ),
+            )
+          : _notices.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -123,11 +246,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
                 final notice = _notices[index];
                 return _NoticeCard(
                   notice: notice,
-                  onTap: () {
-                    setState(() {
-                      _notices[index] = notice.copyWith(isRead: true);
-                    });
-                  },
+                  onTap: () => _markAsRead(notice),
                 );
               },
             ),
