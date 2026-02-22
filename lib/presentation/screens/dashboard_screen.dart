@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../../domain/models/notice.dart';
 import '../state/inspection_bloc.dart';
 //import '../widgets/sync_status_indicator.dart';
-import '../widgets/branding.dart';
+//import '../widgets/branding.dart';
 import '../widgets/app_shell.dart';
 import 'site_inspection_wizard.dart';
 import 'inspection_detail_screen.dart';
@@ -25,6 +26,19 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  Notice? _latestNotice;
+  int _unreadNoticeCount = 0;
+
+  static final Notice _defaultNotice = Notice(
+    id: 'default_notice',
+    title: 'Welcome to NBRO Mobile',
+    message:
+        'Welcome to the NBRO Mobile Inspection Application! This platform helps you manage site inspections efficiently. If you need any assistance, please contact support.',
+    publishedAt: DateTime.now(),
+    publishedBy: 'Admin',
+    priority: NoticePriority.normal,
+    isRead: true,
+  );
 
   @override
   void initState() {
@@ -38,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       curve: Curves.easeInOut,
     );
     _animationController.forward();
+    _loadNoticeSummary();
   }
 
   @override
@@ -81,11 +96,64 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   NavRailController.toggleVisibility();
                 },
               ),
-              title: const NBROBrand(
-                title: 'Dashboard',
-                showFullName: true,
-                logoSize: 60,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: NBROColors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Image.asset(
+                      'assets/icons/pasted-image.png',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.business,
+                          color: NBROColors.primary,
+                          size: 40,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isVerySmall = constraints.maxWidth < 250;
+                            return Text(
+                              isVerySmall ? 'NBRO' : 'National Building Research Organization',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: NBROColors.white,
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Dashboard',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: NBROColors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               titleSpacing: 4,
               actions: [
@@ -105,27 +173,35 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 // Notification Bell
                 Tooltip(
                   message: 'Notifications',
-                  child: IconButton(
-                    icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
-                    iconSize: 24,
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.info_outline, color: NBROColors.white),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text('Notifications feature coming soon!'),
-                              ),
-                            ],
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
+                        iconSize: 24,
+                        onPressed: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const NoticeScreen(),
+                            ),
+                          );
+                          _loadNoticeSummary();
+                        },
+                      ),
+                      if (_unreadNoticeCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: NBROColors.error,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                          backgroundColor: NBROColors.info,
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 3),
                         ),
-                      );
-                    },
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -137,6 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       body: RefreshIndicator(
         onRefresh: () async {
           context.read<InspectionBloc>().add(const LoadInspectionsEvent());
+          await _loadNoticeSummary();
           // Instant refresh - no artificial delay
         },
         child: BlocBuilder<InspectionBloc, InspectionState>(
@@ -221,13 +298,24 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
                     // Notice Bar
                     SliverToBoxAdapter(
-                      child: _NoticeBar(),
+                      child: _NoticeBar(
+                        latestNotice: _latestNotice,
+                        unreadCount: _unreadNoticeCount,
+                        onViewAll: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const NoticeScreen(),
+                            ),
+                          );
+                          _loadNoticeSummary();
+                        },
+                      ),
                     ),
 
                     // Stats Cards
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Row(
                           children: [
                             Expanded(
@@ -241,7 +329,34 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                onTap: () {
+                                description: 'Tap to view on map',
+                                onTap: () async {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) => const Center(
+                                      child: Card(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              CircularProgressIndicator(
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  NBROColors.primary,
+                                                ),
+                                              ),
+                                              SizedBox(height: 12),
+                                              Text('Loading sites...'),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+
+                                  if (!mounted) return;
+                                  Navigator.of(context).pop();
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -268,6 +383,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
+                                description: 'Awaiting action',
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -286,6 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
+                                description: 'Uploaded to cloud',
                               ),
                             ),
                           ],
@@ -437,6 +554,73 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       ),
     );
   }
+
+  Future<void> _loadNoticeSummary() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          _latestNotice = null;
+          _unreadNoticeCount = 0;
+        });
+        return;
+      }
+
+      final noticesResponse = await Supabase.instance.client
+          .from('notices')
+          .select('id, title, message, priority, published_at, published_by_name, target_type')
+          .order('published_at', ascending: false);
+
+      final recipientsResponse = await Supabase.instance.client
+          .from('notice_recipients')
+          .select('notice_id, is_read')
+          .eq('officer_id', user.id);
+
+      final recipientMap = <String, bool>{};
+      for (final row in (recipientsResponse as List)) {
+        final noticeId = row['notice_id'] as String?;
+        if (noticeId != null) {
+          recipientMap[noticeId] = row['is_read'] as bool? ?? false;
+        }
+      }
+
+      final visibleNotices = <Notice>[];
+      for (final row in (noticesResponse as List)) {
+        final json = row as Map<String, dynamic>;
+        final noticeId = json['id'] as String;
+        final targetType = (json['target_type'] as String?) ?? 'all';
+        final isVisible = targetType == 'all' || recipientMap.containsKey(noticeId);
+        if (!isVisible) continue;
+
+        visibleNotices.add(
+          Notice(
+            id: noticeId,
+            title: json['title'] as String,
+            message: json['message'] as String,
+            publishedAt: DateTime.parse(json['published_at'] as String),
+            publishedBy: json['published_by_name'] as String? ?? 'Admin',
+            priority: NoticePriority.values.firstWhere(
+              (e) => e.name == (json['priority'] as String? ?? 'normal'),
+              orElse: () => NoticePriority.normal,
+            ),
+            isRead: recipientMap[noticeId] ?? true,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      final unreadNotices = visibleNotices.where((n) => !n.isRead).toList();
+      setState(() {
+        _latestNotice = unreadNotices.isNotEmpty
+            ? unreadNotices.first
+            : _defaultNotice;
+        _unreadNoticeCount = unreadNotices.length;
+      });
+    } catch (e) {
+      debugPrint('Error loading notice summary: $e');
+    }
+  }
 }
 
 class _ModernStatCard extends StatelessWidget {
@@ -446,6 +630,7 @@ class _ModernStatCard extends StatelessWidget {
   final Color color;
   final Gradient gradient;
   final VoidCallback? onTap;
+  final String? description;
 
   const _ModernStatCard({
     required this.label,
@@ -454,6 +639,7 @@ class _ModernStatCard extends StatelessWidget {
     required this.color,
     required this.gradient,
     this.onTap,
+    this.description,
   });
 
   @override
@@ -495,6 +681,18 @@ class _ModernStatCard extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
+          if (description != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              description!,
+              style: TextStyle(
+                fontSize: 10,
+                color: NBROColors.white.withValues(alpha: 0.7),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
       ),
@@ -731,6 +929,16 @@ class _WelcomeSection extends StatelessWidget {
     }
   }
 
+  String _formatTime() {
+    final now = DateTime.now();
+    return DateFormat('hh:mm a').format(now).toUpperCase();
+  }
+
+  String _formatDate() {
+    final now = DateTime.now();
+    return DateFormat('EEEE yyyy.MM.dd').format(now);
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -768,7 +976,10 @@ class _WelcomeSection extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -798,13 +1009,55 @@ class _WelcomeSection extends StatelessWidget {
                   ),
                 ),
               ],
-            )
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: NBROColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _formatTime(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: NBROColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _formatDate(),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: NBROColors.grey.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
 // Notice Bar Widget
 class _NoticeBar extends StatefulWidget {
+  final Notice? latestNotice;
+  final int unreadCount;
+  final VoidCallback onViewAll;
+
+  const _NoticeBar({
+    required this.latestNotice,
+    required this.unreadCount,
+    required this.onViewAll,
+  });
+
   @override
   State<_NoticeBar> createState() => _NoticeBarState();
 }
@@ -812,18 +1065,13 @@ class _NoticeBar extends StatefulWidget {
 class _NoticeBarState extends State<_NoticeBar> {
   bool _isExpanded = false;
 
- 
-  final Notice _latestNotice = Notice(
-    id: '1',
-    title: 'Welcome to NBRO Mobile',
-    message: 'Welcome to the NBRO Mobile Inspection Application! This platform helps you manage site inspections efficiently. If you need any assistance, please contact support.',
-    publishedAt: DateTime.now().subtract(const Duration(hours: 5)),
-    publishedBy: 'Admin',
-    priority: NoticePriority.normal,
-  );
-
   @override
   Widget build(BuildContext context) {
+    final latestNotice = widget.latestNotice;
+    if (latestNotice == null) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
@@ -884,7 +1132,7 @@ class _NoticeBarState extends State<_NoticeBar> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _latestNotice.title,
+                            latestNotice.title,
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -895,7 +1143,7 @@ class _NoticeBarState extends State<_NoticeBar> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'By ${_latestNotice.publishedBy} • ${_formatDate(_latestNotice.publishedAt)}',
+                            'By ${latestNotice.publishedBy} • ${_formatDate(latestNotice.publishedAt)}',
                             style: TextStyle(
                               fontSize: 11,
                               color: NBROColors.grey,
@@ -921,7 +1169,7 @@ class _NoticeBarState extends State<_NoticeBar> {
                     children: [
                       const SizedBox(height: 12),
                       Text(
-                        _latestNotice.message,
+                        latestNotice.message,
                         style: TextStyle(
                           fontSize: 13,
                           color: NBROColors.darkGrey,
@@ -951,7 +1199,7 @@ class _NoticeBarState extends State<_NoticeBar> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _latestNotice.priority.displayName.toUpperCase(),
+                                  latestNotice.priority.displayName.toUpperCase(),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -963,15 +1211,11 @@ class _NoticeBarState extends State<_NoticeBar> {
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const NoticeScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: widget.onViewAll,
                             icon: const Icon(Icons.open_in_new, size: 16),
-                            label: const Text('View All'),
+                            label: Text(widget.unreadCount > 0
+                                ? 'View All (${widget.unreadCount})'
+                                : 'View All'),
                             style: TextButton.styleFrom(
                               foregroundColor: NBROColors.accent,
                               padding: const EdgeInsets.symmetric(

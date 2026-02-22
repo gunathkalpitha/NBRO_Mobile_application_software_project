@@ -19,7 +19,7 @@ class NavRailController {
 
 enum NavItem { dashboard, inspection, analysis, reports, help, settings }
 
-enum AdminNavItem { dashboard, officers, inspections }
+enum AdminNavItem { dashboard, officers, inspections, notices }
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -184,6 +184,15 @@ class _AdminAppShellState extends State<AdminAppShell> {
                               isSelected: widget.currentItem == AdminNavItem.inspections,
                               onTap: () {
                                 widget.onNavItemSelected(AdminNavItem.inspections);
+                                NavRailController.hide();
+                              },
+                            ),
+                            _NavItem(
+                              icon: Icons.campaign_rounded,
+                              label: 'Notices',
+                              isSelected: widget.currentItem == AdminNavItem.notices,
+                              onTap: () {
+                                widget.onNavItemSelected(AdminNavItem.notices);
                                 NavRailController.hide();
                               },
                             ),
