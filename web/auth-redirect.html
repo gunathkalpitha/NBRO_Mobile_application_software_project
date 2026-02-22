@@ -50,7 +50,7 @@
     <div class="container">
         <h1>NBRO Field Surveyor</h1>
         <div class="spinner" id="spinner"></div>
-        <p id="status">Validating invitation...</p>
+        <p id="status">Validating authentication...</p>
 
         <div id="inviteForm" style="display:none; margin-top: 16px; text-align: left;">
             <p style="margin: 0 0 10px 0;"><strong>Email</strong></p>
@@ -149,8 +149,66 @@
             }
         }
 
+        async function exchangeCodeForSession(code) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = 'Verifying password reset link...';
+            
+            try {
+                console.log('Exchanging code for session:', code);
+                
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        auth_code: code
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (!response.ok) {
+                    throw new Error(data.error_description || data.msg || 'Failed to verify reset link');
+                }
+
+                accessToken = data.access_token;
+                refreshToken = data.refresh_token;
+                
+                if (!accessToken) {
+                    throw new Error('No access token in response');
+                }
+                
+                // Build hash fragment for app redirect
+                authHash = `access_token=${accessToken}&refresh_token=${refreshToken}&type=recovery`;
+                
+                console.log('Token exchange successful, redirecting to app...');
+                statusEl.textContent = 'Password reset verified. Opening app...';
+                setTimeout(openApp, 1000);
+            } catch (error) {
+                console.error('Code exchange error:', error);
+                statusEl.textContent = `Failed to verify: ${error.message}`;
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('manualLink').style.display = 'block';
+            }
+        }
+
         function setupInvitePage() {
             try {
+                // Check for code parameter (password reset PKCE flow)
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                
+                if (code) {
+                    console.log('Password reset code detected, exchanging for tokens...');
+                    exchangeCodeForSession(code);
+                    return;
+                }
+
+                // Check for hash fragment (invite flow with direct tokens)
                 const hash = window.location.hash.substring(1);
                 authHash = hash;
                 
@@ -160,31 +218,47 @@
                     refreshToken = params.get('refresh_token') || '';
                     const type = params.get('type') || '';
                     
-                    if (!accessToken || !refreshToken) {
-                        throw new Error('Missing auth tokens in callback URL');
+                    if (!accessToken) {
+                        throw new Error('Missing access token in callback URL');
                     }
 
                     const payload = decodeJwtPayload(accessToken);
-                    const email = payload?.email || 'Invited officer';
+                    const email = payload?.email || 'User';
 
-                    if (type && type !== 'invite' && type !== 'recovery') {
-                        console.warn('Unexpected auth type:', type);
+                    // Handle password recovery - redirect directly to app
+                    if (type === 'recovery') {
+                        document.getElementById('spinner').style.display = 'none';
+                        document.getElementById('status').textContent = 'Password reset verified. Opening app...';
+                        setTimeout(openApp, 1000);
+                        return;
                     }
-                    
-                    document.getElementById('spinner').style.display = 'none';
-                    document.getElementById('status').textContent = 'Invitation verified. Set your password to continue.';
-                    document.getElementById('emailText').textContent = email;
-                    document.getElementById('inviteForm').style.display = 'block';
-                    document.getElementById('setPasswordBtn').addEventListener('click', setPasswordAndOpenApp);
+
+                    // Handle officer invitation - show password setup form
+                    if (type === 'invite') {
+                        if (!refreshToken) {
+                            throw new Error('Missing refresh token for invitation');
+                        }
+                        document.getElementById('spinner').style.display = 'none';
+                        document.getElementById('status').textContent = 'Invitation verified. Set your password to continue.';
+                        document.getElementById('emailText').textContent = email;
+                        document.getElementById('inviteForm').style.display = 'block';
+                        document.getElementById('setPasswordBtn').addEventListener('click', setPasswordAndOpenApp);
+                        return;
+                    }
+
+                    // Unknown type
+                    console.warn('Unexpected auth type:', type);
+                    throw new Error('Invalid authentication type');
                 } else {
                     document.getElementById('status').textContent = 
                         'No authentication data received. Please try again.';
-                    console.error('No hash fragment found in URL');
+                    console.error('No hash fragment or code parameter found in URL');
                 }
             } catch (error) {
                 console.error('Redirect error:', error);
                 document.getElementById('status').textContent = 
-                    'An error occurred. Please request a new invitation link.';
+                    'An error occurred. Please try again or request a new link.';
+                document.getElementById('spinner').style.display = 'none';
                 document.getElementById('manualLink').style.display = 'block';
             }
         }
