@@ -11,6 +11,7 @@ import 'settings_screen.dart';
 import 'admin_dashboard_main.dart';
 import 'admin/officers_screen.dart';
 import 'admin/inspections_management_screen.dart';
+import 'admin/admin_notices_screen.dart';
 import '../state/inspection_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -72,27 +73,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Show admin dashboard if user is admin
     if (_isAdmin) {
-      return AdminAppShell(
-        currentItem: _currentAdminItem,
-        onNavItemSelected: (item) {
-          setState(() {
-            _currentAdminItem = item;
-          });
-        },
-        child: _buildAdminScreen(_currentAdminItem),
+      return WillPopScope(
+        onWillPop: _handleBackNavigation,
+        child: AdminAppShell(
+          currentItem: _currentAdminItem,
+          onNavItemSelected: (item) {
+            setState(() {
+              _currentAdminItem = item;
+            });
+          },
+          child: _buildAdminScreen(_currentAdminItem),
+        ),
       );
     }
 
     // Show regular officer dashboard
-    return AppShell(
-      currentItem: _currentItem,
-      onNavItemSelected: (item) {
-        setState(() {
-          _currentItem = item;
-        });
-      },
-      child: _buildScreen(_currentItem),
+    return WillPopScope(
+      onWillPop: _handleBackNavigation,
+      child: AppShell(
+        currentItem: _currentItem,
+        onNavItemSelected: (item) {
+          setState(() {
+            _currentItem = item;
+          });
+        },
+        child: _buildScreen(_currentItem),
+      ),
     );
+  }
+
+  Future<bool> _handleBackNavigation() async {
+    if (NavRailController.isVisible.value) {
+      NavRailController.hide();
+      return false;
+    }
+
+    if (_isAdmin) {
+      if (_currentAdminItem != AdminNavItem.dashboard) {
+        setState(() {
+          _currentAdminItem = AdminNavItem.dashboard;
+        });
+        return false;
+      }
+      return true;
+    }
+
+    if (_currentItem != NavItem.dashboard) {
+      setState(() {
+        _currentItem = NavItem.dashboard;
+      });
+      return false;
+    }
+
+    return true;
   }
 
   Widget _buildScreen(NavItem item) {
@@ -132,6 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const AdminOfficersScreen(embedded: true);
       case AdminNavItem.inspections:
         return const AdminInspectionsManagementScreen(embedded: true);
+      case AdminNavItem.notices:
+        return const AdminNoticesScreen(embedded: true);
     }
   }
 }

@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../domain/models/inspection.dart';
 import '../../core/theme/app_theme.dart';
+import 'inspection_detail_screen.dart';
 
 /// Screen to display inspection sites on a map
 /// Can show all sites or a single site location
 class InspectionMapScreen extends StatefulWidget {
   final List<Inspection> inspections;
   final Inspection? selectedInspection;
+  final void Function(BuildContext, Inspection)? onViewDetails;
 
   const InspectionMapScreen({
     super.key,
     required this.inspections,
     this.selectedInspection,
+    this.onViewDetails,
   });
 
   @override
@@ -65,6 +68,22 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
     setState(() {
       _selectedSite = inspection;
     });
+  }
+
+  void _openInspectionDetails(Inspection inspection) {
+    if (widget.onViewDetails != null) {
+      widget.onViewDetails!(context, inspection);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InspectionDetailScreen(
+          inspection: inspection,
+        ),
+      ),
+    );
   }
 
   LatLng _getInitialPosition() {
@@ -178,8 +197,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
                   });
                 },
                 onViewDetails: () {
-                  Navigator.pop(context);
-                  // Navigation back to detail screen happens automatically
+                  _openInspectionDetails(_selectedSite!);
                 },
               ),
             ),
