@@ -6,13 +6,12 @@ import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../../domain/models/notice.dart';
 import '../state/inspection_bloc.dart';
-//import '../widgets/sync_status_indicator.dart';
-//import '../widgets/branding.dart';
 import '../widgets/app_shell.dart';
 import 'site_inspection_wizard.dart';
 import 'inspection_detail_screen.dart';
 import 'inspection_map_screen.dart';
 import 'notice_screen.dart';
+import '../../data/services/draft_storage_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(NavItem)? onNavItemSelected;
@@ -28,6 +27,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   late Animation<double> _fadeAnimation;
   Notice? _latestNotice;
   int _unreadNoticeCount = 0;
+  final DraftStorageService _draftService = DraftStorageService();
+  List<Map<String, dynamic>> _drafts = [];
 
   static final Notice _defaultNotice = Notice(
     id: 'default_notice',
@@ -53,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
     _animationController.forward();
     _loadNoticeSummary();
+    _loadDrafts();
   }
 
   @override
@@ -412,6 +414,72 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
                     const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
+                    // Drafts Section
+                    if (_drafts.isNotEmpty) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Saved Drafts',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: NBROColors.black,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: NBROColors.info.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_drafts.length}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: NBROColors.info,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final draft = _drafts[index];
+                              return _DraftCard(
+                                draft: draft,
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => SiteInspectionWizard(
+                                        draftId: draft['draft_id'],
+                                        draftData: draft,
+                                      ),
+                                    ),
+                                  );
+                                  _loadDrafts(); // Refresh drafts after returning
+                                },
+                                onDelete: () async {
+                                  await _deleteDraft(draft['draft_id']);
+                                },
+                              );
+                            },
+                            childCount: _drafts.length,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
+
                     // Section Header
                     SliverToBoxAdapter(
                       child: Padding(
@@ -480,12 +548,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                               ),
                               const SizedBox(height: 32),
                               ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).push(
+                                onPressed: () async {
+                                  await Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (context) => const SiteInspectionWizard(),
                                     ),
                                   );
+                                  _loadDrafts(); // Refresh drafts after returning
                                 },
                                 icon: const Icon(Icons.add),
                                 label: const Text('New Inspection'),
@@ -541,12 +610,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
+        onPressed: () async {
+          await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const SiteInspectionWizard(),
             ),
           );
+          _loadDrafts(); // Refresh drafts after returning
         },
         icon: const Icon(Icons.add),
         label: const Text('New Inspection'),
@@ -619,6 +689,66 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       });
     } catch (e) {
       debugPrint('Error loading notice summary: $e');
+    }
+  }
+
+  Future<void> _loadDrafts() async {
+    final drafts = await _draftService.getAllDrafts();
+    if (mounted) {
+      setState(() {
+        _drafts = drafts;
+      });
+    }
+  }
+
+  Future<void> _deleteDraft(String draftId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_outlined, color: NBROColors.error),
+            SizedBox(width: 12),
+            Text('Delete Draft?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to delete this draft? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: NBROColors.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _draftService.deleteDraft(draftId);
+      _loadDrafts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: NBROColors.white),
+                SizedBox(width: 12),
+                Text('Draft deleted'),
+              ],
+            ),
+            backgroundColor: NBROColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 }
@@ -1253,6 +1383,186 @@ class _NoticeBarState extends State<_NoticeBar> {
       return 'Yesterday';
     } else {
       return '${difference.inDays} days ago';
+    }
+  }
+}
+
+class _DraftCard extends StatelessWidget {
+  final Map<String, dynamic> draft;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _DraftCard({
+    required this.draft,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final savedAt = DateTime.parse(draft['saved_at'] as String);
+    final ownerName = draft['owner_name'] as String? ?? 'Untitled';
+    final address = draft['address'] as String? ?? 'No address';
+    final currentStep = draft['current_step'] as int? ?? 0;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: NBROColors.info.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: NBROColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.edit_note,
+                  color: NBROColors.info,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ownerName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: NBROColors.black,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: NBROColors.info.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Step ${currentStep + 1}/5',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: NBROColors.info,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      address,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: NBROColors.grey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: NBROColors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDraftTime(savedAt),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: NBROColors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: NBROColors.success.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.touch_app,
+                                size: 12,
+                                color: NBROColors.success,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Tap to continue',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: NBROColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: NBROColors.error,
+                onPressed: onDelete,
+                tooltip: 'Delete Draft',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDraftTime(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return DateFormat('MMM dd, yyyy').format(date);
     }
   }
 }

@@ -39,18 +39,64 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     setState(() => _isLoading = true);
     try {
       final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('profiles')
-          .select('id, email, full_name, role, created_at')
-          .eq('role', 'officer')
-          .order('created_at', ascending: false);
+      
+      // Try plural table name first (new schema)
+      dynamic response;
+      
+      // DEBUGGING: First check ALL profiles to see what's in the database
+      try {
+        final debugResponse = await supabase
+            .from('profiles')
+            .select('id, email, full_name, role, created_at')
+            .order('created_at', ascending: false);
+        debugPrint('🔍 DEBUG: Total profiles in database: ${(debugResponse as List).length}');
+        for (var profile in debugResponse) {
+          debugPrint('   - ${profile['email']} | Role: ${profile['role']} | Name: ${profile['full_name']}');
+        }
+      } catch (e) {
+        debugPrint('🔍 DEBUG: Could not fetch all profiles: $e');
+      }
+      
+      try {
+        response = await supabase
+            .from('profiles')
+            .select('id, email, full_name, role, created_at')
+            .eq('role', 'officer')
+            .order('created_at', ascending: false);
+        debugPrint('✅ Loaded officers from "profiles" table (plural)');
+      } catch (pluralError) {
+        debugPrint('⚠️ Failed to load from "profiles": $pluralError');
+        debugPrint('🔄 Trying singular table name "profile"...');
+        
+        // Fallback to singular table name (old schema)
+        try {
+          response = await supabase
+              .from('profile')
+              .select('id, email, full_name, role, created_at')
+              .eq('role', 'officer')
+              .order('created_at', ascending: false);
+          debugPrint('✅ Loaded officers from "profile" table (singular)');
+        } catch (singularError) {
+          debugPrint('❌ Failed to load from "profile": $singularError');
+          throw Exception('Could not load officers from either "profiles" or "profile" table. Error: $pluralError');
+        }
+      }
 
       setState(() {
         _officers = List<Map<String, dynamic>>.from(response as List);
         _isLoading = false;
       });
+      
+      debugPrint('📊 Loaded ${_officers.length} officer(s) with role="officer"');
+      if (_officers.isEmpty) {
+        debugPrint('⚠️ WARNING: No officers found! This could mean:');
+        debugPrint('   1. No officer profiles exist in the database');
+        debugPrint('   2. Officers exist but with role != "officer"');
+        debugPrint('   3. The handle_new_user() trigger is not creating profiles');
+        debugPrint('   4. Check Supabase Dashboard > Database > profiles table');
+      }
     } catch (e) {
-      debugPrint('Error loading officers: $e');
+      debugPrint('❌ Error loading officers: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,6 +110,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             ),
             backgroundColor: NBROColors.error,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -176,12 +223,19 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       final Map<String, dynamic> data = response.data is Map ? response.data : {};
       
       if (data['success'] == true) {
-        debugPrint('Officer created successfully');
+        debugPrint('✅ Officer created successfully: $email');
+        debugPrint('🔄 Reloading officers list...');
+        
+        // Reload the officers list BEFORE showing the dialog
+        await _loadOfficers();
+        
+        // Show password dialog
         _showPasswordDialog(email, password);
+        
+        // Clear form
         _emailController.clear();
         _nameController.clear();
         _passwordController.clear();
-        await _loadOfficers();
       } else {
         final error = data['error'] ?? 'Unknown error';
         throw Exception(error);
