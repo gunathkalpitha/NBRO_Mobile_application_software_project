@@ -170,9 +170,9 @@ class Inspection {
   // Create from JSON (from Supabase)
   factory Inspection.fromJson(Map<String, dynamic> json) {
     return Inspection(
-      id: json['building_reference_no'] as String,
-      ownerName: json['owner_name'] as String,
-      siteAddress: json['site_address'] as String,
+      id: (json['building_reference_no'] as String?) ?? 'UNKNOWN',
+      ownerName: (json['owner_name'] as String?) ?? 'Unknown Owner',
+      siteAddress: (json['site_address'] as String?) ?? 'Unknown Address',
       contactNo: json['owner_contact'] as String?,
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
@@ -204,7 +204,9 @@ class Inspection {
         (e) => e.name == json['sync_status'],
         orElse: () => SyncStatus.pending,
       ),
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,

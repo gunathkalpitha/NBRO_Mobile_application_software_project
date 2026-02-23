@@ -46,108 +46,134 @@ class _AdminInspectionsManagementScreenState
     setState(() => _isLoading = true);
     try {
       final supabase = Supabase.instance.client;
+      
+      // DEBUG: Check current user and admin status
+      final currentUser = supabase.auth.currentUser;
+      debugPrint('🔍 DEBUG: Current user: ${currentUser?.email} (ID: ${currentUser?.id})');
+      
+      // Try to check is_admin status
+      try {
+        final adminCheck = await supabase.rpc('is_admin');
+        debugPrint('🔍 DEBUG: is_admin() result: $adminCheck');
+      } catch (e) {
+        debugPrint('🔍 DEBUG: Could not check is_admin(): $e');
+      }
 
-      // Fetch all inspections with site details via site_id and building_reference_no
-      final response = await supabase
-          .from('inspections')
-          .select('''
-            id,
-            user_id,
-            building_reference_no,
-            site_name,
-            site_location,
-            inspection_date,
-            total_defects,
-            defects_with_photos,
-            sync_status,
-            created_at,
-            updated_at,
-            sites_by_id:sites!inspections_site_id_fkey(
-              owner_name,
-              owner_contact,
-              site_address,
-              latitude,
-              longitude,
-              distance_from_row,
-              age_of_structure,
-              type_of_structure,
-              present_condition,
-              has_pipe_borne_water,
-              water_source,
-              has_electricity,
-              electricity_source,
-              has_sewage_waste,
-              sewage_type,
-              number_of_floors,
-              wall_materials,
-              door_materials,
-              floor_materials,
-              roof_materials,
-              roof_covering,
-              ancillary_structures,
-              finishes,
-              remarks,
-              building_photo_url,
-              sync_status
-            ),
-            sites_by_ref:sites!fk_inspections_building_ref(
-              owner_name,
-              owner_contact,
-              site_address,
-              latitude,
-              longitude,
-              distance_from_row,
-              age_of_structure,
-              type_of_structure,
-              present_condition,
-              has_pipe_borne_water,
-              water_source,
-              has_electricity,
-              electricity_source,
-              has_sewage_waste,
-              sewage_type,
-              number_of_floors,
-              wall_materials,
-              door_materials,
-              floor_materials,
-              roof_materials,
-              roof_covering,
-              ancillary_structures,
-              finishes,
-              remarks,
-              building_photo_url,
-              sync_status
-            )
-          ''')
-          .order('created_at', ascending: false);
+      // Try to fetch inspections with schema fallback
+      dynamic response;
+      String profilesTableName = 'profiles';
+      
+      try {
+        // First try plural table names (new schema)
+        // Join with sites table to get full site data including photos
+        response = await supabase
+            .from('inspections')
+            .select('''
+              id,
+              user_id,
+              building_reference_no,
+              site_name,
+              site_location,
+              inspection_date,
+              total_defects,
+              defects_with_photos,
+              sync_status,
+              created_at,
+              updated_at,
+              site_id,
+              sites!inspections_site_id_fkey(*)
+            ''')
+            .order('created_at', ascending: false);
+        debugPrint('✅ Loaded inspections from "inspections" table with site data');
+        
+        // DEBUG: Show all inspections
+        final responseList = response as List;
+        debugPrint('🔍 DEBUG: Total inspections in database: ${responseList.length}');
+        if (responseList.isEmpty) {
+          debugPrint('⚠️ WARNING: No inspections found in database');
+          debugPrint('   This could mean:');
+          debugPrint('   1. No inspections have been created yet');
+          debugPrint('   2. RLS is blocking the query (is_admin() returning false)');
+          debugPrint('   3. Officers have not synced any inspections');
+        } else {
+          for (var insp in responseList.take(3)) {
+            debugPrint('   - Site: ${insp['site_name']} | Date: ${insp['inspection_date']} | Officer: ${insp['user_id']}');
+          }
+        }
+      } catch (pluralError) {
+        debugPrint('⚠️ Failed to load from "inspections": $pluralError');
+        debugPrint('🔄 Trying singular table name "inspection"...');
+        
+        // Fallback to singular table names (old schema)
+        response = await supabase
+            .from('inspection')
+            .select('''
+              id,
+              user_id,
+              building_reference_no,
+              site_name,
+              site_location,
+              inspection_date,
+              total_defects,
+              defects_with_photos,
+              sync_status,
+              created_at,
+              updated_at
+            ''')
+            .order('created_at', ascending: false);
+        profilesTableName = 'profile';
+        debugPrint('✅ Loaded inspections from "inspection" table');
+      }
 
-      // Fetch all officers
-      final officersResponse = await supabase
-          .from('profiles')
-          .select('id, email, full_name, role')
-          .eq('role', 'officer');
+      // Fetch all officers with schema fallback
+      dynamic officersResponse;
+      try {
+        officersResponse = await supabase
+            .from(profilesTableName)
+            .select('id, email, full_name, role')
+            .eq('role', 'officer');
+        debugPrint('✅ Loaded officers from "$profilesTableName" table');
+      } catch (e) {
+        debugPrint('⚠️ Error loading officers: $e');
+        officersResponse = []; // Continue with empty officers list
+      }
 
       final Map<String, Map<String, dynamic>> officersMap = {};
       for (final officer in officersResponse) {
-        officersMap[officer['id']] = officer;
+        final officerId = officer['id'] as String?;
+        if (officerId != null && officerId.isNotEmpty) {
+          officersMap[officerId] = officer;
+        }
       }
 
       // Match inspections with officers
       final List<Map<String, dynamic>> inspectionsWithProfiles = [];
       for (final inspection in response) {
-        final userId = inspection['user_id'];
-        final officer = officersMap[userId] ?? {
-          'id': userId,
-          'email': 'Unknown',
-          'full_name': 'Unknown Officer',
-          'role': 'officer'
-        };
+        final userId = inspection['user_id'] as String?;
+        final officer = (userId != null && userId.isNotEmpty) 
+            ? (officersMap[userId] ?? {
+                'id': userId,
+                'email': 'Unknown',
+                'full_name': 'Unknown Officer',
+                'role': 'officer'
+              })
+            : {
+                'id': 'unknown',
+                'email': 'Unknown',
+                'full_name': 'Unknown Officer',
+                'role': 'officer'
+              };
         
         inspectionsWithProfiles.add({
           ...inspection,
           'officer_profile': officer,
         });
       }
+
+      debugPrint('📊 Loaded ${inspectionsWithProfiles.length} inspection(s)');
+
+      // Fetch actual photo counts from defect_media table
+      await _updatePhotoCountsForInspections(inspectionsWithProfiles);
 
       setState(() {
         _inspections = inspectionsWithProfiles;
@@ -158,7 +184,7 @@ class _AdminInspectionsManagementScreenState
 
       _openInitialInspectionIfNeeded();
     } catch (e) {
-      debugPrint('Error loading inspections: $e');
+      debugPrint('❌ Error loading inspections: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -172,9 +198,68 @@ class _AdminInspectionsManagementScreenState
             ),
             backgroundColor: NBROColors.error,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
+    }
+  }
+
+  Future<void> _updatePhotoCountsForInspections(List<Map<String, dynamic>> inspections) async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // Get all building reference numbers
+      final buildingRefs = inspections
+          .map((insp) => insp['building_reference_no'] as String?)
+          .where((ref) => ref != null && ref.isNotEmpty)
+          .toSet()
+          .toList();
+      
+      if (buildingRefs.isEmpty) return;
+      
+      // Fetch photo counts for all inspections in one query
+      final mediaResponse = await supabase
+          .from('defect_media')
+          .select('building_reference_no, defect_id')
+          .inFilter('building_reference_no', buildingRefs);
+      
+      // Count photos per building reference
+      final photoCounts = <String, int>{};
+      for (final media in (mediaResponse as List)) {
+        final buildingRef = media['building_reference_no'] as String?;
+        if (buildingRef != null) {
+          photoCounts[buildingRef] = (photoCounts[buildingRef] ?? 0) + 1;
+        }
+      }
+      
+      // Also count defects for accurate total_defects
+      final defectsResponse = await supabase
+          .from('defects')
+          .select('building_reference_no, defect_id')
+          .inFilter('building_reference_no', buildingRefs);
+      
+      final defectCounts = <String, int>{};
+      for (final defect in (defectsResponse as List)) {
+        final buildingRef = defect['building_reference_no'] as String?;
+        if (buildingRef != null) {
+          defectCounts[buildingRef] = (defectCounts[buildingRef] ?? 0) + 1;
+        }
+      }
+      
+      // Update each inspection with actual counts
+      for (final inspection in inspections) {
+        final buildingRef = inspection['building_reference_no'] as String?;
+        if (buildingRef != null) {
+          inspection['defects_with_photos'] = photoCounts[buildingRef] ?? 0;
+          inspection['total_defects'] = defectCounts[buildingRef] ?? 0;
+        }
+      }
+      
+      debugPrint('✅ Updated photo counts for ${inspections.length} inspections');
+    } catch (e) {
+      debugPrint('⚠️ Error updating photo counts: $e');
+      // Continue without photo counts rather than failing completely
     }
   }
 
@@ -230,8 +315,10 @@ class _AdminInspectionsManagementScreenState
   Map<String, int> _getOfficerInspectionCounts() {
     final counts = <String, int>{};
     for (final inspection in _inspections) {
-      final userId = inspection['user_id'];
-      counts[userId] = (counts[userId] ?? 0) + 1;
+      final userId = inspection['user_id'] as String?;
+      if (userId != null && userId.isNotEmpty) {
+        counts[userId] = (counts[userId] ?? 0) + 1;
+      }
     }
     return counts;
   }
@@ -560,7 +647,8 @@ class _AdminInspectionsManagementScreenState
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final officer = officers[index];
-            final count = counts[officer['id']] ?? 0;
+            final officerId = officer['id'] as String?;
+            final count = (officerId != null) ? (counts[officerId] ?? 0) : 0;
             return _buildOfficerCard(officer, count);
           },
           childCount: officers.length,
@@ -622,7 +710,9 @@ class _AdminInspectionsManagementScreenState
   }
 
   void _showOfficerInspections(Map<String, dynamic> officer) {
-    final officerId = officer['id'];
+    final officerId = officer['id'] as String?;
+    if (officerId == null || officerId.isEmpty) return;
+    
     final officerInspections = _inspections
         .where((inspection) => inspection['user_id'] == officerId)
         .toList();
@@ -1604,6 +1694,13 @@ class _AdminInspectionsManagementScreenState
   }
 
   Map<String, dynamic>? _resolveSiteData(Map<String, dynamic> inspection) {
+    // Check for site data from join
+    final sites = inspection['sites'];
+    if (sites is Map<String, dynamic>) {
+      return sites;
+    }
+    
+    // Fallback to old field names
     final byId = inspection['sites_by_id'];
     if (byId is Map<String, dynamic>) {
       return byId;
