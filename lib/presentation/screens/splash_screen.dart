@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,11 +13,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // Listen for auth state changes (including password recovery)
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      
+      debugPrint('[SplashScreen] Auth state change: $event');
+      
+      if (event == AuthChangeEvent.passwordRecovery) {
+        // User clicked the password reset link from email
+        debugPrint('[SplashScreen] Password recovery detected, navigating to reset screen');
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/reset-password');
+        }
       }
     });
+
+    // Navigate to login after a short delay
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
   }
 
   @override

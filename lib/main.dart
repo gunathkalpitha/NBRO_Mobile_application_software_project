@@ -7,6 +7,8 @@ import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/login_screen.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/auth_callback_screen.dart';
+import 'presentation/screens/forgot_password_screen.dart';
+import 'presentation/screens/reset_password_screen.dart';
 import 'presentation/state/inspection_bloc.dart';
 
 const supabaseUrl = 'https://bazelkzuwxcrmapbuzyp.supabase.co';
@@ -57,6 +59,8 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
           '/auth-callback': (context) => const AuthCallbackScreen(),
+          '/forgot-password': (context) => const ForgotPasswordScreen(),
+          '/reset-password': (context) => const ResetPasswordScreen(),
         },
       ),
     );

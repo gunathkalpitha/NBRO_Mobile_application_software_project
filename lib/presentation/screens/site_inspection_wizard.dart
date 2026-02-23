@@ -7,11 +7,16 @@ import '../../core/theme/app_theme.dart';
 import '../../domain/models/inspection.dart';
 import '../state/inspection_bloc.dart';
 import '../widgets/defect_capture_card.dart';
+import '../../data/services/draft_storage_service.dart';
+import 'package:uuid/uuid.dart';
 
 /// Site Inspection Wizard matching NBRO Physical Forms
 /// Flow: Site Data Sheet → Building Profile → Defect Capture → Review
 class SiteInspectionWizard extends StatefulWidget {
-  const SiteInspectionWizard({super.key});
+  final String? draftId; // For restoring a draft
+  final Map<String, dynamic>? draftData;
+  
+  const SiteInspectionWizard({super.key, this.draftId, this.draftData});
 
   @override
   State<SiteInspectionWizard> createState() => _SiteInspectionWizardState();
@@ -101,12 +106,22 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   
   // Inspection ID
   late String _inspectionId;
+  final DraftStorageService _draftService = DraftStorageService();
+  String? _currentDraftId;
 
   @override
   void initState() {
     super.initState();
-    _inspectionId = 'H-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    _buildingRefController.text = _inspectionId;
+    if (widget.draftId != null && widget.draftData != null) {
+      // Restoring from draft
+      _currentDraftId = widget.draftId;
+      _restoreFromDraft(widget.draftData!);
+    } else {
+      // New inspection
+      _inspectionId = 'H-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      _buildingRefController.text = _inspectionId;
+      _currentDraftId = const Uuid().v4();
+    }
   }
 
   Future<void> _takeBuildingPhoto() async {
@@ -171,7 +186,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     });
   }
 
-  void _completeInspection() {
+  Future<void> _completeInspection() async {
     if (_ownerNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter owner name')),
@@ -238,6 +253,13 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           buildingPhotoPath: _buildingPhotoPath,
         ));
 
+    // Delete the draft after completing inspection
+    if (_currentDraftId != null) {
+      await _draftService.deleteDraft(_currentDraftId!);
+    }
+
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Inspection saved successfully')),
     );
@@ -271,16 +293,175 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     });
   }
 
+  Future<void> _saveDraft() async {
+    final draftData = {
+      'building_ref': _buildingRefController.text,
+      'owner_name': _ownerNameController.text,
+      'address': _addressController.text,
+      'contact': _contactController.text,
+      'building_photo_path': _buildingPhotoPath,
+      'latitude': _latitude,
+      'longitude': _longitude,
+      'distance': _distanceController.text,
+      'age': _ageController.text,
+      'type_of_structure': _typeOfStructure,
+      'present_condition': _presentCondition,
+      'has_pipe_borne_water': _hasPipeBorneWater,
+      'water_source': _waterSource,
+      'has_electricity': _hasElectricity,
+      'electricity_source': _electricitySource,
+      'has_sewage_waste': _hasSewageWaste,
+      'sewage_type': _sewageType,
+      'ancillary_structures': _ancillaryStructures,
+      'number_of_floors': _numberOfFloorsController.text,
+      'building_elements': _buildingElements,
+      'roof_covering': _roofCovering,
+      'defects': _capturedDefects.map((d) => d.toJson()).toList(),
+      'current_step': _currentStep,
+      'inspection_id': _inspectionId,
+    };
+    
+    await _draftService.saveDraft(draftId: _currentDraftId!, draftData: draftData);
+  }
+
+  void _restoreFromDraft(Map<String, dynamic> data) {
+    _inspectionId = data['inspection_id'] ?? 'H-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    _buildingRefController.text = data['building_ref'] ?? _inspectionId;
+    _ownerNameController.text = data['owner_name'] ?? '';
+    _addressController.text = data['address'] ?? '';
+    _contactController.text = data['contact'] ?? '';
+    _buildingPhotoPath = data['building_photo_path'];
+    _latitude = data['latitude'];
+    _longitude = data['longitude'];
+    _distanceController.text = data['distance'] ?? '';
+    _ageController.text = data['age'] ?? '';
+    _typeOfStructure = data['type_of_structure'];
+    _presentCondition = data['present_condition'];
+    _hasPipeBorneWater = data['has_pipe_borne_water'] ?? false;
+    _waterSource = data['water_source'];
+    _hasElectricity = data['has_electricity'] ?? false;
+    _electricitySource = data['electricity_source'];
+    _hasSewageWaste = data['has_sewage_waste'] ?? false;
+    _sewageType = data['sewage_type'];
+    
+    if (data['ancillary_structures'] != null) {
+      final saved = Map<String, dynamic>.from(data['ancillary_structures']);
+      saved.forEach((key, value) {
+        if (_ancillaryStructures.containsKey(key)) {
+          _ancillaryStructures[key] = Map<String, bool>.from(value);
+        }
+      });
+    }
+    
+    _numberOfFloorsController.text = data['number_of_floors'] ?? '';
+    
+    if (data['building_elements'] != null) {
+      final saved = Map<String, dynamic>.from(data['building_elements']);
+      saved.forEach((key, value) {
+        if (_buildingElements.containsKey(key)) {
+          _buildingElements[key] = Map<String, bool>.from(value);
+        }
+      });
+    }
+    
+    _roofCovering = data['roof_covering'];
+    
+    if (data['defects'] != null) {
+      _capturedDefects.clear();
+      for (final defectJson in (data['defects'] as List)) {
+        _capturedDefects.add(Defect.fromJson(defectJson));
+      }
+    }
+    
+    _currentStep = data['current_step'] ?? 0;
+  }
+
+  Future<bool> _handleBackPress() async {
+    // Check if there's any data entered
+    final hasData = _buildingRefController.text.isNotEmpty ||
+                    _ownerNameController.text.isNotEmpty ||
+                    _addressController.text.isNotEmpty ||
+                    _capturedDefects.isNotEmpty;
+    
+    if (!hasData) {
+      return true; // Allow navigation without dialog
+    }
+    
+    // Show save draft dialog
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.save_outlined, color: NBROColors.primary),
+            const SizedBox(width: 12),
+            const Text('Save as Draft?'),
+          ],
+        ),
+        content: const Text(
+          'Do you want to save this inspection as a draft? You can continue editing it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'discard'),
+            child: const Text(
+              'Discard',
+              style: TextStyle(color: NBROColors.error),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, 'save'),
+            icon: const Icon(Icons.save),
+            label: const Text('Save Draft'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: NBROColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == 'save') {
+      await _saveDraft();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: NBROColors.white),
+                SizedBox(width: 12),
+                Text('Draft saved successfully'),
+              ],
+            ),
+            backgroundColor: NBROColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return true;
+    } else if (result == 'discard') {
+      // Delete draft if exists
+      if (_currentDraftId != null) {
+        await _draftService.deleteDraft(_currentDraftId!);
+      }
+      return true;
+    }
+    
+    return false; // Cancel navigation
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pre-Crack Survey Report'),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        child: Stepper(
+    return WillPopScope(
+      onWillPop: _handleBackPress,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Pre-Crack Survey Report'),
+          elevation: 0,
+        ),
+        body: SingleChildScrollView(
+          controller: _scrollController,
+          child: Stepper(
         physics: const NeverScrollableScrollPhysics(),
         currentStep: _currentStep,
         controlsBuilder: (context, details) {
@@ -315,11 +496,15 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
             _completeInspection();
           }
         },
-        onStepCancel: () {
+        onStepCancel: () async {
           if (_currentStep > 0) {
             setState(() => _currentStep -= 1);
           } else {
-            Navigator.of(context).pop();
+            final navigator = Navigator.of(context);
+            final shouldPop = await _handleBackPress();
+            if (shouldPop && mounted) {
+              navigator.pop();
+            }
           }
         },
         steps: [
@@ -329,7 +514,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           _buildDefectCaptureStep(),
           _buildReviewStep(),
         ],
-      ),
+        ),
+        ),
       ),
     );
   }

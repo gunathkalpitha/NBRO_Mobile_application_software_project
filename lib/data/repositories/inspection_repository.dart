@@ -39,14 +39,19 @@ class InspectionRepository {
         buildingPhotoUrl: buildingPhotoUrl,
       );
       
-      // Insert site data
+      // Insert site data and get the created site record
       final siteJson = inspectionWithUser.toJson();
       debugPrint('[Repository] Site JSON: $siteJson');
       
-      await _supabase.from('sites').insert(siteJson);
-      debugPrint('[Repository] ✅ Site inserted successfully');
+      final siteResponse = await _supabase
+          .from('sites')
+          .insert(siteJson)
+          .select()
+          .single();
+      debugPrint('[Repository] ✅ Site inserted successfully with ID: ${siteResponse['id']}');
 
       // Insert defects if any
+      int defectsWithPhotos = 0;
       if (inspection.defects.isNotEmpty) {
         final defectsJson = inspection.defects
             .map((defect) => defect.toJson())
@@ -61,9 +66,26 @@ class InspectionRepository {
           if (defect.photoPath != null) {
             await _uploadDefectPhoto(defect.id, inspection.id, defect.photoPath!);
             debugPrint('[Repository] ✅ Photo uploaded for defect ${defect.id}');
+            defectsWithPhotos++;
           }
         }
       }
+      
+      // Insert into inspections table for admin visibility
+      final inspectionRecord = {
+        'site_id': siteResponse['id'],
+        'user_id': currentUser.id,
+        'building_reference_no': inspection.id,
+        'site_name': inspection.ownerName,
+        'site_location': inspection.siteAddress,
+        'inspection_date': DateTime.now().toIso8601String(),
+        'total_defects': inspection.defects.length,
+        'defects_with_photos': defectsWithPhotos,
+        'sync_status': 'synced',
+      };
+      
+      await _supabase.from('inspections').insert(inspectionRecord);
+      debugPrint('[Repository] ✅ Inspection record created for admin tracking');
       
       // Update sync status to 'synced' since save was successful
       await _supabase
