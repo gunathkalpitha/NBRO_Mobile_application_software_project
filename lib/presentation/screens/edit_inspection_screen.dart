@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/inspection.dart';
 import '../../data/repositories/inspection_repository.dart';
@@ -57,6 +60,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
   
   // Building Photo
   String? _buildingPhotoUrl;
+  String? _newBuildingPhotoPath; // local path of a newly picked photo (not yet uploaded)
   
   bool _isLoading = false;
   bool _hasChanges = false;
@@ -206,6 +210,25 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     }
   }
 
+  Future<void> _pickBuildingPhoto(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 85);
+      if (picked != null) {
+        setState(() {
+          _newBuildingPhotoPath = picked.path;
+          _hasChanges = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _saveInspection() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -252,7 +275,10 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
         updatedAt: DateTime.now(),
       );
 
-      await _repository.updateInspection(updatedInspection);
+      await _repository.updateInspection(
+        updatedInspection,
+        newBuildingPhotoPath: _newBuildingPhotoPath,
+      );
 
       if (mounted) {
         widget.onInspectionUpdated(updatedInspection);
@@ -534,34 +560,38 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
             ),
           ),
           const SizedBox(height: 12),
-          if (_buildingPhotoUrl != null) ...[
+          if (_newBuildingPhotoPath != null || _buildingPhotoUrl != null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                _buildingPhotoUrl!,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
+              child: _newBuildingPhotoPath != null
+                  ? (kIsWeb
+                      ? Image.network(_newBuildingPhotoPath!, height: 200, width: double.infinity, fit: BoxFit.cover)
+                      : Image.file(File(_newBuildingPhotoPath!), height: 200, width: double.infinity, fit: BoxFit.cover))
+                  : Image.network(
+                      _buildingPhotoUrl!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('Failed to load image'),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 48, color: Colors.grey),
-                          SizedBox(height: 8),
-                          Text('Failed to load image'),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
             const SizedBox(height: 12),
           ] else ...[
@@ -589,14 +619,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Photo upload functionality coming soon'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                  onPressed: () => _pickBuildingPhoto(ImageSource.camera),
                   icon: const Icon(Icons.camera_alt),
                   label: const Text('Take Photo'),
                 ),
@@ -604,27 +627,21 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Photo upload functionality coming soon'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                  onPressed: () => _pickBuildingPhoto(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library),
                   label: const Text('From Gallery'),
                 ),
               ),
             ],
           ),
-          if (_buildingPhotoUrl != null) ...[
+          if (_buildingPhotoUrl != null || _newBuildingPhotoPath != null) ...[
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () {
                 setState(() {
                   _buildingPhotoUrl = null;
-                  _markAsChanged();
+                  _newBuildingPhotoPath = null;
+                  _hasChanges = true;
                 });
               },
               icon: const Icon(Icons.delete, color: Colors.red),
@@ -988,7 +1005,6 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                       Icon(
                         Icons.warning_amber,
                         size: 64,
-                        color: Colors.grey.shade400,
                       ),
                       const SizedBox(height: 16),
                       Text(

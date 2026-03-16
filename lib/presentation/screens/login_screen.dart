@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
@@ -26,6 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkBiometricAvailability() async {
+    if (kIsWeb) {
+      debugPrint('[LoginScreen] Biometric authentication not supported on web');
+      return;
+    }
+
     try {
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
@@ -43,6 +49,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _authenticateWithBiometric() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Biometric login is not available on web')),
+        );
+      }
+      return;
+    }
+
     try {
       final isAuthenticated = await _localAuth.authenticate(
         localizedReason: 'Authenticate to access NBRO Field Surveyor',
@@ -94,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Check if the account is active
         try {
           final profileResponse = await Supabase.instance.client
-              .from('profiles')
+              .from('profile')
               .select('is_active')
               .eq('id', response.user!.id)
               .single();

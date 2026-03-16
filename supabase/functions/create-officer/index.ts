@@ -102,12 +102,12 @@ serve(async (req) => {
     const userId = authData.user?.id;
     console.log(`[create-officer] Auth user created: ${userId}`);
 
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const { error: profileError } = await supabase.from("profile").insert({
       id: userId,
-      email,
       full_name: fullName,
       role: "officer",
       is_active: true,
+      must_change_password: true,
     });
 
     if (profileError) {

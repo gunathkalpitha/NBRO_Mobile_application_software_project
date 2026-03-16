@@ -136,48 +136,45 @@ class Inspection {
   // Convert to JSON for Supabase
   Map<String, dynamic> toJson() {
     return {
-      'building_reference_no': id,
+      'building_ref': id,
       'owner_name': ownerName,
-      'site_address': siteAddress,
+      'address': siteAddress,
       'owner_contact': contactNo,
       'latitude': latitude,
       'longitude': longitude,
       'distance_from_row': distanceFromRow,
-      'age_of_structure': ageOfStructure,
-      'type_of_structure': typeOfStructure,
-      'present_condition': presentCondition,
-      'has_pipe_borne_water': hasPipeBorneWater,
-      'water_source': waterSource,
-      'has_electricity': hasElectricity,
-      'electricity_source': electricitySource,
-      'has_sewage_waste': hasSewageWaste,
-      'sewage_type': sewageType,
-      'number_of_floors': numberOfFloors,
-      'wall_materials': wallMaterials,
-      'door_materials': doorMaterials,
-      'floor_materials': floorMaterials,
-      'roof_materials': roofMaterials,
-      'roof_covering': roofCovering,
       'sync_status': syncStatus.name,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'remarks': remarks,
-      'created_by': createdBy,
-      'building_photo_url': buildingPhotoUrl,
+      'user_id': createdBy,
     };
   }
 
   // Create from JSON (from Supabase)
   factory Inspection.fromJson(Map<String, dynamic> json) {
+    int? parseApproxAge(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is int) return raw;
+      final text = raw.toString();
+      final match = RegExp(r'\d+').firstMatch(text);
+      if (match == null) return null;
+      return int.tryParse(match.group(0)!);
+    }
+
     return Inspection(
-      id: (json['building_reference_no'] as String?) ?? 'UNKNOWN',
+      id: (json['building_ref'] as String?) ??
+          (json['building_reference_no'] as String?) ??
+          (json['site_id'] as String?) ??
+          'UNKNOWN',
       ownerName: (json['owner_name'] as String?) ?? 'Unknown Owner',
-      siteAddress: (json['site_address'] as String?) ?? 'Unknown Address',
+      siteAddress: (json['address'] as String?) ??
+          (json['site_address'] as String?) ??
+          'Unknown Address',
       contactNo: json['owner_contact'] as String?,
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
       distanceFromRow: json['distance_from_row'] != null ? (json['distance_from_row'] as num).toDouble() : null,
-      ageOfStructure: json['age_of_structure'] as int?,
+      ageOfStructure: parseApproxAge(json['age_of_structure'] ?? json['approx_age']),
       typeOfStructure: json['type_of_structure'] as String?,
       presentCondition: json['present_condition'] as String?,
       hasPipeBorneWater: json['has_pipe_borne_water'] as bool?,
@@ -211,7 +208,7 @@ class Inspection {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       remarks: json['remarks'] as String?,
-      createdBy: json['created_by'] as String?,
+      createdBy: (json['user_id'] as String?) ?? (json['created_by'] as String?),
       buildingPhotoUrl: json['building_photo_url'] as String?,
     );
   }

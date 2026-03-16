@@ -4,6 +4,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const inviteRedirectTo =
+  Deno.env.get('INVITE_REDIRECT_TO') ||
+  'https://gunathkalpitha.github.io/nbro-auth-redirect/'
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
@@ -49,12 +52,11 @@ serve(async (req: Request) => {
     }
 
     console.log('Inviting user:', email)
-    // Invite user via email
-    // Don't specify redirectTo - let it use the default verification URL
-    // The mobile app will handle the deep link through Android/iOS configuration
+    // Invite user via email with explicit redirect page that can handle all auth URL formats.
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(
       email,
       {
+        redirectTo: inviteRedirectTo,
         data: {
           full_name: fullName,
           role: 'officer',
@@ -73,10 +75,9 @@ serve(async (req: Request) => {
     console.log('User invited, creating profile for:', data.user.id)
     // Create or update profile record
     const { error: profileError } = await supabase
-      .from('profiles')
+      .from('profile')
       .upsert({
         id: data.user.id,
-        email: email,
         full_name: fullName,
         role: 'officer',
         is_active: true,

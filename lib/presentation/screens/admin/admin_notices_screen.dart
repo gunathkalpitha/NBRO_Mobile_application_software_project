@@ -30,6 +30,19 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
   bool _isSending = false;
   List<Notice> _notices = [];
 
+  String _officerLabel(Map<String, dynamic> officer) {
+    final name = officer['full_name'] as String?;
+    if (name != null && name.isNotEmpty) {
+      return name;
+    }
+    final id = officer['id'] as String?;
+    if (id == null || id.isEmpty) {
+      return 'Unknown Officer';
+    }
+    final shortId = id.length > 8 ? id.substring(0, 8) : id;
+    return 'Officer $shortId';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,8 +76,8 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
   Future<void> _loadOfficers() async {
     try {
       final response = await Supabase.instance.client
-          .from('profiles')
-          .select('id, email, full_name')
+          .from('profile')
+          .select('id, full_name')
           .eq('role', 'officer')
           .eq('is_active', true)
           .order('full_name', ascending: true);
@@ -458,7 +471,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
             (officer) => DropdownMenuItem<String>(
               value: officer['id'] as String,
               child: Text(
-                officer['full_name'] ?? officer['email'] ?? 'Unknown Officer',
+                _officerLabel(officer),
               ),
             ),
           )
@@ -480,7 +493,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
         final isSelected = _selectedOfficerIds.contains(officerId);
         return FilterChip(
           label: Text(
-            officer['full_name'] ?? officer['email'] ?? 'Unknown Officer',
+            _officerLabel(officer),
           ),
           selected: isSelected,
           onSelected: (selected) {

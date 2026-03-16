@@ -46,12 +46,12 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       // DEBUGGING: First check ALL profiles to see what's in the database
       try {
         final debugResponse = await supabase
-            .from('profiles')
-            .select('id, email, full_name, role, created_at')
+            .from('profile')
+            .select('id, full_name, role, created_at')
             .order('created_at', ascending: false);
         debugPrint('🔍 DEBUG: Total profiles in database: ${(debugResponse as List).length}');
         for (var profile in debugResponse) {
-          debugPrint('   - ${profile['email']} | Role: ${profile['role']} | Name: ${profile['full_name']}');
+          debugPrint('   - ${profile['id']} | Role: ${profile['role']} | Name: ${profile['full_name']}');
         }
       } catch (e) {
         debugPrint('🔍 DEBUG: Could not fetch all profiles: $e');
@@ -59,8 +59,8 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       
       try {
         response = await supabase
-            .from('profiles')
-            .select('id, email, full_name, role, created_at')
+          .from('profile')
+          .select('id, full_name, role, created_at')
             .eq('role', 'officer')
             .order('created_at', ascending: false);
         debugPrint('✅ Loaded officers from "profiles" table (plural)');
@@ -72,7 +72,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         try {
           response = await supabase
               .from('profile')
-              .select('id, email, full_name, role, created_at')
+              .select('id, full_name, role, created_at')
               .eq('role', 'officer')
               .order('created_at', ascending: false);
           debugPrint('✅ Loaded officers from "profile" table (singular)');
@@ -526,7 +526,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         
         // Delete from profiles table
         await supabase
-            .from('profiles')
+          .from('profile')
             .delete()
             .eq('id', officerId);
 
