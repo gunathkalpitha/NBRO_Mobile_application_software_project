@@ -43,9 +43,46 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        final role = user.userMetadata?['role'] ?? 'officer';
+        final client = Supabase.instance.client;
+
+        // Prefer explicit role from profile table in DB.
+        String role = (user.userMetadata?['role'] as String?) ?? '';
+
+        if (role.isEmpty) {
+          try {
+            final profile = await client
+                .from('profile')
+                .select('role, is_active')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (profile != null && (profile['is_active'] as bool? ?? true)) {
+              role = (profile['role'] as String?) ?? '';
+            }
+          } catch (e) {
+            debugPrint('[HomeScreen] Failed profile role lookup: $e');
+          }
+        }
+
+        bool isAdmin = role == 'admin';
+
+        // Safety fallback for known default admin account.
+        if (!isAdmin && (user.email?.toLowerCase() == 'admin@gmail.com')) {
+          isAdmin = true;
+        }
+
+        // Last fallback: ask DB helper if current user is admin.
+        if (!isAdmin) {
+          try {
+            final rpcResult = await client.rpc('is_admin');
+            isAdmin = rpcResult == true;
+          } catch (e) {
+            debugPrint('[HomeScreen] Failed is_admin() lookup: $e');
+          }
+        }
+
         setState(() {
-          _isAdmin = role == 'admin';
+          _isAdmin = isAdmin;
           _isCheckingRole = false;
         });
       } else {

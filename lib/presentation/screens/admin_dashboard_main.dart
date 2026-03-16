@@ -40,61 +40,28 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     try {
       final supabase = Supabase.instance.client;
       
-      // Get total active officers count with schema fallback
-      dynamic officersResponse;
-      try {
-        officersResponse = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('role', 'officer')
-            .eq('is_active', true);
-        debugPrint('✅ Loaded officers from "profiles" table');
-      } catch (e) {
-        debugPrint('⚠️ Failed to load from "profiles", trying "profile": $e');
-        officersResponse = await supabase
-            .from('profile')
-            .select('id')
-            .eq('role', 'officer')
-            .eq('is_active', true);
-        debugPrint('✅ Loaded officers from "profile" table');
-      }
+      // New schema uses singular profile table.
+      final officersResponse = await supabase
+          .from('profile')
+          .select('id')
+          .eq('role', 'officer')
+          .eq('is_active', true);
       _totalOfficers = (officersResponse as List).length;
 
-      // Get total inspections count with schema fallback
-      dynamic inspectionsResponse;
-      try {
-        inspectionsResponse = await supabase
-            .from('inspections')
-            .select('id, sync_status');
-        debugPrint('✅ Loaded inspections from "inspections" table');
-      } catch (e) {
-        debugPrint('⚠️ Failed to load from "inspections", trying "inspection": $e');
-        inspectionsResponse = await supabase
-            .from('inspection')
-            .select('id, sync_status');
-        debugPrint('✅ Loaded inspections from "inspection" table');
-      }
-      
-      final List inspectionsList = inspectionsResponse as List;
+      // New schema stores sync status on site records.
+      final sitesForStatus = await supabase
+          .from('site')
+          .select('site_id, sync_status');
+
+      final List inspectionsList = sitesForStatus as List;
       _totalInspections = inspectionsList.length;
       _pendingInspections = inspectionsList
           .where((i) => i['sync_status'] == 'pending')
           .length;
 
-      // Get total sites count with schema fallback
-      dynamic sitesResponse;
-      try {
-        sitesResponse = await supabase
-            .from('sites')
-            .select('id');
-        debugPrint('✅ Loaded sites from "sites" table');
-      } catch (e) {
-        debugPrint('⚠️ Failed to load from "sites", trying "site": $e');
-        sitesResponse = await supabase
-            .from('site')
-            .select('id');
-        debugPrint('✅ Loaded sites from "site" table');
-      }
+      final sitesResponse = await supabase
+          .from('site')
+          .select('site_id');
       _totalSites = (sitesResponse as List).length;
 
       debugPrint('📊 Admin Stats: Officers=$_totalOfficers, Inspections=$_totalInspections, Pending=$_pendingInspections, Sites=$_totalSites');

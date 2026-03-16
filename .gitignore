@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local secrets and machine-specific config
+/ios/Flutter/SecretKeys.xcconfig
+/replace-secrets.txt
+/lib/config.dart
+.env
+.env.*

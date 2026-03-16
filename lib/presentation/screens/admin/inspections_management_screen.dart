@@ -46,12 +46,7 @@ class _AdminInspectionsManagementScreenState
     setState(() => _isLoading = true);
     try {
       final supabase = Supabase.instance.client;
-      
-      // DEBUG: Check current user and admin status
-      final currentUser = supabase.auth.currentUser;
-      debugPrint('🔍 DEBUG: Current user: ${currentUser?.email} (ID: ${currentUser?.id})');
-      
-      // Try to check is_admin status
+
       try {
         final adminCheck = await supabase.rpc('is_admin');
         debugPrint('🔍 DEBUG: is_admin() result: $adminCheck');
@@ -59,84 +54,33 @@ class _AdminInspectionsManagementScreenState
         debugPrint('🔍 DEBUG: Could not check is_admin(): $e');
       }
 
-      // Try to fetch inspections with schema fallback
-      dynamic response;
-      String profilesTableName = 'profiles';
-      
-      try {
-        // First try plural table names (new schema)
-        // Join with sites table to get full site data including photos
-        response = await supabase
-            .from('inspections')
-            .select('''
-              id,
-              user_id,
-              building_reference_no,
-              site_name,
-              site_location,
-              inspection_date,
-              total_defects,
-              defects_with_photos,
-              sync_status,
-              created_at,
-              updated_at,
-              site_id,
-              sites!inspections_site_id_fkey(*)
-            ''')
-            .order('created_at', ascending: false);
-        debugPrint('✅ Loaded inspections from "inspections" table with site data');
-        
-        // DEBUG: Show all inspections
-        final responseList = response as List;
-        debugPrint('🔍 DEBUG: Total inspections in database: ${responseList.length}');
-        if (responseList.isEmpty) {
-          debugPrint('⚠️ WARNING: No inspections found in database');
-          debugPrint('   This could mean:');
-          debugPrint('   1. No inspections have been created yet');
-          debugPrint('   2. RLS is blocking the query (is_admin() returning false)');
-          debugPrint('   3. Officers have not synced any inspections');
-        } else {
-          for (var insp in responseList.take(3)) {
-            debugPrint('   - Site: ${insp['site_name']} | Date: ${insp['inspection_date']} | Officer: ${insp['user_id']}');
-          }
-        }
-      } catch (pluralError) {
-        debugPrint('⚠️ Failed to load from "inspections": $pluralError');
-        debugPrint('🔄 Trying singular table name "inspection"...');
-        
-        // Fallback to singular table names (old schema)
-        response = await supabase
-            .from('inspection')
-            .select('''
-              id,
-              user_id,
-              building_reference_no,
-              site_name,
-              site_location,
-              inspection_date,
-              total_defects,
-              defects_with_photos,
-              sync_status,
-              created_at,
-              updated_at
-            ''')
-            .order('created_at', ascending: false);
-        profilesTableName = 'profile';
-        debugPrint('✅ Loaded inspections from "inspection" table');
-      }
+      final response = await supabase
+          .from('site')
+          .select('''
+            site_id,
+            user_id,
+            building_ref,
+            owner_name,
+            owner_contact,
+            address,
+            latitude,
+            longitude,
+            distance_from_row,
+            building_photo_url,
+            building_photo_path,
+            sync_status,
+            created_at,
+            updated_at,
+            general_observation(type, present_condition, approx_age),
+            external_services(pipe_born_water_supply, sewage_waste, electricity_source),
+            main_building(no_floors)
+          ''')
+          .order('created_at', ascending: false);
 
-      // Fetch all officers with schema fallback
-      dynamic officersResponse;
-      try {
-        officersResponse = await supabase
-            .from(profilesTableName)
-            .select('id, email, full_name, role')
-            .eq('role', 'officer');
-        debugPrint('✅ Loaded officers from "$profilesTableName" table');
-      } catch (e) {
-        debugPrint('⚠️ Error loading officers: $e');
-        officersResponse = []; // Continue with empty officers list
-      }
+      final officersResponse = await supabase
+          .from('profile')
+          .select('id, full_name, role')
+          .eq('role', 'officer');
 
       final Map<String, Map<String, dynamic>> officersMap = {};
       for (final officer in officersResponse) {
@@ -148,24 +92,77 @@ class _AdminInspectionsManagementScreenState
 
       // Match inspections with officers
       final List<Map<String, dynamic>> inspectionsWithProfiles = [];
-      for (final inspection in response) {
-        final userId = inspection['user_id'] as String?;
+      for (final row in response) {
+        final userId = row['user_id'] as String?;
+        final observations = (row['general_observation'] as List?) ?? const [];
+        final services = (row['external_services'] as List?) ?? const [];
+        final buildings = (row['main_building'] as List?) ?? const [];
+
+        final observation = observations.isNotEmpty
+            ? observations.first as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final service = services.isNotEmpty
+            ? services.first as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final building = buildings.isNotEmpty
+            ? buildings.first as Map<String, dynamic>
+            : const <String, dynamic>{};
+
+        final pipeWater = service['pipe_born_water_supply'] as String?;
+        final electricity = service['electricity_source'] as String?;
+        final sewage = service['sewage_waste'] as String?;
+
+        final siteData = <String, dynamic>{
+          'site_id': row['site_id'],
+          'building_ref': row['building_ref'],
+          'owner_name': row['owner_name'],
+          'owner_contact': row['owner_contact'],
+          'site_address': row['address'],
+          'address': row['address'],
+          'latitude': row['latitude'],
+          'longitude': row['longitude'],
+          'distance_from_row': row['distance_from_row'],
+          'building_photo_url': row['building_photo_url'],
+          'building_photo_path': row['building_photo_path'],
+          'sync_status': row['sync_status'],
+          'age_of_structure': observation['approx_age'],
+          'type_of_structure': observation['type'],
+          'present_condition': observation['present_condition'],
+          'number_of_floors': building['no_floors'],
+          'water_source': pipeWater,
+          'has_pipe_borne_water': (pipeWater ?? '').toLowerCase().contains('available'),
+          'electricity_source': electricity,
+          'has_electricity': (electricity ?? '').toLowerCase().contains('available'),
+          'sewage_type': sewage,
+          'has_sewage_waste': (sewage ?? '').toLowerCase().contains('available'),
+        };
+
         final officer = (userId != null && userId.isNotEmpty) 
             ? (officersMap[userId] ?? {
                 'id': userId,
-                'email': 'Unknown',
                 'full_name': 'Unknown Officer',
                 'role': 'officer'
               })
             : {
                 'id': 'unknown',
-                'email': 'Unknown',
                 'full_name': 'Unknown Officer',
                 'role': 'officer'
               };
         
         inspectionsWithProfiles.add({
-          ...inspection,
+          'id': row['site_id'],
+          'site_id': row['site_id'],
+          'user_id': userId,
+          'building_reference_no': row['building_ref'],
+          'site_name': row['owner_name'],
+          'site_location': row['address'],
+          'inspection_date': row['created_at'],
+          'sync_status': row['sync_status'],
+          'created_at': row['created_at'],
+          'updated_at': row['updated_at'],
+          'total_defects': 0,
+          'defects_with_photos': 0,
+          'site_data': siteData,
           'officer_profile': officer,
         });
       }
@@ -208,54 +205,79 @@ class _AdminInspectionsManagementScreenState
   Future<void> _updatePhotoCountsForInspections(List<Map<String, dynamic>> inspections) async {
     try {
       final supabase = Supabase.instance.client;
-      
-      // Get all building reference numbers
-      final buildingRefs = inspections
-          .map((insp) => insp['building_reference_no'] as String?)
-          .where((ref) => ref != null && ref.isNotEmpty)
+
+      final siteIds = inspections
+          .map((insp) => insp['site_id'] as String?)
+          .where((id) => id != null && id.isNotEmpty)
           .toSet()
           .toList();
-      
-      if (buildingRefs.isEmpty) return;
-      
-      // Fetch photo counts for all inspections in one query
-      final mediaResponse = await supabase
-          .from('defect_media')
-          .select('building_reference_no, defect_id')
-          .inFilter('building_reference_no', buildingRefs);
-      
-      // Count photos per building reference
-      final photoCounts = <String, int>{};
-      for (final media in (mediaResponse as List)) {
-        final buildingRef = media['building_reference_no'] as String?;
-        if (buildingRef != null) {
-          photoCounts[buildingRef] = (photoCounts[buildingRef] ?? 0) + 1;
-        }
-      }
-      
-      // Also count defects for accurate total_defects
+
+      if (siteIds.isEmpty) return;
+
       final defectsResponse = await supabase
           .from('defects')
-          .select('building_reference_no, defect_id')
-          .inFilter('building_reference_no', buildingRefs);
-      
+          .select('defect_id, site_id')
+          .inFilter('site_id', siteIds);
+
       final defectCounts = <String, int>{};
+      final defectToSite = <String, String>{};
       for (final defect in (defectsResponse as List)) {
-        final buildingRef = defect['building_reference_no'] as String?;
-        if (buildingRef != null) {
-          defectCounts[buildingRef] = (defectCounts[buildingRef] ?? 0) + 1;
+        final siteId = defect['site_id'] as String?;
+        final defectId = defect['defect_id'] as String?;
+        if (siteId != null) {
+          defectCounts[siteId] = (defectCounts[siteId] ?? 0) + 1;
+        }
+        if (siteId != null && defectId != null) {
+          defectToSite[defectId] = siteId;
         }
       }
-      
+
+      final defectIds = defectToSite.keys.toList();
+      final photoCounts = <String, int>{};
+
+      if (defectIds.isNotEmpty) {
+        final defectInfoResponse = await supabase
+            .from('defect_info')
+            .select('info_id, defect_id')
+            .inFilter('defect_id', defectIds);
+
+        final infoToDefect = <String, String>{};
+        for (final info in (defectInfoResponse as List)) {
+          final infoId = info['info_id'] as String?;
+          final defectId = info['defect_id'] as String?;
+          if (infoId != null && defectId != null) {
+            infoToDefect[infoId] = defectId;
+          }
+        }
+
+        final infoIds = infoToDefect.keys.toList();
+        if (infoIds.isNotEmpty) {
+          final imagesResponse = await supabase
+              .from('defect_image')
+              .select('info_id')
+              .inFilter('info_id', infoIds);
+
+          for (final image in (imagesResponse as List)) {
+            final infoId = image['info_id'] as String?;
+            if (infoId == null) continue;
+            final defectId = infoToDefect[infoId];
+            if (defectId == null) continue;
+            final siteId = defectToSite[defectId];
+            if (siteId == null) continue;
+            photoCounts[siteId] = (photoCounts[siteId] ?? 0) + 1;
+          }
+        }
+      }
+
       // Update each inspection with actual counts
       for (final inspection in inspections) {
-        final buildingRef = inspection['building_reference_no'] as String?;
-        if (buildingRef != null) {
-          inspection['defects_with_photos'] = photoCounts[buildingRef] ?? 0;
-          inspection['total_defects'] = defectCounts[buildingRef] ?? 0;
+        final siteId = inspection['site_id'] as String?;
+        if (siteId != null) {
+          inspection['defects_with_photos'] = photoCounts[siteId] ?? 0;
+          inspection['total_defects'] = defectCounts[siteId] ?? 0;
         }
       }
-      
+
       debugPrint('✅ Updated photo counts for ${inspections.length} inspections');
     } catch (e) {
       debugPrint('⚠️ Error updating photo counts: $e');
@@ -1363,36 +1385,90 @@ class _AdminInspectionsManagementScreenState
 
   Future<List<Map<String, dynamic>>> _fetchDefectDetails(String buildingRef) async {
     final supabase = Supabase.instance.client;
+    final site = await supabase
+        .from('site')
+        .select('site_id')
+        .eq('building_ref', buildingRef)
+        .maybeSingle();
+
+    if (site == null) {
+      return [];
+    }
+
+    final siteId = site['site_id'] as String;
+
     final defectsResponse = await supabase
         .from('defects')
         .select(
-            'defect_id, notation, defect_category, floor_level, length_mm, width_mm, remarks, location_description')
-        .eq('building_reference_no', buildingRef)
+            'defect_id, created_at, defect_info(info_id, remarks, length, width, defect_image(image_url, image_path))')
+        .eq('site_id', siteId)
         .order('created_at', ascending: false);
 
-    final mediaResponse = await supabase
-        .from('defect_media')
-        .select('defect_id, storage_url')
-        .eq('building_reference_no', buildingRef)
-        .order('uploaded_at', ascending: false);
-
-    final mediaMap = <String, String>{};
-    for (final media in (mediaResponse as List)) {
-      final defectId = media['defect_id'] as String?;
-      final url = media['storage_url'] as String?;
-      if (defectId != null && url != null && url.isNotEmpty) {
-        mediaMap[defectId] = url;
-      }
-    }
-
     return (defectsResponse as List).map((defect) {
+      final defectRow = defect as Map<String, dynamic>;
+      final infoList = (defectRow['defect_info'] as List?) ?? const [];
+      final info = infoList.isNotEmpty
+          ? infoList.first as Map<String, dynamic>
+          : const <String, dynamic>{};
+
+      final imageList = (info['defect_image'] as List?) ?? const [];
+      final image = imageList.isNotEmpty
+          ? imageList.first as Map<String, dynamic>
+          : const <String, dynamic>{};
+
+      final parsed = _parseDefectMeta(info['remarks'] as String?);
+
       final defectId = defect['defect_id'] as String?;
-      final photoUrl = defectId != null ? mediaMap[defectId] : null;
       return {
-        ...defect as Map<String, dynamic>,
-        'photo_url': photoUrl,
+        'defect_id': defectId,
+        'notation': parsed['notation'],
+        'defect_category': parsed['category'],
+        'floor_level': parsed['floor'],
+        'length_mm': info['length'],
+        'width_mm': info['width'],
+        'location_description': null,
+        'remarks': parsed['remarks'],
+        'photo_url': image['image_url'],
       };
     }).toList();
+  }
+
+  Map<String, String> _parseDefectMeta(String? rawRemarks) {
+    if (rawRemarks == null || !rawRemarks.startsWith('NBRO_META:')) {
+      return {
+        'notation': 'C',
+        'category': 'buildingFloor',
+        'floor': '',
+        'remarks': rawRemarks ?? '',
+      };
+    }
+
+    final splitIndex = rawRemarks.indexOf('|');
+    if (splitIndex == -1) {
+      return {
+        'notation': 'C',
+        'category': 'buildingFloor',
+        'floor': '',
+        'remarks': rawRemarks,
+      };
+    }
+
+    final meta = rawRemarks.substring('NBRO_META:'.length, splitIndex);
+    final plainRemarks = rawRemarks.substring(splitIndex + 1);
+    final result = <String, String>{
+      'notation': 'C',
+      'category': 'buildingFloor',
+      'floor': '',
+      'remarks': plainRemarks,
+    };
+
+    for (final pair in meta.split(';')) {
+      final index = pair.indexOf('=');
+      if (index <= 0) continue;
+      result[pair.substring(0, index)] = pair.substring(index + 1);
+    }
+
+    return result;
   }
 
   Widget _buildDefectsSection(String buildingRef) {
@@ -1694,6 +1770,11 @@ class _AdminInspectionsManagementScreenState
   }
 
   Map<String, dynamic>? _resolveSiteData(Map<String, dynamic> inspection) {
+    final siteData = inspection['site_data'];
+    if (siteData is Map<String, dynamic>) {
+      return siteData;
+    }
+
     // Check for site data from join
     final sites = inspection['sites'];
     if (sites is Map<String, dynamic>) {

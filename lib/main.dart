@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'config.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'presentation/screens/login_screen.dart';
@@ -10,10 +11,6 @@ import 'presentation/screens/auth_callback_screen.dart';
 import 'presentation/screens/forgot_password_screen.dart';
 import 'presentation/screens/reset_password_screen.dart';
 import 'presentation/state/inspection_bloc.dart';
-
-const supabaseUrl = 'https://bazelkzuwxcrmapbuzyp.supabase.co';
-const supabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhemVsa3p1d3hjcm1hcGJ1enlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MjY0NTYsImV4cCI6MjA4NDQwMjQ1Nn0.bCuiTsDIXKKQaqPRVBcTfrp44APXtCAp8QpovVaBywk';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +25,13 @@ void main() async {
 
 Future<void> _initSupabase() async {
   try {
+    if (supabaseAnonKey.startsWith('sb_secret_') ||
+        supabaseAnonKey.startsWith('sb_secret__')) {
+      throw StateError(
+        'Invalid Supabase client key: use anon/publishable key in Flutter app',
+      );
+    }
+
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
