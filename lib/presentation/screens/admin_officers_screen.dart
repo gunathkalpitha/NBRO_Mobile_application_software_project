@@ -40,7 +40,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     try {
       final supabase = Supabase.instance.client;
       
-      // Try plural table name first (new schema)
+   
       dynamic response;
       
       // DEBUGGING: First check ALL profiles to see what's in the database
