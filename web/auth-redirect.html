@@ -77,12 +77,68 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://bazelkzuwxcrmapbuzyp.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhemVsa3p1d3hjcm1hcGJ1enlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MjY0NTYsImV4cCI6MjA4NDQwMjQ1Nn0.bCuiTsDIXKKQaqPRVBcTfrp44APXtCAp8QpovVaBywk';
+        const SUPABASE_URL = 'https://rjzodelildlnrhijwiwv.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 
         let authHash = '';
         let accessToken = '';
         let refreshToken = '';
+
+        function normalizeAuthType(rawType) {
+            const type = (rawType || '').toLowerCase();
+            if (!type) return 'invite';
+            // Supabase may use signup for invite flows depending on template/flow.
+            if (type === 'signup') return 'invite';
+            return type;
+        }
+
+        function buildAuthHash(token, refresh, type) {
+            const parts = [];
+            if (token) parts.push(`access_token=${encodeURIComponent(token)}`);
+            if (refresh) parts.push(`refresh_token=${encodeURIComponent(refresh)}`);
+            if (type) parts.push(`type=${encodeURIComponent(type)}`);
+            return parts.join('&');
+        }
+
+        function startFromTokens(token, refresh, type) {
+            accessToken = token || '';
+            refreshToken = refresh || '';
+            const normalizedType = normalizeAuthType(type);
+            authHash = buildAuthHash(accessToken, refreshToken, normalizedType);
+
+            if (!accessToken) {
+                throw new Error('Missing access token in callback URL');
+            }
+
+            const payload = decodeJwtPayload(accessToken);
+            const email = payload?.email || 'User';
+
+            // Password reset flow: go straight to app callback handling.
+            if (normalizedType === 'recovery') {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('status').textContent = 'Password reset verified. Opening app...';
+                setTimeout(openApp, 1000);
+                return;
+            }
+
+            // Invitation/signup flow: collect password first.
+            if (normalizedType === 'invite') {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('status').textContent = 'Invitation verified. Set your password to continue.';
+                document.getElementById('emailText').textContent = email;
+                document.getElementById('inviteForm').style.display = 'block';
+
+                const btn = document.getElementById('setPasswordBtn');
+                btn.replaceWith(btn.cloneNode(true));
+                document.getElementById('setPasswordBtn').addEventListener('click', setPasswordAndOpenApp);
+                return;
+            }
+
+            // Unknown/other auth flow: continue to app callback for SDK handling.
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('status').textContent = 'Authentication verified. Opening app...';
+            setTimeout(openApp, 1000);
+        }
 
         function decodeJwtPayload(token) {
             try {
@@ -182,12 +238,8 @@
                     throw new Error('No access token in response');
                 }
                 
-                // Build hash fragment for app redirect
-                authHash = `access_token=${accessToken}&refresh_token=${refreshToken}&type=recovery`;
-                
                 console.log('Token exchange successful, redirecting to app...');
-                statusEl.textContent = 'Password reset verified. Opening app...';
-                setTimeout(openApp, 1000);
+                startFromTokens(accessToken, refreshToken, 'recovery');
             } catch (error) {
                 console.error('Code exchange error:', error);
                 statusEl.textContent = `Failed to verify: ${error.message}`;
@@ -196,11 +248,76 @@
             }
         }
 
+        async function verifyTokenHashFlow(tokenHash, type, email) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = 'Verifying invitation link...';
+
+            const normalizedType = normalizeAuthType(type);
+
+            const body = {
+                token_hash: tokenHash,
+                type: normalizedType,
+            };
+
+            if (email) {
+                body.email = email;
+            }
+
+            const response = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error_description || data.msg || 'Failed to verify invitation link');
+            }
+
+            const token = data.access_token || data.session?.access_token || '';
+            const refresh = data.refresh_token || data.session?.refresh_token || '';
+
+            if (!token) {
+                throw new Error('Verification succeeded but no access token was returned');
+            }
+
+            startFromTokens(token, refresh, normalizedType);
+        }
+
         function setupInvitePage() {
             try {
+                const statusEl = document.getElementById('status');
                 // Check for code parameter (password reset PKCE flow)
                 const urlParams = new URLSearchParams(window.location.search);
                 const code = urlParams.get('code');
+                const queryType = urlParams.get('type') || '';
+                const queryToken = urlParams.get('access_token') || '';
+                const queryRefresh = urlParams.get('refresh_token') || '';
+                const tokenHash = urlParams.get('token_hash') || urlParams.get('token') || '';
+                const email = urlParams.get('email') || '';
+
+                // Check for hash fragment first (standard implicit flow)
+                const hash = window.location.hash.substring(1);
+                if (hash) {
+                    const hashParams = new URLSearchParams(hash);
+                    const hashToken = hashParams.get('access_token') || '';
+                    const hashRefresh = hashParams.get('refresh_token') || '';
+                    const hashType = hashParams.get('type') || queryType;
+
+                    if (hashToken) {
+                        startFromTokens(hashToken, hashRefresh, hashType);
+                        return;
+                    }
+                }
+
+                // Some flows return tokens in query string instead of hash.
+                if (queryToken) {
+                    startFromTokens(queryToken, queryRefresh, queryType);
+                    return;
+                }
                 
                 if (code) {
                     console.log('Password reset code detected, exchanging for tokens...');
@@ -208,52 +325,18 @@
                     return;
                 }
 
-                // Check for hash fragment (invite flow with direct tokens)
-                const hash = window.location.hash.substring(1);
-                authHash = hash;
-                
-                if (hash) {
-                    const params = new URLSearchParams(hash);
-                    accessToken = params.get('access_token') || '';
-                    refreshToken = params.get('refresh_token') || '';
-                    const type = params.get('type') || '';
-                    
-                    if (!accessToken) {
-                        throw new Error('Missing access token in callback URL');
-                    }
-
-                    const payload = decodeJwtPayload(accessToken);
-                    const email = payload?.email || 'User';
-
-                    // Handle password recovery - redirect directly to app
-                    if (type === 'recovery') {
+                if (tokenHash) {
+                    verifyTokenHashFlow(tokenHash, queryType, email).catch((error) => {
+                        console.error('Token-hash verification failed:', error);
+                        statusEl.textContent = `Failed to verify link: ${error.message}`;
                         document.getElementById('spinner').style.display = 'none';
-                        document.getElementById('status').textContent = 'Password reset verified. Opening app...';
-                        setTimeout(openApp, 1000);
-                        return;
-                    }
-
-                    // Handle officer invitation - show password setup form
-                    if (type === 'invite') {
-                        if (!refreshToken) {
-                            throw new Error('Missing refresh token for invitation');
-                        }
-                        document.getElementById('spinner').style.display = 'none';
-                        document.getElementById('status').textContent = 'Invitation verified. Set your password to continue.';
-                        document.getElementById('emailText').textContent = email;
-                        document.getElementById('inviteForm').style.display = 'block';
-                        document.getElementById('setPasswordBtn').addEventListener('click', setPasswordAndOpenApp);
-                        return;
-                    }
-
-                    // Unknown type
-                    console.warn('Unexpected auth type:', type);
-                    throw new Error('Invalid authentication type');
-                } else {
-                    document.getElementById('status').textContent = 
-                        'No authentication data received. Please try again.';
-                    console.error('No hash fragment or code parameter found in URL');
+                        document.getElementById('manualLink').style.display = 'block';
+                    });
+                    return;
                 }
+
+                statusEl.textContent = 'No authentication data received. Please use the latest invitation email link.';
+                console.error('No hash, query tokens, code, or token_hash found in URL');
             } catch (error) {
                 console.error('Redirect error:', error);
                 document.getElementById('status').textContent = 

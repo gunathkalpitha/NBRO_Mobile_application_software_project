@@ -86,14 +86,27 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
+  String _officerSecondaryText(Map<String, dynamic> officer) {
+    final email = officer['email'] as String?;
+    if (email != null && email.isNotEmpty) {
+      return email;
+    }
+    final id = officer['id'] as String?;
+    if (id == null || id.isEmpty) {
+      return 'N/A';
+    }
+    final shortId = id.length > 8 ? id.substring(0, 8) : id;
+    return 'ID: $shortId';
+  }
+
   // ─── Data ─────────────────────────────────────────────────────────────────────
 
   Future<void> _loadOfficers() async {
     setState(() => _isLoading = true);
     try {
       final response = await Supabase.instance.client
-          .from('profiles')
-          .select('id, email, full_name, role, created_at')
+          .from('profile')
+          .select('id, full_name, role, created_at')
           .eq('role', 'officer')
           .eq('is_active', true)
           .order('created_at', ascending: false);
@@ -424,7 +437,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       final client = Supabase.instance.client;
       
       // Disable the officer account by setting is_active to false
-      await client.from('profiles').update({'is_active': false}).eq('id', officerId);
+      await client.from('profile').update({'is_active': false}).eq('id', officerId);
       
       // Remove immediately from UI for instant feedback
       if (mounted) {
@@ -1111,7 +1124,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      officer['email'] ?? '',
+                                      _officerSecondaryText(officer),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: NBROColors.grey,

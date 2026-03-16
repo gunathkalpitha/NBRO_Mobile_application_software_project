@@ -1,0 +1,8 @@
+// config.dart.example
+// Copy this file to lib/config.dart and fill in your real values.
+// config.dart is gitignored - never commit it.
+//
+// Get values from: Supabase Dashboard -> Project Settings -> API
+
+const supabaseUrl = 'YOUR_SUPABASE_URL'; // e.g. https://xxxx.supabase.co
+const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'; // starts with eyJ...
