@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/first_login_guide_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/presentation/screens/auth/first_login_guide_screen.dart';
 
 class AuthCallbackScreen extends StatefulWidget {
   const AuthCallbackScreen({super.key});
@@ -35,7 +37,7 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
         await Future.delayed(const Duration(seconds: 2));
 
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          await _navigateToPostLoginDestination();
         }
       } else {
         // No session yet, try to recover from the callback
@@ -66,7 +68,7 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
         });
         await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          await _navigateToPostLoginDestination();
         }
       } else if (mounted) {
         setState(() {
@@ -84,6 +86,24 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
         });
       }
     }
+  }
+
+  Future<void> _navigateToPostLoginDestination() async {
+    final shouldShowGuide = await FirstLoginGuideService.shouldShowForCurrentUser();
+    if (!mounted) {
+      return;
+    }
+
+    if (shouldShowGuide) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const FirstLoginGuideScreen(),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   @override
