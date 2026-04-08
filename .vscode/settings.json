@@ -1,5 +1,6 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
+    "java.import.gradle.enabled": false,
     "deno.enable": true,
     "deno.enablePaths": [
         "supabase/functions"
