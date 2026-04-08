@@ -7,8 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/rendering.dart';
+
 
 class DefectCaptureCard extends StatefulWidget {
   final Function(Defect) onDefectCapture;
