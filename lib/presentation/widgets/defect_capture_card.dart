@@ -5,8 +5,10 @@ import 'dart:io' show File;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:path_provider/path_provider.dart';
 
 
 class DefectCaptureCard extends StatefulWidget {

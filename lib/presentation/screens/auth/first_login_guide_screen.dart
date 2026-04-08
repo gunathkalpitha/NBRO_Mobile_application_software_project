@@ -42,6 +42,21 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
       title: 'Save and Sync',
       description: 'Your inspection data is stored securely and can be synced for reporting anytime.',
     ),
+    _GuideStep(
+      icon: Icons.assessment_outlined,
+      title: 'Generate Reports',
+      description: 'Create detailed PDF reports with photos, measurements, and findings for stakeholders.',
+    ),
+    _GuideStep(
+      icon: Icons.people_alt_outlined,
+      title: 'Collaborate with Teams',
+      description: 'Share inspections with team members and track changes in real-time securely.',
+    ),
+    _GuideStep(
+      icon: Icons.cloud_done_outlined,
+      title: 'Work Offline',
+      description: 'Inspections are saved locally and automatically synced when internet is available.',
+    ),
   ];
 
   Future<void> _completeGuide() async {
