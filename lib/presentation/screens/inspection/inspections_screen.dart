@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
-import '../state/inspection_bloc.dart';
-import '../widgets/app_shell.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
+import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 import 'inspection_detail_screen.dart';
 
 class InspectionsScreen extends StatefulWidget {

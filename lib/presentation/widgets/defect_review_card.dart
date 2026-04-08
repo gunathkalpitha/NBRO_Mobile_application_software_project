@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
 
 class DefectReviewCard extends StatefulWidget {
   final Defect defect;

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
-import '../../domain/models/notice.dart';
-import '../state/inspection_bloc.dart';
-import '../widgets/app_shell.dart';
-import 'site_inspection_wizard.dart';
-import 'inspection_detail_screen.dart';
-import 'inspection_map_screen.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/domain/models/notice.dart';
+import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
+import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
+import '../inspection/site_inspection_wizard.dart';
+import '../inspection/inspection_detail_screen.dart';
+import '../inspection/inspection_map_screen.dart';
 import 'notice_screen.dart';
-import '../../data/services/draft_storage_service.dart';
+import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(NavItem)? onNavItemSelected;

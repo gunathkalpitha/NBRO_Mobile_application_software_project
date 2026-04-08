@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/models/inspection.dart';
-import '../../data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
 
 /// InspectionEvent - Events for Inspection BLoC
 abstract class InspectionEvent {

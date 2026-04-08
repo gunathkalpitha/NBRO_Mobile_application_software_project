@@ -3,8 +3,8 @@ import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
 
 class DefectCaptureCard extends StatefulWidget {
   final Function(Defect) onDefectCapture;

@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
-import '../../domain/models/inspection.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'dart:io';
 
 /// Repository for managing inspections in Supabase

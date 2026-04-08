@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/notice.dart';
-import '../widgets/branding.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/notice.dart';
+import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 
 class NoticeScreen extends StatefulWidget {
   const NoticeScreen({super.key});

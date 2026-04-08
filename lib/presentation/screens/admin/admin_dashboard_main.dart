@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../widgets/app_shell.dart';
-import '../../data/repositories/inspection_repository.dart';
-import '../../domain/models/inspection.dart';
-import 'admin/officers_screen.dart';
-import 'admin/inspections_management_screen.dart';
-import 'admin/admin_notices_screen.dart';
-import 'inspection_map_screen.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
+import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'officers_screen.dart';
+import 'inspections_management_screen.dart';
+import 'admin_notices_screen.dart';
+import '../inspection/inspection_map_screen.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   final void Function(AdminNavItem)? onNavItemSelected;
