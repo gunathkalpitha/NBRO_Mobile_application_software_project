@@ -4,12 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config.dart';
 import 'core/theme/app_theme.dart';
-import 'presentation/screens/splash_screen.dart';
-import 'presentation/screens/login_screen.dart';
-import 'presentation/screens/home_screen.dart';
-import 'presentation/screens/auth_callback_screen.dart';
-import 'presentation/screens/forgot_password_screen.dart';
-import 'presentation/screens/reset_password_screen.dart';
+import 'presentation/screens/auth/splash_screen.dart';
+import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/officer/home_screen.dart';
+import 'presentation/screens/auth/auth_callback_screen.dart';
+import 'presentation/screens/password/forgot_password_screen.dart';
+import 'presentation/screens/password/reset_password_screen.dart';
 import 'presentation/state/inspection_bloc.dart';
 
 void main() async {

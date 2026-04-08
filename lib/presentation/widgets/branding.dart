@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
-import '../../core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 
 class NBROBrand extends StatelessWidget {
   final String title;

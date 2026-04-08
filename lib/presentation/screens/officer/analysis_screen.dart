@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
-import '../widgets/branding.dart';
-import '../widgets/app_shell.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
+import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});

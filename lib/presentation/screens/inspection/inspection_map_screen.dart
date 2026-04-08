@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../domain/models/inspection.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'inspection_detail_screen.dart';
 
 /// Screen to display inspection sites on a map

@@ -1,44 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 
-class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+class ForgotPasswordScreen extends StatefulWidget {
+  const ForgotPasswordScreen({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _emailController = TextEditingController();
   bool _isLoading = false;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _passwordReset = false;
+  bool _emailSent = false;
 
-  Future<void> _handlePasswordUpdate() async {
-    final newPassword = _newPasswordController.text;
-    final confirmPassword = _confirmPasswordController.text;
-
-    if (newPassword.isEmpty || confirmPassword.isEmpty) {
+  Future<void> _handlePasswordReset() async {
+    if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
-      );
-      return;
-    }
-
-    if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
+        const SnackBar(content: Text('Please enter your email address')),
       );
       return;
     }
@@ -46,39 +25,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      debugPrint('[ResetPasswordScreen] Updating password');
+      final email = _emailController.text.trim();
       
-      // Update the user's password
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: newPassword),
+      debugPrint('[ForgotPasswordScreen] Requesting password reset for: $email');
+      
+      // Request password reset from Supabase
+      // Uses GitHub hosted page for email compatibility, then redirects to app
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'https://gunathkalpitha.github.io/nbro-auth-redirect/',
       );
       
-      debugPrint('[ResetPasswordScreen] Password updated successfully');
+      debugPrint('[ForgotPasswordScreen] Password reset email sent');
       
       setState(() {
-        _passwordReset = true;
+        _emailSent = true;
       });
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password updated successfully!'),
+            content: Text('Password reset link sent! Check your email.'),
             backgroundColor: NBROColors.success,
+            duration: Duration(seconds: 5),
           ),
         );
-        
-        // Navigate to login after a delay
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/login',
-              (route) => false,
-            );
-          }
-        });
       }
     } on AuthException catch (e) {
-      debugPrint('[ResetPasswordScreen] Password update error: ${e.message}');
+      debugPrint('[ForgotPasswordScreen] Password reset error: ${e.message}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -88,11 +62,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         );
       }
     } catch (e) {
-      debugPrint('[ResetPasswordScreen] Password update error: $e');
+      debugPrint('[ForgotPasswordScreen] Password reset error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating password: $e'),
+            content: Text('Error sending reset email: $e'),
             backgroundColor: NBROColors.error,
           ),
         );
@@ -104,8 +78,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   void dispose() {
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -156,14 +129,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             padding: const EdgeInsets.all(12),
                             child: const Icon(
-                              Icons.vpn_key,
+                              Icons.lock_reset,
                               size: 40,
                               color: NBROColors.primary,
                             ),
                           ),
                           const SizedBox(height: 24),
                           const Text(
-                            'Create New Password',
+                            'Reset Password',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -174,7 +147,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 32),
                             child: Text(
-                              'Your new password must be different from previously used passwords',
+                              'Enter your email address and we\'ll send you a link to reset your password',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: NBROColors.white,
@@ -198,7 +171,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           ),
                         ),
                         padding: const EdgeInsets.all(32),
-                        child: _passwordReset
+                        child: _emailSent
                             ? _buildSuccessView()
                             : _buildFormView(),
                       ),
@@ -218,7 +191,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Set New Password',
+          'Email Address',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -227,7 +200,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Must be at least 6 characters',
+          'We\'ll send you reset instructions',
           style: TextStyle(
             fontSize: 14,
             color: NBROColors.grey,
@@ -235,57 +208,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         const SizedBox(height: 32),
 
-        // New Password Field
+        // Email Field
         TextField(
-          controller: _newPasswordController,
-          obscureText: _obscureNewPassword,
+          controller: _emailController,
           decoration: InputDecoration(
-            hintText: 'New Password',
+            hintText: 'Enter your email',
             hintStyle: const TextStyle(color: NBROColors.grey),
-            prefixIcon: const Icon(Icons.lock_outlined),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureNewPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-              ),
-              onPressed: () {
-                setState(() => _obscureNewPassword = !_obscureNewPassword);
-              },
-            ),
+            prefixIcon: const Icon(Icons.email_outlined),
             enabled: !_isLoading,
           ),
+          keyboardType: TextInputType.emailAddress,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
 
-        // Confirm Password Field
-        TextField(
-          controller: _confirmPasswordController,
-          obscureText: _obscureConfirmPassword,
-          decoration: InputDecoration(
-            hintText: 'Confirm New Password',
-            hintStyle: const TextStyle(color: NBROColors.grey),
-            prefixIcon: const Icon(Icons.lock_outlined),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureConfirmPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-              ),
-              onPressed: () {
-                setState(
-                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                );
-              },
-            ),
-            enabled: !_isLoading,
-          ),
-        ),
-        const SizedBox(height: 32),
-
-        // Update Password Button
+        // Send Reset Link Button
         ElevatedButton(
-          onPressed: _isLoading ? null : _handlePasswordUpdate,
+          onPressed: _isLoading ? null : _handlePasswordReset,
           child: _isLoading
               ? const SizedBox(
                   height: 20,
@@ -297,51 +235,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                   ),
                 )
-              : const Text('Update Password'),
+              : const Text('Send Reset Link'),
         ),
         const SizedBox(height: 24),
 
-        // Password Requirements
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: NBROColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Password Requirements:',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: NBROColors.grey,
-                ),
-              ),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.check_circle, size: 16, color: NBROColors.grey),
-                  SizedBox(width: 8),
-                  Text(
-                    'At least 6 characters',
-                    style: TextStyle(fontSize: 12, color: NBROColors.grey),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.check_circle, size: 16, color: NBROColors.grey),
-                  SizedBox(width: 8),
-                  Text(
-                    'Both passwords must match',
-                    style: TextStyle(fontSize: 12, color: NBROColors.grey),
-                  ),
-                ],
-              ),
-            ],
+        // Back to Login Button
+        Center(
+          child: TextButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back, size: 18),
+            label: const Text('Back to Login'),
+            style: TextButton.styleFrom(
+              foregroundColor: NBROColors.primary,
+            ),
           ),
         ),
       ],
@@ -353,13 +259,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Icon(
-          Icons.check_circle_outline,
+          Icons.mark_email_read_outlined,
           size: 80,
           color: NBROColors.success,
         ),
         const SizedBox(height: 24),
         const Text(
-          'Password Updated!',
+          'Check Your Email',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -368,22 +274,61 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Your password has been successfully updated. You can now log in with your new password.',
-          style: TextStyle(
+        Text(
+          'We\'ve sent a password reset link to:\n${_emailController.text}',
+          style: const TextStyle(
             fontSize: 14,
             color: NBROColors.grey,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
-        const Text(
-          'Redirecting to login...',
-          style: TextStyle(
-            fontSize: 13,
-            color: NBROColors.primary,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: NBROColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-          textAlign: TextAlign.center,
+          child: const Column(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: NBROColors.primary,
+                size: 24,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Click the link in the email to reset your password. The link will expire in 1 hour.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: NBROColors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        OutlinedButton.icon(
+          onPressed: () {
+            setState(() {
+              _emailSent = false;
+              _emailController.clear();
+            });
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Send Again'),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back, size: 18),
+            label: const Text('Back to Login'),
+            style: TextButton.styleFrom(
+              foregroundColor: NBROColors.primary,
+            ),
+          ),
         ),
       ],
     );

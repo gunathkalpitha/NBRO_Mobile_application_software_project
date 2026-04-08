@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
-import '../../data/services/pdf_report_service.dart';
-import '../../data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/data/services/pdf_report_service.dart';
+import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
 import 'inspection_map_screen.dart';
 import 'edit_inspection_screen.dart';
 

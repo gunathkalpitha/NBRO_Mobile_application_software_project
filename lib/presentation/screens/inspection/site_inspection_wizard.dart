@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../../core/theme/app_theme.dart';
-import '../../domain/models/inspection.dart';
-import '../state/inspection_bloc.dart';
-import '../widgets/defect_capture_card.dart';
-import '../../data/services/draft_storage_service.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
+import 'package:nbro_mobile_application/presentation/widgets/defect_capture_card.dart';
+import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
 import 'package:uuid/uuid.dart';
 
 /// Site Inspection Wizard matching NBRO Physical Forms
@@ -118,7 +118,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       _restoreFromDraft(widget.draftData!);
     } else {
       // New inspection
-      _inspectionId = 'H-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      _inspectionId = 'H-';
       _buildingRefController.text = _inspectionId;
       _currentDraftId = const Uuid().v4();
     }

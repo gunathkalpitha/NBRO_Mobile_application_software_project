@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/theme/app_theme.dart';
-import '../state/inspection_bloc.dart';
+import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
 
 class SyncStatusIndicator extends StatelessWidget {
   final VoidCallback onSyncPressed;

@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../domain/models/inspection.dart';
+import 'package:nbro_mobile_application/domain/models/inspection.dart';
 
 class PDFReportService {
   /// Generate a Pre-Crack Survey Report PDF matching NBRO format
