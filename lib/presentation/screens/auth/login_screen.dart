@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/first_login_guide_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/presentation/screens/auth/first_login_guide_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (isAuthenticated && mounted) {
         debugPrint('[LoginScreen] Biometric authentication successful');
-        _navigateToDashboard();
+        _navigateToPostLoginDestination();
       }
     } catch (e) {
       debugPrint('[LoginScreen] Biometric authentication error: $e');
@@ -132,13 +134,13 @@ class _LoginScreenState extends State<LoginScreen> {
           }
           
           if (mounted) {
-            _navigateToDashboard();
+            _navigateToPostLoginDestination();
           }
         } catch (e) {
           debugPrint('[LoginScreen] Error checking account status: $e');
           // If we can't check, allow login to proceed
           if (mounted) {
-            _navigateToDashboard();
+            _navigateToPostLoginDestination();
           }
         }
       } else {
@@ -168,11 +170,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _navigateToDashboard() {
-    debugPrint('[LoginScreen] Navigation initiated to /home');
-    Navigator.of(context).pushReplacementNamed('/home').then((_) {
-      debugPrint('[LoginScreen] Navigation to /home completed');
-    });
+  Future<void> _navigateToPostLoginDestination() async {
+    final shouldShowGuide = await FirstLoginGuideService.shouldShowForCurrentUser();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (shouldShowGuide) {
+      debugPrint('[LoginScreen] First login detected - opening guide');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const FirstLoginGuideScreen(),
+        ),
+      );
+      return;
+    }
+
+    debugPrint('[LoginScreen] Guide already seen - navigating to /home');
+    Navigator.of(context).pushReplacementNamed('/home');
   }
 
   @override
