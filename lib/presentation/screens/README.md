@@ -1,7 +1,5 @@
 # Screens Folder Structure
 
-This folder is now organized by feature to make development easier.
-
 ## admin/
 - admin_dashboard_main.dart
 - admin_notices_screen.dart
