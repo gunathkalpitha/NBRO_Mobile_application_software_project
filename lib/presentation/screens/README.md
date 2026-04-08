@@ -35,6 +35,3 @@
 - help_support_screen.dart
 - notice_screen.dart
 
-## Notes
-- The old duplicate file `admin_officers_screen.dart` was removed.
-- Imports were updated to match this new structure.
