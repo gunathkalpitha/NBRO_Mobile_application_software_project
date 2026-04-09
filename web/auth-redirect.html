@@ -85,6 +85,7 @@
         let authQuery = '';
         let accessToken = '';
         let refreshToken = '';
+        let passwordFlow = 'invite';
 
         function normalizeAuthType(rawType) {
             const type = (rawType || '').toLowerCase();
@@ -107,6 +108,7 @@
             refreshToken = refresh || '';
             const normalizedType = normalizeAuthType(type);
             authHash = buildAuthHash(accessToken, refreshToken, normalizedType);
+            passwordFlow = normalizedType;
 
             if (!accessToken) {
                 throw new Error('Missing access token in callback URL');
@@ -115,11 +117,17 @@
             const payload = decodeJwtPayload(accessToken);
             const email = payload?.email || 'User';
 
-            // Password reset flow: go straight to app callback handling.
+            // Password reset flow: collect a new password on this page first.
             if (normalizedType === 'recovery') {
                 document.getElementById('spinner').style.display = 'none';
-                document.getElementById('status').textContent = 'Password reset verified. Opening app...';
-                setTimeout(openApp, 1000);
+                document.getElementById('status').textContent = 'Password reset verified. Set your new password to continue.';
+                document.getElementById('emailText').textContent = email;
+                document.getElementById('inviteForm').style.display = 'block';
+
+                const btn = document.getElementById('setPasswordBtn');
+                btn.textContent = 'Reset Password and Open App';
+                btn.replaceWith(btn.cloneNode(true));
+                document.getElementById('setPasswordBtn').addEventListener('click', setPasswordAndOpenApp);
                 return;
             }
 
@@ -180,6 +188,16 @@
             statusEl.textContent = 'Saving password...';
 
             try {
+                const payload = {
+                    password: password,
+                };
+
+                if (passwordFlow === 'invite') {
+                    payload.data = {
+                        invite_completed: true,
+                    };
+                }
+
                 const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
                     method: 'PUT',
                     headers: {
@@ -187,12 +205,7 @@
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        password: password,
-                        data: {
-                            invite_completed: true
-                        }
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
@@ -220,6 +233,21 @@
                 type: type || 'recovery',
             }).toString();
             setTimeout(openApp, 700);
+        }
+
+        function forwardRecoveryErrorToApp(error, errorCode, errorDescription) {
+            const statusEl = document.getElementById('status');
+
+            authQuery = new URLSearchParams({
+                type: 'recovery',
+                error: error || 'access_denied',
+                error_code: errorCode || 'invalid_link',
+                error_description: errorDescription || 'Reset link is invalid or expired',
+            }).toString();
+
+            statusEl.textContent = 'Reset link is invalid or expired. Opening app to request a new link...';
+            document.getElementById('spinner').style.display = 'none';
+            setTimeout(openApp, 900);
         }
 
         async function verifyTokenHashFlow(tokenHash, type, email) {
@@ -272,6 +300,9 @@
                 const queryRefresh = urlParams.get('refresh_token') || '';
                 const tokenHash = urlParams.get('token_hash') || urlParams.get('token') || '';
                 const email = urlParams.get('email') || '';
+                const queryError = urlParams.get('error') || '';
+                const queryErrorCode = urlParams.get('error_code') || '';
+                const queryErrorDescription = urlParams.get('error_description') || '';
 
                 // Check for hash fragment first (standard implicit flow)
                 const hash = window.location.hash.substring(1);
@@ -280,11 +311,40 @@
                     const hashToken = hashParams.get('access_token') || '';
                     const hashRefresh = hashParams.get('refresh_token') || '';
                     const hashType = hashParams.get('type') || queryType;
+                    const hashError = hashParams.get('error') || queryError;
+                    const hashErrorCode = hashParams.get('error_code') || queryErrorCode;
+                    const hashErrorDescription = hashParams.get('error_description') || queryErrorDescription;
+
+                    if (hashError || hashErrorCode) {
+                        const normalizedHashType = normalizeAuthType(hashType || queryType);
+                        if (normalizedHashType === 'recovery') {
+                            forwardRecoveryErrorToApp(hashError, hashErrorCode, hashErrorDescription);
+                            return;
+                        }
+
+                        document.getElementById('spinner').style.display = 'none';
+                        statusEl.textContent = hashErrorDescription || 'Authentication link is invalid or expired.';
+                        document.getElementById('manualLink').style.display = 'block';
+                        return;
+                    }
 
                     if (hashToken) {
                         startFromTokens(hashToken, hashRefresh, hashType);
                         return;
                     }
+                }
+
+                if (queryError || queryErrorCode) {
+                    const normalizedQueryType = normalizeAuthType(queryType);
+                    if (normalizedQueryType === 'recovery') {
+                        forwardRecoveryErrorToApp(queryError, queryErrorCode, queryErrorDescription);
+                        return;
+                    }
+
+                    document.getElementById('spinner').style.display = 'none';
+                    statusEl.textContent = queryErrorDescription || 'Authentication link is invalid or expired.';
+                    document.getElementById('manualLink').style.display = 'block';
+                    return;
                 }
 
                 // Some flows return tokens in query string instead of hash.

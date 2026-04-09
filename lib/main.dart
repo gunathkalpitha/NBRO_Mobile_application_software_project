@@ -36,6 +36,9 @@ Future<void> _initSupabase() async {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.implicit,
+      ),
       debug: false,
     );
     debugPrint('[Main] Supabase initialized successfully');
