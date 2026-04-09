@@ -53,13 +53,15 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    final unlocked = await SessionSecurityService.authenticateForUnlock();
-    if (!unlocked) {
-      await Supabase.instance.client.auth.signOut();
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
+    final needsAppLock = await SessionSecurityService.shouldRequireAppLockOnLaunch();
+    if (needsAppLock) {
+      final unlocked = await SessionSecurityService.authenticateForUnlock();
+      if (!unlocked) {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+        return;
       }
-      return;
     }
 
     if (mounted) {

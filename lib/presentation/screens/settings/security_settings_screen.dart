@@ -12,9 +12,10 @@ class SecuritySettingsScreen extends StatefulWidget {
 class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   bool _isLoading = true;
   bool _biometricEnabled = false;
+  int _appLockTimeoutMinutes = 30;
   bool _staySignedInEnabled = true;
   int _staySignedInHours = 2;
-  bool _biometricAvailable = false;
+  bool _fingerprintAvailable = false;
 
   @override
   void initState() {
@@ -24,14 +25,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
   Future<void> _load() async {
     final settings = await SessionSecurityService.getSettings();
-    final canUseBiometric = await SessionSecurityService.canUseBiometric();
+    final canUseFingerprint = await SessionSecurityService.canUseFingerprint();
     if (!mounted) return;
 
     setState(() {
       _biometricEnabled = settings.biometricEnabled;
+      _appLockTimeoutMinutes = settings.appLockTimeoutMinutes;
       _staySignedInEnabled = settings.staySignedInEnabled;
       _staySignedInHours = settings.staySignedInHours;
-      _biometricAvailable = canUseBiometric;
+      _fingerprintAvailable = canUseFingerprint;
       _isLoading = false;
     });
   }
@@ -53,22 +55,75 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         children: [
           Card(
             child: SwitchListTile(
-              title: const Text('Enable Biometric Unlock'),
+              title: const Text('Enable Fingerprint Unlock'),
               subtitle: Text(
-                _biometricAvailable
-                    ? 'Use fingerprint/face to unlock app session.'
-                    : 'Biometric is not available on this device.',
+                _fingerprintAvailable
+                    ? 'Use fingerprint to unlock when app lock is triggered.'
+                    : 'Fingerprint is not available on this device.',
               ),
-              value: _biometricAvailable && _biometricEnabled,
-              onChanged: !_biometricAvailable
+              value: _fingerprintAvailable && _biometricEnabled,
+              onChanged: !_fingerprintAvailable
                   ? null
                   : (value) async {
+                      if (value) {
+                        final verification =
+                            await SessionSecurityService.verifyFingerprintForEnable();
+                        if (!context.mounted) return;
+                        if (!verification.success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${verification.message ?? 'Fingerprint verification failed.'} Fingerprint unlock was not enabled.',
+                              ),
+                            ),
+                          );
+                          setState(() => _biometricEnabled = false);
+                          await SessionSecurityService.setBiometricEnabled(false);
+                          return;
+                        }
+                      }
+
                       setState(() => _biometricEnabled = value);
                       await SessionSecurityService.setBiometricEnabled(value);
+
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value
+                                ? 'Fingerprint unlock enabled.'
+                                : 'Fingerprint unlock disabled.',
+                          ),
+                        ),
+                      );
                     },
               secondary: const Icon(Icons.fingerprint, color: NBROColors.primary),
             ),
           ),
+          if (_fingerprintAvailable && _biometricEnabled) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.lock_clock, color: NBROColors.primary),
+                title: const Text('Lock App After'),
+                subtitle: Text(_lockDelayText(_appLockTimeoutMinutes)),
+                trailing: DropdownButton<int>(
+                  value: _appLockTimeoutMinutes,
+                  items: const [0, 30, 120]
+                      .map((m) => DropdownMenuItem<int>(
+                            value: m,
+                            child: Text(_lockDelayText(m)),
+                          ))
+                      .toList(),
+                  onChanged: (value) async {
+                    if (value == null) return;
+                    setState(() => _appLockTimeoutMinutes = value);
+                    await SessionSecurityService.setAppLockTimeoutMinutes(value);
+                  },
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Card(
             child: SwitchListTile(
@@ -114,12 +169,19 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
-              'Recommended: keep Stay Signed In enabled and use Biometric Unlock for faster and secure access.',
+              'Recommended: enable Fingerprint Unlock and choose a lock delay that matches your field workflow.',
               style: TextStyle(color: NBROColors.darkGrey),
             ),
           ),
         ],
       ),
     );
+  }
+
+  static String _lockDelayText(int minutes) {
+    if (minutes == 0) return 'Immediate';
+    if (minutes == 30) return '30 minutes';
+    if (minutes == 120) return '2 hours';
+    return '$minutes minutes';
   }
 }
