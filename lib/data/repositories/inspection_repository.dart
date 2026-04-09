@@ -44,6 +44,9 @@ class InspectionRepository {
         'p_no_floors': inspection.numberOfFloors,
       }) as String;
 
+      // Ensure coordinates are persisted even if the deployed RPC version ignores them.
+      await _persistSiteCoordinates(siteId, inspection.latitude, inspection.longitude);
+
       if (buildingPhotoPath != null) {
         try {
           final upload = await _uploadBuildingPhoto(siteId, buildingPhotoPath);
@@ -84,6 +87,7 @@ class InspectionRepository {
             address,
             building_ref,
             distance_from_row,
+            location,
             latitude,
             longitude,
             building_photo_url,
@@ -129,6 +133,7 @@ class InspectionRepository {
             address,
             building_ref,
             distance_from_row,
+            location,
             latitude,
             longitude,
             building_photo_url,
@@ -164,6 +169,7 @@ class InspectionRepository {
             address,
             building_ref,
             distance_from_row,
+            location,
             latitude,
             longitude,
             building_photo_url,
@@ -589,13 +595,15 @@ class InspectionRepository {
             ))
         .toList();
 
+    final resolvedCoords = _resolveCoordinatesFromRow(row);
+
     return Inspection(
       id: (row['building_ref'] as String?) ?? (row['site_id'] as String),
       ownerName: (row['owner_name'] as String?) ?? 'Unknown Owner',
       siteAddress: (row['address'] as String?) ?? 'Unknown Address',
       contactNo: row['owner_contact'] as String?,
-      latitude: (row['latitude'] as num?)?.toDouble(),
-      longitude: (row['longitude'] as num?)?.toDouble(),
+      latitude: resolvedCoords.$1,
+      longitude: resolvedCoords.$2,
       distanceFromRow: (row['distance_from_row'] as num?)?.toDouble(),
       ageOfStructure: _parseDouble(observation['approx_age'])?.round(),
       typeOfStructure: observation['type'] as String?,
@@ -630,6 +638,53 @@ class InspectionRepository {
       createdBy: row['user_id'] as String?,
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
+  }
+
+  Future<void> _persistSiteCoordinates(
+    String siteId,
+    double? latitude,
+    double? longitude,
+  ) async {
+    if (latitude == null || longitude == null) return;
+
+    await _supabase.from('site').update({
+      'latitude': latitude,
+      'longitude': longitude,
+    }).eq('site_id', siteId);
+  }
+
+  (double?, double?) _resolveCoordinatesFromRow(Map<String, dynamic> row) {
+    final directLat = (row['latitude'] as num?)?.toDouble();
+    final directLng = (row['longitude'] as num?)?.toDouble();
+    if (directLat != null && directLng != null) {
+      return (directLat, directLng);
+    }
+
+    final location = row['location'];
+    if (location is String) {
+      final pointMatch = RegExp(r'POINT\s*\(([-0-9.]+)\s+([-0-9.]+)\)')
+          .firstMatch(location);
+      if (pointMatch != null) {
+        final lng = double.tryParse(pointMatch.group(1)!);
+        final lat = double.tryParse(pointMatch.group(2)!);
+        if (lat != null && lng != null) {
+          return (lat, lng);
+        }
+      }
+    }
+
+    if (location is Map<String, dynamic>) {
+      final coords = location['coordinates'];
+      if (coords is List && coords.length >= 2) {
+        final lng = (coords[0] as num?)?.toDouble();
+        final lat = (coords[1] as num?)?.toDouble();
+        if (lat != null && lng != null) {
+          return (lat, lng);
+        }
+      }
+    }
+
+    return (directLat, directLng);
   }
 
   Defect _mapDefectFromRow(Map<String, dynamic> row, String inspectionId) {
