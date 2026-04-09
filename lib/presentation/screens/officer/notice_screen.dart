@@ -40,7 +40,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
       final noticesResponse = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name, target_type')
+          .select('id, title, message, priority, published_at, published_by_name, published_by_avatar_url, target_type')
           .order('published_at', ascending: false);
 
       final recipientsResponse = await Supabase.instance.client
@@ -75,6 +75,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
             message: json['message'] as String,
             publishedAt: DateTime.parse(json['published_at'] as String),
             publishedBy: json['published_by_name'] as String? ?? 'Admin',
+            publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
             priority: NoticePriority.values.firstWhere(
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
@@ -254,6 +255,56 @@ class _NoticeScreenState extends State<NoticeScreen> {
   }
 }
 
+class _NoticeSenderChip extends StatelessWidget {
+  final Notice notice;
+
+  const _NoticeSenderChip({required this.notice});
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = notice.publishedByAvatarUrl;
+    final initials = notice.publishedBy.trim().isEmpty
+        ? 'AD'
+        : notice.publishedBy.trim().split(RegExp(r'\s+')).length >= 2
+            ? '${notice.publishedBy.trim().split(RegExp(r'\s+'))[0][0]}${notice.publishedBy.trim().split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
+            : notice.publishedBy.trim().substring(0, notice.publishedBy.trim().length >= 2 ? 2 : 1).toUpperCase();
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: NBROColors.white,
+          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
+          child: avatarUrl == null || avatarUrl.isEmpty
+              ? Text(
+                  initials,
+                  style: const TextStyle(
+                    color: NBROColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                )
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'By ${notice.publishedBy}',
+            style: TextStyle(
+              fontSize: 11,
+              color: NBROColors.grey,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _NoticeCard extends StatelessWidget {
   final Notice notice;
   final VoidCallback onTap;
@@ -338,17 +389,21 @@ class _NoticeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: priorityColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      _getPriorityIcon(),
-                      color: priorityColor,
-                      size: 20,
-                    ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: NBROColors.white,
+                    backgroundImage: notice.publishedByAvatarUrl != null &&
+                            notice.publishedByAvatarUrl!.isNotEmpty
+                        ? NetworkImage(notice.publishedByAvatarUrl!)
+                        : null,
+                    child: notice.publishedByAvatarUrl == null ||
+                            notice.publishedByAvatarUrl!.isEmpty
+                        ? Icon(
+                            _getPriorityIcon(),
+                            color: priorityColor,
+                            size: 18,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -358,32 +413,24 @@ class _NoticeCard extends StatelessWidget {
                         Text(
                           notice.title,
                           style: TextStyle(
-                            fontWeight:
-                                notice.isRead ? FontWeight.w600 : FontWeight.bold,
+                            fontWeight: notice.isRead ? FontWeight.w600 : FontWeight.bold,
                             fontSize: 15,
                             color: NBROColors.black,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        _NoticeSenderChip(notice: notice),
                         const SizedBox(height: 2),
                         Text(
-                          'By ${notice.publishedBy} • ${_formatDate(notice.publishedAt)}',
+                          _formatDate(notice.publishedAt),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: NBROColors.grey,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (!notice.isRead)
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: priorityColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 12),

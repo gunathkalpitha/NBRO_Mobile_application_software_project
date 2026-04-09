@@ -639,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
       final noticesResponse = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name, target_type')
+          .select('id, title, message, priority, published_at, published_by_name, published_by_avatar_url, target_type')
           .order('published_at', ascending: false);
 
       final recipientsResponse = await Supabase.instance.client
@@ -670,6 +670,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             message: json['message'] as String,
             publishedAt: DateTime.parse(json['published_at'] as String),
             publishedBy: json['published_by_name'] as String? ?? 'Admin',
+            publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
             priority: NoticePriority.values.firstWhere(
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
@@ -1244,17 +1245,21 @@ class _NoticeBarState extends State<_NoticeBar> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: NBROColors.accent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.campaign,
-                        color: NBROColors.accent,
-                        size: 20,
-                      ),
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: NBROColors.white,
+                      backgroundImage: latestNotice.publishedByAvatarUrl != null &&
+                              latestNotice.publishedByAvatarUrl!.isNotEmpty
+                          ? NetworkImage(latestNotice.publishedByAvatarUrl!)
+                          : null,
+                      child: latestNotice.publishedByAvatarUrl == null ||
+                              latestNotice.publishedByAvatarUrl!.isEmpty
+                          ? const Icon(
+                              Icons.campaign,
+                              color: NBROColors.accent,
+                              size: 18,
+                            )
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1272,12 +1277,28 @@ class _NoticeBarState extends State<_NoticeBar> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            'By ${latestNotice.publishedBy} • ${_formatDate(latestNotice.publishedAt)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: NBROColors.grey,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'By ${latestNotice.publishedBy}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: NBROColors.grey,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _formatDate(latestNotice.publishedAt),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: NBROColors.grey,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

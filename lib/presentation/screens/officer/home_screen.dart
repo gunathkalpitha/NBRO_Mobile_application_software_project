@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/profile_completion_service.dart';
+import 'package:nbro_mobile_application/core/services/profile_state_service.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 import 'dashboard_screen.dart';
 import '../inspection/inspections_screen.dart';
@@ -85,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _isAdmin = isAdmin;
           _isCheckingRole = false;
         });
+        await ProfileCompletionService.refresh();
+        await ProfileStateService.refresh();
       } else {
         setState(() {
           _isCheckingRole = false;
@@ -204,6 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const AdminInspectionsManagementScreen(embedded: true);
       case AdminNavItem.notices:
         return const AdminNoticesScreen(embedded: true);
+      case AdminNavItem.settings:
+        return const SettingsScreen(isAdminMode: true);
     }
   }
 }

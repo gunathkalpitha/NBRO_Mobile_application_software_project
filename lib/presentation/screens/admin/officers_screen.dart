@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/user_profile.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
 class AdminOfficersScreen extends StatefulWidget {
@@ -99,6 +100,59 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     return 'ID: $shortId';
   }
 
+  int _completion(Map<String, dynamic> officer) {
+    return UserProfile.completionPercentageFromMap(officer, email: '');
+  }
+
+  Widget _infoChip({required IconData icon, required String text}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: NBROColors.light,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: NBROColors.darkGrey),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 11, color: NBROColors.darkGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _avatar(Map<String, dynamic> officer) {
+    final avatarUrl = officer['avatar_url'] as String?;
+    final name = (officer['full_name'] as String?) ?? 'Officer';
+    final initials = name.trim().isEmpty
+        ? 'O'
+        : name.trim().split(RegExp(r'\s+')).length >= 2
+            ? '${name.trim().split(RegExp(r'\s+'))[0][0]}${name.trim().split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
+            : name.trim().substring(0, name.trim().length >= 2 ? 2 : 1).toUpperCase();
+
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: NBROColors.white,
+      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+          ? NetworkImage(avatarUrl)
+          : null,
+      child: avatarUrl == null || avatarUrl.isEmpty
+          ? Text(
+              initials,
+              style: const TextStyle(
+                color: NBROColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            )
+          : null,
+    );
+  }
+
   // ─── Data ─────────────────────────────────────────────────────────────────────
 
   Future<void> _loadOfficers() async {
@@ -106,7 +160,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     try {
       final response = await Supabase.instance.client
           .from('profile')
-          .select('id, full_name, role, created_at')
+          .select('id, full_name, role, created_at, phone_number, position_title, employee_id, work_role, avatar_url')
           .eq('role', 'officer')
           .eq('is_active', true)
           .order('created_at', ascending: false);
@@ -1095,19 +1149,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: NBROColors.primary
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.person,
-                                  color: NBROColors.primary,
-                                  size: 32,
-                                ),
-                              ),
+                              _avatar(officer),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
@@ -1130,27 +1172,78 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                                         color: NBROColors.grey,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: NBROColors.success
-                                            .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'OFFICER',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: NBROColors.success,
-                                          letterSpacing: 0.5,
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        _infoChip(
+                                          icon: Icons.phone_outlined,
+                                          text: (officer['phone_number'] as String?)?.trim().isNotEmpty == true
+                                              ? officer['phone_number'] as String
+                                              : 'Phone missing',
                                         ),
-                                      ),
+                                        _infoChip(
+                                          icon: Icons.work_outline,
+                                          text: (officer['position_title'] as String?)?.trim().isNotEmpty == true
+                                              ? officer['position_title'] as String
+                                              : 'Position missing',
+                                        ),
+                                        _infoChip(
+                                          icon: Icons.credit_card_outlined,
+                                          text: (officer['employee_id'] as String?)?.trim().isNotEmpty == true
+                                              ? officer['employee_id'] as String
+                                              : 'ID missing',
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: NBROColors.success.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'OFFICER',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: NBROColors.success,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _completion(officer) >= 100
+                                                ? NBROColors.success.withValues(alpha: 0.12)
+                                                : NBROColors.warning.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            'PROFILE ${_completion(officer)}%',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: _completion(officer) >= 100
+                                                  ? NBROColors.success
+                                                  : NBROColors.black,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

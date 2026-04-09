@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/profile_completion_service.dart';
+import 'package:nbro_mobile_application/core/services/profile_state_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'package:nbro_mobile_application/domain/models/user_profile.dart';
 
 /// Controls the NavigationRail expanded/collapsed state from child screens
 class NavRailController {
@@ -19,7 +22,7 @@ class NavRailController {
 
 enum NavItem { dashboard, inspection, analysis, reports, help, settings }
 
-enum AdminNavItem { dashboard, officers, inspections, notices }
+enum AdminNavItem { dashboard, officers, inspections, notices, settings }
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -195,6 +198,19 @@ class _AdminAppShellState extends State<AdminAppShell> {
                                 widget.onNavItemSelected(AdminNavItem.notices);
                                 NavRailController.hide();
                               },
+                            ),
+                            ValueListenableBuilder<ProfileCompletionState>(
+                              valueListenable: ProfileCompletionService.notifier,
+                              builder: (_, state, __) => _NavItem(
+                                icon: Icons.settings_rounded,
+                                label: 'Settings',
+                                showAlertDot: !state.isComplete && !state.isLoading,
+                                isSelected: widget.currentItem == AdminNavItem.settings,
+                                onTap: () {
+                                  widget.onNavItemSelected(AdminNavItem.settings);
+                                  NavRailController.hide();
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -394,14 +410,18 @@ class _AppShellState extends State<AppShell> {
                                 widget.onNavItemSelected(NavItem.help);
                               },
                             ),
-                            _NavItem(
-                              icon: Icons.settings_rounded,
-                              label: 'Settings',
-                              isSelected: widget.currentItem == NavItem.settings,
-                              onTap: () {
-                                widget.onNavItemSelected(NavItem.settings);
-                                NavRailController.hide();
-                              },
+                            ValueListenableBuilder<ProfileCompletionState>(
+                              valueListenable: ProfileCompletionService.notifier,
+                              builder: (_, state, __) => _NavItem(
+                                icon: Icons.settings_rounded,
+                                label: 'Settings',
+                                showAlertDot: !state.isComplete && !state.isLoading,
+                                isSelected: widget.currentItem == NavItem.settings,
+                                onTap: () {
+                                  widget.onNavItemSelected(NavItem.settings);
+                                  NavRailController.hide();
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -437,12 +457,14 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
+  final bool showAlertDot;
   final VoidCallback onTap;
 
   const _NavItem({
     required this.icon,
     required this.label,
     required this.isSelected,
+    this.showAlertDot = false,
     required this.onTap,
   });
 
@@ -501,6 +523,15 @@ class _NavItem extends StatelessWidget {
                       color: NBROColors.white,
                       shape: BoxShape.circle,
                     ),
+                  )
+                else if (showAlertDot)
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                      color: NBROColors.error,
+                      shape: BoxShape.circle,
+                    ),
                   ),
               ],
             ),
@@ -519,116 +550,122 @@ class _UserInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    
-    // Get user name and email
-    String userName = 'Guest User';
-    String userEmail = '';
-    String initials = 'GU';
-    
-    if (user != null) {
-      // Try to get name from user metadata first
-      userName = user.userMetadata?['full_name'] ?? 
-                 user.userMetadata?['name'] ?? 
-                 user.email?.split('@').first ?? 
-                 'User';
-      
-      userEmail = user.email ?? '';
-      
-      // Generate initials from name
-      final nameParts = userName.split(' ');
-      if (nameParts.length >= 2) {
-        initials = nameParts[0][0].toUpperCase() + nameParts[1][0].toUpperCase();
-      } else if (userName.isNotEmpty) {
-        initials = userName.substring(0, userName.length >= 2 ? 2 : 1).toUpperCase();
-      }
-    }
-    
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: NBROColors.accent.withValues(alpha: 0.5),
-              width: 2,
-            ),
-          ),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundColor: NBROColors.white,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: NBROColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+    return ValueListenableBuilder<UserProfile?>(
+      valueListenable: ProfileStateService.notifier,
+      builder: (context, profile, _) {
+        final user = Supabase.instance.client.auth.currentUser;
+        final userName = profile?.fullName.trim().isNotEmpty == true
+            ? profile!.fullName
+            : user?.userMetadata?['full_name'] ??
+                user?.userMetadata?['name'] ??
+                user?.email?.split('@').first ??
+                'User';
+        final userEmail = user?.email ?? '';
+        final avatarUrl = profile?.avatarUrl;
+        final initials = _initials(userName);
+
+        return Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: NBROColors.accent.withValues(alpha: 0.5),
+                  width: 2,
+                ),
+              ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: NBROColors.white,
+                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: avatarUrl == null || avatarUrl.isEmpty
+                    ? Text(
+                        initials,
+                        style: const TextStyle(
+                          color: NBROColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      )
+                    : null,
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                userName,
-                style: const TextStyle(
-                  color: NBROColors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    userName,
+                    style: const TextStyle(
+                      color: NBROColors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  if (userEmail.isNotEmpty)
+                    Text(
+                      userEmail,
+                      style: TextStyle(
+                        color: NBROColors.white.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Text(
+                      roleLabel,
+                      style: TextStyle(
+                        color: NBROColors.white.withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
-              const SizedBox(height: 2),
-              if (userEmail.isNotEmpty)
-                Text(
-                  userEmail,
-                  style: TextStyle(
-                    color: NBROColors.white.withValues(alpha: 0.7),
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              else
-                Text(
-                  roleLabel,
-                  style: TextStyle(
-                    color: NBROColors.white.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-            ],
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: NBROColors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.logout_rounded, color: NBROColors.white),
-            iconSize: 20,
-            tooltip: 'Logout',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
-            onPressed: () async {
-              NavRailController.hide();
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-          ),
-        ),
-      ],
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: NBROColors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.logout_rounded, color: NBROColors.white),
+                iconSize: 20,
+                tooltip: 'Logout',
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+                onPressed: () async {
+                  NavRailController.hide();
+                  await Supabase.instance.client.auth.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacementNamed('/login');
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  String _initials(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) return 'GU';
+    final parts = cleaned.split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return cleaned.substring(0, cleaned.length >= 2 ? 2 : 1).toUpperCase();
   }
 }

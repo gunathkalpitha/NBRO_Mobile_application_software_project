@@ -78,9 +78,11 @@
 
     <script>
         const SUPABASE_URL = 'https://rjzodelildlnrhijwiwv.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_0ic_wja7i_cZBkRgk1oQyA_rownnOKF';
 
 
         let authHash = '';
+        let authQuery = '';
         let accessToken = '';
         let refreshToken = '';
 
@@ -150,7 +152,9 @@
         }
 
         function openApp() {
-            const deepLink = `nbroapp://auth-callback#${authHash}`;
+            const deepLink = authQuery
+                ? `nbroapp://auth-callback?${authQuery}`
+                : `nbroapp://auth-callback#${authHash}`;
             document.getElementById('deepLink').href = deepLink;
             window.location.href = deepLink;
             document.getElementById('manualLink').style.display = 'block';
@@ -205,47 +209,17 @@
             }
         }
 
-        async function exchangeCodeForSession(code) {
+        function forwardPkceCodeToApp(code, type) {
             const statusEl = document.getElementById('status');
-            statusEl.textContent = 'Verifying password reset link...';
-            
-            try {
-                console.log('Exchanging code for session:', code);
-                
-                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        auth_code: code
-                    })
-                });
+            statusEl.textContent = 'Opening app to verify reset link...';
 
-                console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Response data:', data);
-
-                if (!response.ok) {
-                    throw new Error(data.error_description || data.msg || 'Failed to verify reset link');
-                }
-
-                accessToken = data.access_token;
-                refreshToken = data.refresh_token;
-                
-                if (!accessToken) {
-                    throw new Error('No access token in response');
-                }
-                
-                console.log('Token exchange successful, redirecting to app...');
-                startFromTokens(accessToken, refreshToken, 'recovery');
-            } catch (error) {
-                console.error('Code exchange error:', error);
-                statusEl.textContent = `Failed to verify: ${error.message}`;
-                document.getElementById('spinner').style.display = 'none';
-                document.getElementById('manualLink').style.display = 'block';
-            }
+            // PKCE exchange needs the original code_verifier that lives in app storage.
+            // Forwarding the code prevents browser-side "auth code and code verifier" errors.
+            authQuery = new URLSearchParams({
+                code: code,
+                type: type || 'recovery',
+            }).toString();
+            setTimeout(openApp, 700);
         }
 
         async function verifyTokenHashFlow(tokenHash, type, email) {
@@ -320,8 +294,25 @@
                 }
                 
                 if (code) {
-                    console.log('Password reset code detected, exchanging for tokens...');
-                    exchangeCodeForSession(code);
+                    const normalizedQueryType = normalizeAuthType(queryType);
+
+                    if (normalizedQueryType === 'recovery') {
+                        console.log('Password reset code detected, forwarding to app for PKCE exchange...');
+                        forwardPkceCodeToApp(code, queryType);
+                        return;
+                    }
+
+                    // Invitation/signup links should stay on this page.
+                    // If Supabase sends only `code` (without token_hash/tokens), we cannot verify invite in-browser.
+                    // Keep user on page and show what needs to be adjusted in email template.
+                    authQuery = new URLSearchParams({
+                        code: code,
+                        type: queryType || 'invite',
+                    }).toString();
+                    document.getElementById('deepLink').href = `nbroapp://auth-callback?${authQuery}`;
+                    document.getElementById('spinner').style.display = 'none';
+                    statusEl.textContent = 'Invitation link received, but this link format cannot be completed on web. Please ask admin to use invite link with token_hash, or open this link from the mobile app.';
+                    document.getElementById('manualLink').style.display = 'block';
                     return;
                 }
 
