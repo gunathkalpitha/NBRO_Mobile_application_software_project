@@ -33,7 +33,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       // Uses GitHub hosted page for email compatibility, then redirects to app
       await Supabase.instance.client.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'https://gunathkalpitha.github.io/nbro-auth-redirect/',
+        redirectTo: 'https://gunathkalpitha.github.io/nbro-auth-redirect/?type=recovery',
       );
       
       debugPrint('[ForgotPasswordScreen] Password reset email sent');

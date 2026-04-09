@@ -4,6 +4,7 @@ class Notice {
   final String message;
   final DateTime publishedAt;
   final String publishedBy;
+  final String? publishedByAvatarUrl;
   final NoticePriority priority;
   final bool isRead;
 
@@ -13,6 +14,7 @@ class Notice {
     required this.message,
     required this.publishedAt,
     required this.publishedBy,
+    this.publishedByAvatarUrl,
     this.priority = NoticePriority.normal,
     this.isRead = false,
   });
@@ -23,6 +25,7 @@ class Notice {
     String? message,
     DateTime? publishedAt,
     String? publishedBy,
+    String? publishedByAvatarUrl,
     NoticePriority? priority,
     bool? isRead,
   }) {
@@ -32,6 +35,7 @@ class Notice {
       message: message ?? this.message,
       publishedAt: publishedAt ?? this.publishedAt,
       publishedBy: publishedBy ?? this.publishedBy,
+      publishedByAvatarUrl: publishedByAvatarUrl ?? this.publishedByAvatarUrl,
       priority: priority ?? this.priority,
       isRead: isRead ?? this.isRead,
     );
@@ -44,6 +48,7 @@ class Notice {
       message: json['message'] as String,
       publishedAt: DateTime.parse(json['published_at'] as String),
       publishedBy: json['published_by'] as String,
+      publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
       priority: NoticePriority.values.firstWhere(
         (e) => e.name == json['priority'],
         orElse: () => NoticePriority.normal,
@@ -59,6 +64,7 @@ class Notice {
       'message': message,
       'published_at': publishedAt.toIso8601String(),
       'published_by': publishedBy,
+      'published_by_avatar_url': publishedByAvatarUrl,
       'priority': priority.name,
       'is_read': isRead,
     };

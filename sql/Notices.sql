@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS notices (
     target_type TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'individual', 'selected')),
     published_by UUID REFERENCES profile(id) ON DELETE SET NULL,
     published_by_name TEXT,
+    published_by_avatar_url TEXT,
     published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

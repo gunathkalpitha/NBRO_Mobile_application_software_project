@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/profile_completion_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
+import 'package:nbro_mobile_application/presentation/screens/settings/profile_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool isAdminMode;
+
+  const SettingsScreen({super.key, this.isAdminMode = false});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -15,6 +20,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notifications = true;
   bool _locationTracking = false;
   String _syncInterval = 'Every 15 minutes';
+
+  @override
+  void initState() {
+    super.initState();
+    ProfileCompletionService.refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,19 +43,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // Account Section
             _buildSectionHeader('Account'),
-            Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: const Icon(Icons.person, color: NBROColors.primary),
-                title: const Text('Profile'),
-                subtitle: const Text('View and edit your profile'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile feature coming soon')),
-                  );
-                },
-              ),
+            ValueListenableBuilder<ProfileCompletionState>(
+              valueListenable: ProfileCompletionService.notifier,
+              builder: (context, state, _) {
+                final isIncomplete = !state.isComplete && !state.isLoading;
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    leading: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.person, color: NBROColors.primary),
+                        if (isIncomplete)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: NBROColors.error,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    title: const Text('Profile Settings'),
+                    subtitle: Text(
+                      state.isLoading
+                          ? 'Checking profile completion...'
+                          : isIncomplete
+                              ? 'Complete your profile (${state.percentage}%)'
+                              : 'Profile completed (100%)',
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileSettingsScreen(),
+                        ),
+                      );
+                      await ProfileCompletionService.refresh();
+                    },
+                  ),
+                );
+              },
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -63,81 +107,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
 
             // Sync Settings Section
-            _buildSectionHeader('Sync & Storage'),
-            Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    secondary: const Icon(Icons.cloud_sync, color: NBROColors.primary),
-                    title: const Text('Auto Sync'),
-                    subtitle: const Text('Automatically sync inspections'),
-                    value: _autoSync,
-                    onChanged: (value) {
-                      setState(() => _autoSync = value);
-                    },
-                  ),
-                  if (_autoSync)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Sync Interval',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButton<String>(
-                            value: _syncInterval,
-                            isExpanded: true,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Every 15 minutes',
-                                child: Text('Every 15 minutes'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Every 30 minutes',
-                                child: Text('Every 30 minutes'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Every hour',
-                                child: Text('Every hour'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Manual',
-                                child: Text('Manual'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() => _syncInterval = value);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
+            if (!widget.isAdminMode) ...[
+              _buildSectionHeader('Sync & Storage'),
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      secondary: const Icon(Icons.cloud_sync, color: NBROColors.primary),
+                      title: const Text('Auto Sync'),
+                      subtitle: const Text('Automatically sync inspections'),
+                      value: _autoSync,
+                      onChanged: (value) {
+                        setState(() => _autoSync = value);
+                      },
                     ),
-                ],
+                    if (_autoSync)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sync Interval',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButton<String>(
+                              value: _syncInterval,
+                              isExpanded: true,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Every 15 minutes',
+                                  child: Text('Every 15 minutes'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Every 30 minutes',
+                                  child: Text('Every 30 minutes'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Every hour',
+                                  child: Text('Every hour'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Manual',
+                                  child: Text('Manual'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _syncInterval = value);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: const Icon(Icons.storage, color: NBROColors.primary),
-                title: const Text('Storage Usage'),
-                subtitle: const Text('2.3 GB of 10 GB used'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Storage management coming soon')),
-                  );
-                },
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.storage, color: NBROColors.primary),
+                  title: const Text('Storage Usage'),
+                  subtitle: const Text('2.3 GB of 10 GB used'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Storage management coming soon')),
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 16),
 
             // Notification Settings Section
@@ -205,8 +251,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    _showLogoutDialog();
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/login',
+                      (route) => false,
+                    );
                   },
                   icon: const Icon(Icons.logout),
                   label: const Text('Logout'),
@@ -266,29 +317,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/login',
-                (route) => false,
-              );
-            },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
 }

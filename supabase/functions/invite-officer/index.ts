@@ -8,6 +8,18 @@ const inviteRedirectTo =
   Deno.env.get('INVITE_REDIRECT_TO') ||
   'https://gunathkalpitha.github.io/nbro-auth-redirect/'
 
+function withInviteType(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (!parsed.searchParams.has('type')) {
+      parsed.searchParams.set('type', 'invite')
+    }
+    return parsed.toString()
+  } catch {
+    return url
+  }
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 const corsHeaders = {
@@ -56,7 +68,7 @@ serve(async (req: Request) => {
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(
       email,
       {
-        redirectTo: inviteRedirectTo,
+        redirectTo: withInviteType(inviteRedirectTo),
         data: {
           full_name: fullName,
           role: 'officer',

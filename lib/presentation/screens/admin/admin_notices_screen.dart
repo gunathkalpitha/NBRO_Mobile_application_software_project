@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/profile_state_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/notice.dart';
+import 'package:nbro_mobile_application/domain/models/user_profile.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
 enum NoticeTargetType { all, individual, selected }
@@ -29,6 +31,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   List<Notice> _notices = [];
+  UserProfile? _currentProfile;
 
   String _officerLabel(Map<String, dynamic> officer) {
     final name = officer['full_name'] as String?;
@@ -62,6 +65,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
     });
 
     await Future.wait([
+      _loadCurrentProfile(),
       _loadOfficers(),
       _loadNotices(),
     ]);
@@ -70,6 +74,33 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadCurrentProfile() async {
+    try {
+      if (ProfileStateService.notifier.value != null) {
+        _currentProfile = ProfileStateService.notifier.value;
+        return;
+      }
+
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        _currentProfile = null;
+        return;
+      }
+
+      final row = await Supabase.instance.client
+          .from('profile')
+          .select('id, full_name, role, is_active, avatar_url')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+
+      if (row != null) {
+        _currentProfile = UserProfile.fromMap(Map<String, dynamic>.from(row));
+      }
+    } catch (_) {
+      _currentProfile = null;
     }
   }
 
@@ -96,7 +127,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
     try {
       final response = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name')
+          .select('id, title, message, priority, published_at, published_by_name, published_by_avatar_url')
           .order('published_at', ascending: false);
 
       final notices = (response as List)
@@ -106,6 +137,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
                 message: json['message'] as String,
                 publishedAt: DateTime.parse(json['published_at'] as String),
                 publishedBy: json['published_by_name'] as String? ?? 'Admin',
+                publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
                 priority: NoticePriority.values.firstWhere(
                   (e) => e.name == (json['priority'] as String? ?? 'normal'),
                   orElse: () => NoticePriority.normal,
@@ -148,10 +180,14 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      final publishedByName = user?.userMetadata?['full_name'] ??
-          user?.userMetadata?['name'] ??
-          user?.email?.split('@').first ??
-          'Admin';
+      final profile = _currentProfile;
+      final publishedByName = profile?.fullName.trim().isNotEmpty == true
+          ? profile!.fullName
+          : user?.userMetadata?['full_name'] ??
+              user?.userMetadata?['name'] ??
+              user?.email?.split('@').first ??
+              'Admin';
+      final publishedByAvatarUrl = profile?.avatarUrl;
 
       final targetType = _targetType.name;
 
@@ -164,6 +200,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
             'target_type': targetType,
             'published_by': user?.id,
             'published_by_name': publishedByName,
+            'published_by_avatar_url': publishedByAvatarUrl,
           })
           .select('id')
           .single();
@@ -566,19 +603,6 @@ class _NoticeCard extends StatelessWidget {
     }
   }
 
-  IconData _getPriorityIcon() {
-    switch (notice.priority) {
-      case NoticePriority.urgent:
-        return Icons.error;
-      case NoticePriority.high:
-        return Icons.priority_high;
-      case NoticePriority.normal:
-        return Icons.info;
-      case NoticePriority.low:
-        return Icons.notes;
-    }
-  }
-
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
@@ -599,6 +623,12 @@ class _NoticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final priorityColor = _getPriorityColor();
+    final avatarUrl = notice.publishedByAvatarUrl;
+    final initials = notice.publishedBy.trim().isEmpty
+      ? 'AD'
+      : notice.publishedBy.trim().split(RegExp(r'\s+')).length >= 2
+        ? '${notice.publishedBy.trim().split(RegExp(r'\s+'))[0][0]}${notice.publishedBy.trim().split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
+        : notice.publishedBy.trim().substring(0, notice.publishedBy.trim().length >= 2 ? 2 : 1).toUpperCase();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -621,17 +651,22 @@ class _NoticeCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: priorityColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    _getPriorityIcon(),
-                    color: priorityColor,
-                    size: 20,
-                  ),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: NBROColors.white,
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: avatarUrl == null || avatarUrl.isEmpty
+                      ? Text(
+                          initials,
+                          style: const TextStyle(
+                            color: NBROColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -647,12 +682,28 @@ class _NoticeCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        'By ${notice.publishedBy} • ${_formatDate(notice.publishedAt)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: NBROColors.grey,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'By ${notice.publishedBy}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: NBROColors.grey,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDate(notice.publishedAt),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: NBROColors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
