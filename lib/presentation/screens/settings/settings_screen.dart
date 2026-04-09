@@ -5,6 +5,7 @@ import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 import 'package:nbro_mobile_application/presentation/screens/settings/profile_settings_screen.dart';
+import 'package:nbro_mobile_application/presentation/screens/settings/security_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool isAdminMode;
@@ -98,8 +99,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: const Text('Change password and security settings'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Security settings coming soon')),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SecuritySettingsScreen(),
+                    ),
                   );
                 },
               ),

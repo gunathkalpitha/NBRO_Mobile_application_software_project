@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/session_security_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -32,10 +33,37 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     });
 
-    // Navigate to login after a short delay
+    // Keep splash visible briefly for UX continuity.
     await Future.delayed(const Duration(seconds: 2));
+
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+      return;
+    }
+
+    final withinPeriod = await SessionSecurityService.isSessionWithinAllowedPeriod();
+    if (!withinPeriod) {
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+      return;
+    }
+
+    final unlocked = await SessionSecurityService.authenticateForUnlock();
+    if (!unlocked) {
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+      return;
+    }
+
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/home');
     }
   }
 
