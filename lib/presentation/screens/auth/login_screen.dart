@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/services/first_login_guide_service.dart';
+import 'package:nbro_mobile_application/core/services/session_security_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/screens/auth/first_login_guide_screen.dart';
 
@@ -60,6 +61,17 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    if (Supabase.instance.client.auth.currentSession == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login once with email/password before using biometric unlock.'),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final isAuthenticated = await _localAuth.authenticate(
         localizedReason: 'Authenticate to access NBRO Field Surveyor',
@@ -107,6 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       
       if (response.user != null) {
         debugPrint('[LoginScreen] Login successful for user: ${response.user!.id}');
+
+        await SessionSecurityService.recordPasswordLogin();
         
         // Check if the account is active
         try {
