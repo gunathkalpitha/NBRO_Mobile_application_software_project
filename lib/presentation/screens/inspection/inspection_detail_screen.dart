@@ -962,7 +962,7 @@ class _TimestampsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Timeline',
+            'Timeline & Modifications',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               color: NBROColors.black,
@@ -986,6 +986,7 @@ class _TimestampsSection extends StatelessWidget {
                   label: 'Created',
                   date: dateFormatter.format(inspection.createdAt),
                   color: NBROColors.success,
+                  officer: inspection.createdBy != null ? 'Officer: ${inspection.createdBy}' : null,
                 ),
                 if (inspection.updatedAt != null) ...[
                   const SizedBox(height: 16),
@@ -999,6 +1000,7 @@ class _TimestampsSection extends StatelessWidget {
                     label: 'Last Modified',
                     date: dateFormatter.format(inspection.updatedAt!),
                     color: NBROColors.info,
+                    officer: inspection.updatedBy != null ? 'Modified by: ${inspection.updatedBy}' : null,
                   ),
                 ],
               ],
@@ -1603,12 +1605,14 @@ class _TimelineItem extends StatelessWidget {
   final String label;
   final String date;
   final Color color;
+  final String? officer;
 
   const _TimelineItem({
     required this.icon,
     required this.label,
     required this.date,
     required this.color,
+    this.officer,
   });
 
   @override
@@ -1645,6 +1649,17 @@ class _TimelineItem extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (officer != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  officer!,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: NBROColors.grey.withValues(alpha: 0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

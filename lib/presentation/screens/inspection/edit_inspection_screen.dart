@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
+import 'edit_defect_modal.dart';
 
 class EditInspectionScreen extends StatefulWidget {
   final Inspection inspection;
@@ -141,6 +142,31 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     'Flat': 'Flat',
   };
 
+  String _normalizeMaterialKey(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  Map<String, bool> _normalizeSelectedMaterials(
+    Map<String, bool>? source,
+    Map<String, String> options,
+  ) {
+    if (source == null || source.isEmpty) return <String, bool>{};
+
+    final optionByNormalized = <String, String>{};
+    for (final key in options.keys) {
+      optionByNormalized[_normalizeMaterialKey(key)] = key;
+    }
+
+    final normalizedSelections = <String, bool>{};
+    source.forEach((rawKey, rawValue) {
+      if (rawValue != true) return;
+      final normalizedRawKey = _normalizeMaterialKey(rawKey);
+      final matchedOptionKey = optionByNormalized[normalizedRawKey] ?? rawKey;
+      normalizedSelections[matchedOptionKey] = true;
+    });
+    return normalizedSelections;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -177,10 +203,22 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     _numberOfFloorsController = TextEditingController(
       text: widget.inspection.numberOfFloors ?? '',
     );
-    _wallMaterials = Map.from(widget.inspection.wallMaterials ?? {});
-    _doorMaterials = Map.from(widget.inspection.doorMaterials ?? {});
-    _floorMaterials = Map.from(widget.inspection.floorMaterials ?? {});
-    _roofMaterials = Map.from(widget.inspection.roofMaterials ?? {});
+    _wallMaterials = _normalizeSelectedMaterials(
+      widget.inspection.wallMaterials,
+      _wallMaterialOptions,
+    );
+    _doorMaterials = _normalizeSelectedMaterials(
+      widget.inspection.doorMaterials,
+      _doorMaterialOptions,
+    );
+    _floorMaterials = _normalizeSelectedMaterials(
+      widget.inspection.floorMaterials,
+      _floorMaterialOptions,
+    );
+    _roofMaterials = _normalizeSelectedMaterials(
+      widget.inspection.roofMaterials,
+      _roofMaterialOptions,
+    );
     _roofCovering = widget.inspection.roofCovering;
     _buildingPhotoUrl = widget.inspection.buildingPhotoUrl;
   }
@@ -982,14 +1020,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: () {
-                 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Add defect functionality coming soon'),
-                    ),
-                  );
-                },
+                onPressed: _showAddDefectModal,
                 icon: const Icon(Icons.add),
                 label: const Text('Add Defect'),
               ),
@@ -1022,25 +1053,100 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     final defect = _defects[index];
+                    final defectImageUrl = defect.photoUrl ?? defect.photoPath;
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: NBROColors.primary,
-                          child: Text(
-                            defect.notation.code,
-                            style: const TextStyle(color: Colors.white),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _showEditDefectModal(index),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: NBROColors.primary,
+                                    child: Text(
+                                      defect.notation.code,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          defect.category.displayName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (defect.floorLevel != null && defect.floorLevel!.isNotEmpty)
+                                          Text(
+                                            'Floor: ${defect.floorLevel}',
+                                            style: TextStyle(color: Colors.grey.shade600),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: NBROColors.primary),
+                                    onPressed: () => _showEditDefectModal(index),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _deleteDefect(index),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              if (defectImageUrl != null && defectImageUrl.isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    defectImageUrl,
+                                    height: 150,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 150,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade200,
+                                        ),
+                                        child: const Center(
+                                          child: Icon(Icons.image_not_supported),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Length: ${defect.lengthMm}mm${defect.widthMm != null ? ' | Width: ${defect.widthMm}mm' : ''}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              if (defect.remarks != null && defect.remarks!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                    'Remarks: ${defect.remarks}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                        title: Text(defect.category.displayName),
-                        subtitle: Text(
-                          'Length: ${defect.lengthMm}mm${defect.widthMm != null ? ' | Width: ${defect.widthMm}mm' : ''}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            _deleteDefect(index);
-                          },
                         ),
                       ),
                     );
@@ -1048,6 +1154,49 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                 ),
         ),
       ],
+    );
+  }
+
+  void _showAddDefectModal() {
+    showDialog(
+      context: context,
+      builder: (context) => EditDefectModal(
+        onSave: (newDefect) {
+          setState(() {
+            _defects.add(
+              Defect(
+                id: newDefect.id,
+                inspectionId: widget.inspection.id,
+                notation: newDefect.notation,
+                category: newDefect.category,
+                floorLevel: newDefect.floorLevel,
+                lengthMm: newDefect.lengthMm,
+                widthMm: newDefect.widthMm,
+                photoPath: newDefect.photoPath,
+                remarks: newDefect.remarks,
+                createdAt: newDefect.createdAt,
+                photoUrl: newDefect.photoUrl,
+              ),
+            );
+            _markAsChanged();
+          });
+        },
+      ),
+    );
+  }
+
+  void _showEditDefectModal(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => EditDefectModal(
+        defect: _defects[index],
+        onSave: (updatedDefect) {
+          setState(() {
+            _defects[index] = updatedDefect;
+            _markAsChanged();
+          });
+        },
+      ),
     );
   }
 

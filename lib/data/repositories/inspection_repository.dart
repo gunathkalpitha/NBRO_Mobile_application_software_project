@@ -63,6 +63,8 @@ class InspectionRepository {
         await _createDefectForSite(siteId, defect);
       }
 
+      await _syncMaterialSpecifications(siteId, inspection);
+
       await _supabase
           .from('site')
           .update({'sync_status': 'synced'})
@@ -97,7 +99,10 @@ class InspectionRepository {
             updated_at,
             general_observation(type, present_condition, approx_age),
             external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(no_floors),
+            main_building(
+              no_floors,
+              specification(element_type, is_used)
+            ),
             defects(
               defect_id,
               created_at,
@@ -143,7 +148,10 @@ class InspectionRepository {
             updated_at,
             general_observation(type, present_condition, approx_age),
             external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(no_floors),
+            main_building(
+              no_floors,
+              specification(element_type, is_used)
+            ),
             defects(
               defect_id,
               created_at,
@@ -179,7 +187,10 @@ class InspectionRepository {
             updated_at,
             general_observation(type, present_condition, approx_age),
             external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(no_floors),
+            main_building(
+              no_floors,
+              specification(element_type, is_used)
+            ),
             defects(
               defect_id,
               created_at,
@@ -223,6 +234,7 @@ class InspectionRepository {
         'longitude': inspection.longitude,
         'distance_from_row': inspection.distanceFromRow,
         'sync_status': inspection.syncStatus.name,
+        'updated_at': inspection.updatedAt?.toIso8601String(),
       }).eq('site_id', siteId);
 
       if (newBuildingPhotoPath != null) {
@@ -275,6 +287,9 @@ class InspectionRepository {
           'no_floors': inspection.numberOfFloors,
         },
       );
+
+      await _syncMaterialSpecifications(siteId, inspection);
+      await _syncDefectsForSite(siteId, inspection.defects);
     } catch (e) {
       throw Exception('Failed to update inspection: $e');
     }
@@ -325,7 +340,7 @@ class InspectionRepository {
         'width': defect.widthMm?.toString(),
       }).eq('info_id', infoId);
 
-      if (defect.photoPath != null) {
+      if (defect.photoPath != null && !_isRemoteUrl(defect.photoPath!)) {
         final upload = await _uploadDefectPhoto(defect.id, defect.photoPath!);
         final existingImage = await _supabase
             .from('defect_image')
@@ -343,6 +358,24 @@ class InspectionRepository {
           await _supabase.from('defect_image').update({
             'image_url': upload['url'],
             'image_path': upload['path'],
+          }).eq('image_id', existingImage['image_id']);
+        }
+      } else if (defect.photoPath != null && _isRemoteUrl(defect.photoPath!)) {
+        final existingImage = await _supabase
+            .from('defect_image')
+            .select('image_id')
+            .eq('info_id', infoId)
+            .maybeSingle();
+
+        if (existingImage == null) {
+          await _supabase.from('defect_image').insert({
+            'info_id': infoId,
+            'image_url': defect.photoPath,
+            'image_path': null,
+          });
+        } else {
+          await _supabase.from('defect_image').update({
+            'image_url': defect.photoPath,
           }).eq('image_id', existingImage['image_id']);
         }
       }
@@ -501,13 +534,55 @@ class InspectionRepository {
         .eq(idColumn, existing[idColumn]);
   }
 
+  Future<void> _syncMaterialSpecifications(
+    String siteId,
+    Inspection inspection,
+  ) async {
+    final building = await _supabase
+        .from('main_building')
+        .select('building_id')
+        .eq('site_id', siteId)
+        .maybeSingle();
+
+    if (building == null) return;
+    final buildingId = building['building_id'] as String;
+
+    await _supabase.from('specification').delete().eq('building_id', buildingId);
+
+    final rows = <Map<String, dynamic>>[];
+
+    void appendSelected(String scope, Map<String, bool>? materials) {
+      if (materials == null || materials.isEmpty) return;
+      materials.forEach((key, value) {
+        if (value == true) {
+          rows.add({
+            'building_id': buildingId,
+            'is_used': true,
+            'element_type': '$scope|$key',
+          });
+        }
+      });
+    }
+
+    appendSelected('wall', inspection.wallMaterials);
+    appendSelected('door', inspection.doorMaterials);
+    appendSelected('floor', inspection.floorMaterials);
+    appendSelected('roof', inspection.roofMaterials);
+
+    if (rows.isNotEmpty) {
+      await _supabase.from('specification').insert(rows);
+    }
+  }
+
   Future<void> _createDefectForSite(String siteId, Defect defect) async {
     String? imageUrl;
     String? imagePath;
-    if (defect.photoPath != null) {
+    if (defect.photoPath != null && !_isRemoteUrl(defect.photoPath!)) {
       final upload = await _uploadDefectPhoto(defect.id, defect.photoPath!);
       imageUrl = upload['url'];
       imagePath = upload['path'];
+    } else if (defect.photoPath != null && _isRemoteUrl(defect.photoPath!)) {
+      imageUrl = defect.photoPath;
     }
 
     await _supabase.rpc('insert_defect_with_details', params: {
@@ -518,6 +593,14 @@ class InspectionRepository {
       'p_image_url': imageUrl,
       'p_image_path': imagePath,
     });
+  }
+
+  Future<void> _syncDefectsForSite(String siteId, List<Defect> defects) async {
+    await _supabase.from('defects').delete().eq('site_id', siteId);
+
+    for (final defect in defects) {
+      await _createDefectForSite(siteId, defect);
+    }
   }
 
   Map<String, String> _parseDefectRemarks(String? remarks) {
@@ -563,6 +646,10 @@ class InspectionRepository {
     return 'NBRO_META:notation=${defect.notation.code};category=${defect.category.name};floor=$floor|$note';
   }
 
+  bool _isRemoteUrl(String value) {
+    return value.startsWith('http://') || value.startsWith('https://');
+  }
+
   double? _parseDouble(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
@@ -586,6 +673,39 @@ class InspectionRepository {
     final building = buildingList.isNotEmpty
         ? buildingList.first as Map<String, dynamic>
         : const <String, dynamic>{};
+
+    final specs = (building['specification'] as List?) ?? const [];
+    final wallMaterials = <String, bool>{};
+    final doorMaterials = <String, bool>{};
+    final floorMaterials = <String, bool>{};
+    final roofMaterials = <String, bool>{};
+
+    for (final spec in specs) {
+      final item = spec as Map<String, dynamic>;
+      final isUsed = item['is_used'] == true;
+      final elementType = item['element_type'] as String?;
+      if (!isUsed || elementType == null || !elementType.contains('|')) continue;
+
+      final parts = elementType.split('|');
+      if (parts.length < 2) continue;
+      final scope = parts.first.toLowerCase();
+      final key = parts.sublist(1).join('|');
+
+      switch (scope) {
+        case 'wall':
+          wallMaterials[key] = true;
+          break;
+        case 'door':
+          doorMaterials[key] = true;
+          break;
+        case 'floor':
+          floorMaterials[key] = true;
+          break;
+        case 'roof':
+          roofMaterials[key] = true;
+          break;
+      }
+    }
 
     final defectsRows = (row['defects'] as List?) ?? const [];
     final defects = defectsRows
@@ -624,6 +744,10 @@ class InspectionRepository {
           false,
       sewageType: services['sewage_waste'] as String?,
       numberOfFloors: building['no_floors'] as String?,
+      wallMaterials: wallMaterials.isEmpty ? null : wallMaterials,
+      doorMaterials: doorMaterials.isEmpty ? null : doorMaterials,
+      floorMaterials: floorMaterials.isEmpty ? null : floorMaterials,
+      roofMaterials: roofMaterials.isEmpty ? null : roofMaterials,
       defects: defects,
       syncStatus: SyncStatus.values.firstWhere(
         (e) => e.name == row['sync_status'],
@@ -636,6 +760,7 @@ class InspectionRepository {
           ? DateTime.parse(row['updated_at'] as String)
           : null,
       createdBy: row['user_id'] as String?,
+      updatedBy: row['user_id'] as String?,
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
   }
@@ -714,7 +839,7 @@ class InspectionRepository {
       lengthMm: _parseDouble(info['length']) ?? 0,
       widthMm: _parseDouble(info['width']),
       remarks: parsed['remarks'],
-      photoPath: image['image_path'] as String?,
+        photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?),
       photoUrl: image['image_url'] as String?,
       createdAt: row['created_at'] != null
           ? DateTime.parse(row['created_at'] as String)
@@ -897,3 +1022,4 @@ class InspectionRepository {
     }
   }
 }
+

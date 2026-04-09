@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/services/first_login_guide_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/screens/auth/first_login_guide_screen.dart';
+import 'package:nbro_mobile_application/presentation/screens/password/reset_password_screen.dart';
 
 class AuthCallbackScreen extends StatefulWidget {
   const AuthCallbackScreen({super.key});
@@ -23,6 +24,15 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
 
   Future<void> _handleAuthCallback() async {
     try {
+      final incomingUri = _getIncomingAuthUri();
+      if (incomingUri != null) {
+        final type = (incomingUri.queryParameters['type'] ?? '').toLowerCase();
+        if (type == 'recovery') {
+          await _handlePasswordRecovery(incomingUri);
+          return;
+        }
+      }
+
       // Supabase automatically handles the OAuth/invitation callback
       // Check if we have a valid session
       final session = Supabase.instance.client.auth.currentSession;
@@ -52,6 +62,61 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
         });
       }
     }
+  }
+
+  Uri? _getIncomingAuthUri() {
+    final routeName = WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+
+    if (routeName.isNotEmpty && routeName != '/') {
+      final routeUri = Uri.tryParse(routeName);
+      if (routeUri != null &&
+          (routeUri.path != '/' ||
+              routeUri.queryParameters.isNotEmpty ||
+              routeUri.fragment.isNotEmpty)) {
+        return routeUri;
+      }
+    }
+
+    final baseUri = Uri.base;
+    if (baseUri.queryParameters.isNotEmpty || baseUri.fragment.isNotEmpty) {
+      return baseUri;
+    }
+
+    return null;
+  }
+
+  Future<void> _handlePasswordRecovery(Uri uri) async {
+    final hasRecoveryError =
+        (uri.queryParameters['error'] ?? '').isNotEmpty ||
+        (uri.queryParameters['error_code'] ?? '').isNotEmpty;
+
+    if (hasRecoveryError) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushReplacementNamed('/forgot-password');
+      return;
+    }
+
+    final code = uri.queryParameters['code'];
+
+    if (code != null && code.isNotEmpty) {
+      try {
+        await Supabase.instance.client.auth.exchangeCodeForSession(code);
+      } catch (e) {
+        debugPrint('[AuthCallback] Recovery code exchange failed: $e');
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const ResetPasswordScreen(),
+      ),
+    );
   }
 
   Future<void> _tryRecoverSession() async {

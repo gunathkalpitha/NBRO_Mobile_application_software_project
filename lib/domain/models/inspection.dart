@@ -35,6 +35,7 @@ class Inspection {
   final DateTime? updatedAt;
   final String? remarks;
   final String? createdBy; // User ID from Supabase Auth
+  final String? updatedBy; // User ID of the officer who last modified this inspection
   final String? buildingPhotoUrl; // Front view building image URL
 
   Inspection({
@@ -66,6 +67,7 @@ class Inspection {
     this.updatedAt,
     this.remarks,
     this.createdBy,
+    this.updatedBy,
     this.buildingPhotoUrl,
   });
 
@@ -98,6 +100,7 @@ class Inspection {
     DateTime? updatedAt,
     String? remarks,
     String? createdBy,
+    String? updatedBy,
     String? buildingPhotoUrl,
   }) {
     return Inspection(
@@ -129,6 +132,7 @@ class Inspection {
       updatedAt: updatedAt ?? this.updatedAt,
       remarks: remarks ?? this.remarks,
       createdBy: createdBy ?? this.createdBy,
+      updatedBy: updatedBy ?? this.updatedBy,
       buildingPhotoUrl: buildingPhotoUrl ?? this.buildingPhotoUrl,
     );
   }
@@ -147,6 +151,7 @@ class Inspection {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'user_id': createdBy,
+      'updated_by': updatedBy,
     };
   }
 
@@ -209,6 +214,7 @@ class Inspection {
           : null,
       remarks: json['remarks'] as String?,
       createdBy: (json['user_id'] as String?) ?? (json['created_by'] as String?),
+      updatedBy: json['updated_by'] as String?,
       buildingPhotoUrl: json['building_photo_url'] as String?,
     );
   }

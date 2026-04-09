@@ -18,6 +18,22 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initialize() async {
+    final incomingUri = _getIncomingAuthUri();
+    if (incomingUri != null) {
+      final type = (incomingUri.queryParameters['type'] ?? '').toLowerCase();
+      if (type == 'recovery') {
+        await _handlePasswordRecoveryLink(incomingUri);
+        return;
+      }
+
+      if (type == 'invite') {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/auth-callback');
+        }
+        return;
+      }
+    }
+
     // Listen for auth state changes (including password recovery)
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final event = data.event;
@@ -67,6 +83,57 @@ class _SplashScreenState extends State<SplashScreen> {
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/home');
     }
+  }
+
+  Uri? _getIncomingAuthUri() {
+    final routeName = WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+
+    if (routeName.isNotEmpty && routeName != '/') {
+      final routeUri = Uri.tryParse(routeName);
+      if (routeUri != null &&
+          (routeUri.path != '/' ||
+              routeUri.queryParameters.isNotEmpty ||
+              routeUri.fragment.isNotEmpty)) {
+        return routeUri;
+      }
+    }
+
+    final baseUri = Uri.base;
+    if (baseUri.queryParameters.isNotEmpty || baseUri.fragment.isNotEmpty) {
+      return baseUri;
+    }
+
+    return null;
+  }
+
+  Future<void> _handlePasswordRecoveryLink(Uri uri) async {
+    final hasRecoveryError =
+        (uri.queryParameters['error'] ?? '').isNotEmpty ||
+        (uri.queryParameters['error_code'] ?? '').isNotEmpty;
+
+    if (hasRecoveryError) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushReplacementNamed('/forgot-password');
+      return;
+    }
+
+    final code = uri.queryParameters['code'];
+
+    if (code != null && code.isNotEmpty) {
+      try {
+        await Supabase.instance.client.auth.exchangeCodeForSession(code);
+      } catch (e) {
+        debugPrint('[SplashScreen] Code exchange failed: $e');
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushReplacementNamed('/reset-password');
   }
 
   @override
