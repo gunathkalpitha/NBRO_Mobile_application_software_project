@@ -193,3 +193,29 @@ CREATE TRIGGER update_defect_image_at
 BEFORE UPDATE ON defect_image
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- Fix Foreign Key Constraints for Cascade Delete
+-- ============================================================================
+-- Drop existing constraints that use ON DELETE RESTRICT
+ALTER TABLE general_observation DROP CONSTRAINT IF EXISTS general_observation_site_id_fkey;
+ALTER TABLE external_services DROP CONSTRAINT IF EXISTS external_services_site_id_fkey;
+ALTER TABLE ancillary_building DROP CONSTRAINT IF EXISTS ancillary_building_site_id_fkey;
+ALTER TABLE main_building DROP CONSTRAINT IF EXISTS main_building_site_id_fkey;
+
+-- Add new constraints with ON DELETE CASCADE
+ALTER TABLE general_observation 
+ADD CONSTRAINT general_observation_site_id_fkey 
+FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE external_services 
+ADD CONSTRAINT external_services_site_id_fkey 
+FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE ancillary_building 
+ADD CONSTRAINT ancillary_building_site_id_fkey 
+FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE main_building 
+ADD CONSTRAINT main_building_site_id_fkey 
+FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
