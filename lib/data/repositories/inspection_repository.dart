@@ -289,9 +289,42 @@ class InspectionRepository {
   /// Delete an inspection and all its defects
   Future<void> deleteInspection(String id) async {
     try {
-      await _supabase.from('site').delete().eq('building_ref', id);
-      await _supabase.from('site').delete().eq('site_id', id);
-    } catch (e) {
+      debugPrint('[Repository] 🗑️ Deleting inspection: $id');
+      
+      String? siteId;
+      bool isUuid = id.contains('-') && RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(id);
+      
+      // If it's a UUID, use it directly as site_id
+      if (isUuid) {
+        siteId = id;
+        debugPrint('[Repository] ✓ Using ID as site_id (UUID format): $siteId');
+      } else {
+        // It's a building_ref, need to look up the site_id
+        debugPrint('[Repository] Looking up site by building_ref: $id');
+        final response = await _supabase
+            .from('site')
+            .select('site_id')
+            .eq('building_ref', id)
+            .maybeSingle();
+        
+        if (response != null) {
+          siteId = response['site_id'] as String;
+          debugPrint('[Repository] ✓ Found site_id: $siteId');
+        } else {
+          debugPrint('[Repository] ⚠️ Site not found with building_ref, trying direct delete by building_ref...');
+          // Try deleting by building_ref directly
+          await _supabase.from('site').delete().eq('building_ref', id);
+          debugPrint('[Repository] ✓ Inspection deleted by building_ref: $id');
+          return;
+        }
+      }
+      
+      // Delete by site_id (CASCADE constraints will handle dependent records)
+      await _supabase.from('site').delete().eq('site_id', siteId);
+      debugPrint('[Repository] ✓ Inspection deleted successfully: $siteId');
+    } catch (e, stackTrace) {
+      debugPrint('[Repository] ❌ Error deleting inspection: $e');
+      debugPrint('[Repository] Stack trace: $stackTrace');
       throw Exception('Failed to delete inspection: $e');
     }
   }

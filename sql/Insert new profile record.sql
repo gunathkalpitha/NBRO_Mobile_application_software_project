@@ -1,10 +1,11 @@
 BEGIN;
 
-INSERT INTO profile(id,full_name,role)
+INSERT INTO profile(id, full_name, role, email)
 VALUES(
   'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'Government Officer',
-  'admin'
+  'admin',
+  'officer@gov.lk'
 )
 ON CONFLICT (id) DO NOTHING;
 COMMIT;
@@ -59,93 +60,65 @@ COMMIT;
 
 BEGIN;
 
-INSERT INTO main_building (site_id, no_floors)
-VALUES (
-  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
-  '3'
+WITH new_building AS (
+  INSERT INTO main_building (site_id, no_floors)
+  VALUES (
+    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
+    '3'
+  )
+  RETURNING building_id
 )
-RETURNING building_id;
-
-COMMIT;
-
-
-BEGIN;
-
 INSERT INTO specification (building_id, is_used, element_type, element_properties, floor_details)
-VALUES (
-  '9b83c5dd-7245-4125-9235-1bce3e55f287',
+SELECT 
+  building_id,
   TRUE,
   'Concrete',
   '{"material":"cement","strength":"M25"}',
   '{"floor1":"Living Room","floor2":"Bedrooms","floor3":"Roof"}'
-);
+FROM new_building;
+
 COMMIT;
 
 BEGIN;
 
-INSERT INTO ancillary_building (site_id, building_type)
-VALUES (
-  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
-  'Garage'
+WITH new_ancillary AS (
+  INSERT INTO ancillary_building (site_id, building_type)
+  VALUES (
+    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
+    'Garage'
+  )
+  RETURNING structure_id
+),
+new_detail_type AS (
+  INSERT INTO detail_type (structure_id, name)
+  SELECT structure_id, 'Wall'
+  FROM new_ancillary
+  RETURNING detail_type_id
 )
-RETURNING structure_id;
-
-COMMIT;
-
-BEGIN;
-
-INSERT INTO detail_type (structure_id, name)
-VALUES (
-  '07bac287-140f-409b-9d7b-c25f27ac00b1',
-  'Wall'
-)
-RETURNING detail_type_id;
-COMMIT;
-
-BEGIN;
-
 INSERT INTO building_detail (detail_type_id, front, left_side, right_side, rear)
-VALUES (
-  '6f5b379b-86e7-4d6e-9882-cddae941712e',
-  TRUE,
-  FALSE,
-  TRUE,
-  FALSE
-);
+SELECT detail_type_id, TRUE, FALSE, TRUE, FALSE
+FROM new_detail_type;
 
 COMMIT;
 
 BEGIN;
 
-INSERT INTO defects (site_id)
-VALUES (
-  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7'
+WITH new_defect AS (
+  INSERT INTO defects (site_id)
+  VALUES (
+    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7'
+  )
+  RETURNING defect_id
+),
+new_defect_info AS (
+  INSERT INTO defect_info (defect_id, remarks, length, width)
+  SELECT defect_id, 'Crack near window', '1.5m', '0.2m'
+  FROM new_defect
+  RETURNING info_id
 )
-RETURNING defect_id;
-
-COMMIT;
-
-BEGIN;
-
-INSERT INTO defect_info (defect_id, remarks, length, width)
-VALUES (
-  '3d2e0256-955d-4ca7-aecd-9c71cba8a6c5',
-  'Crack near window',
-  '1.5m',
-  '0.2m'
-)
-RETURNING info_id;
-
-COMMIT;
-
-BEGIN;
-
 INSERT INTO defect_image (info_id, image_url, image_path)
-VALUES (
-  'e937cd61-b2f9-4a55-abaf-c4a0566ad473',
-  'http://example.com/defect.jpg',
-  '/images/defect.jpg'
-);
+SELECT info_id, 'http://example.com/defect.jpg', '/images/defect.jpg'
+FROM new_defect_info;
 
 COMMIT;
 

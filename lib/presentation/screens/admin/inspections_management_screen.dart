@@ -1397,19 +1397,40 @@ class _AdminInspectionsManagementScreenState
 
     final siteId = site['site_id'] as String;
 
+    // Fetch defects WITHOUT nested defect_info to avoid RLS policy issues
     final defectsResponse = await supabase
         .from('defects')
-        .select(
-            'defect_id, created_at, defect_info(info_id, remarks, length, width, defect_image(image_url, image_path))')
+        .select('defect_id, created_at')
         .eq('site_id', siteId)
         .order('created_at', ascending: false);
 
+    if ((defectsResponse as List).isEmpty) {
+      return [];
+    }
+
+    final defectIds = (defectsResponse as List)
+        .map((d) => d['defect_id'] as String)
+        .toList();
+
+    // Fetch defect_info separately
+    final infosResponse = await supabase
+        .from('defect_info')
+        .select('defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)')
+        .inFilter('defect_id', defectIds);
+
+    // Create a map for quick lookup
+    final infosMap = <String, Map<String, dynamic>>{};
+    for (final info in (infosResponse as List)) {
+      final defectId = info['defect_id'] as String?;
+      if (defectId != null) {
+        infosMap[defectId] = info as Map<String, dynamic>;
+      }
+    }
+
     return (defectsResponse as List).map((defect) {
       final defectRow = defect as Map<String, dynamic>;
-      final infoList = (defectRow['defect_info'] as List?) ?? const [];
-      final info = infoList.isNotEmpty
-          ? infoList.first as Map<String, dynamic>
-          : const <String, dynamic>{};
+      final defectId = defectRow['defect_id'] as String?;
+      final info = (defectId != null ? infosMap[defectId] : null) ?? const <String, dynamic>{};
 
       final imageList = (info['defect_image'] as List?) ?? const [];
       final image = imageList.isNotEmpty
@@ -1418,7 +1439,6 @@ class _AdminInspectionsManagementScreenState
 
       final parsed = _parseDefectMeta(info['remarks'] as String?);
 
-      final defectId = defect['defect_id'] as String?;
       return {
         'defect_id': defectId,
         'notation': parsed['notation'],
