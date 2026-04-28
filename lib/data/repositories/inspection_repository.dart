@@ -105,21 +105,21 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
-              created_at,
-              defect_info(
-                info_id,
-                remarks,
-                length,
-                width,
-                defect_image(image_url, image_path)
-              )
+              created_at
             )
           ''')
           .order('created_at', ascending: false);
 
-      return (response as List)
+      final inspections = (response as List)
           .map((json) => _mapInspectionFromSiteRow(json as Map<String, dynamic>))
           .toList();
+
+      // Fetch defect_info separately for each inspection's defects to avoid RLS policy issues
+      for (final inspection in inspections) {
+        await _populateDefectInfo(inspection);
+      }
+
+      return inspections;
     } catch (e) {
       throw Exception('Failed to get inspections: $e');
     }
@@ -154,14 +154,7 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
-              created_at,
-              defect_info(
-                info_id,
-                remarks,
-                length,
-                width,
-                defect_image(image_url, image_path)
-              )
+              created_at
             )
           ''')
           .eq('building_ref', id)
@@ -193,14 +186,7 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
-              created_at,
-              defect_info(
-                info_id,
-                remarks,
-                length,
-                width,
-                defect_image(image_url, image_path)
-              )
+              created_at
             )
           ''')
           .eq('site_id', id)
@@ -210,7 +196,12 @@ class InspectionRepository {
         return null;
       }
 
-      return _mapInspectionFromSiteRow(siteResponse);
+      final inspection = _mapInspectionFromSiteRow(siteResponse);
+
+      // Fetch defect_info separately to avoid RLS policy issues
+      await _populateDefectInfo(inspection);
+
+      return inspection;
     } catch (e) {
       throw Exception('Failed to get inspection: $e');
     }
@@ -402,26 +393,75 @@ class InspectionRepository {
 
       final response = await _supabase
           .from('defects')
-          .select('''
-            defect_id,
-            created_at,
-            defect_info(
-              info_id,
-              remarks,
-              length,
-              width,
-              defect_image(image_url, image_path)
-            )
-          ''')
+          .select('defect_id, created_at')
           .eq('site_id', site['site_id'])
           .order('created_at', ascending: true);
 
-      return (response as List)
+      final defects = (response as List)
           .map((json) => _mapDefectFromRow(
                 json as Map<String, dynamic>,
                 inspectionId,
               ))
           .toList();
+
+      // Fetch defect_info separately for each defect to avoid RLS policy issues
+      if (defects.isNotEmpty) {
+        final defectIds = defects.map((d) => d.id).toList();
+
+        try {
+          final infosResponse = await _supabase
+              .from('defect_info')
+              .select('defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)')
+              .inFilter('defect_id', defectIds);
+
+          // Create a map of defect_id -> info for quick lookup
+          final infosMap = <String, Map<String, dynamic>>{};
+          for (final info in (infosResponse as List)) {
+            final defectId = (info['defect_id'] as String?) ?? '';
+            if (defectId.isNotEmpty) {
+              infosMap[defectId] = info as Map<String, dynamic>;
+            }
+          }
+
+          // Update each defect with its info
+          for (int i = 0; i < defects.length; i++) {
+            final defect = defects[i];
+            final info = infosMap[defect.id] ?? const <String, dynamic>{};
+
+            // Rebuild the defect with updated info
+            final images = (info['defect_image'] as List?) ?? const [];
+            final image = images.isNotEmpty
+                ? images.first as Map<String, dynamic>
+                : const <String, dynamic>{};
+
+            final parsed = _parseDefectRemarks(info['remarks'] as String?);
+
+            defects[i] = Defect(
+              id: defect.id,
+              inspectionId: defect.inspectionId,
+              notation: DefectNotation.values.firstWhere(
+                (e) => e.code == parsed['notation'],
+                orElse: () => defect.notation,
+              ),
+              category: DefectCategory.values.firstWhere(
+                (e) => e.name == parsed['category'],
+                orElse: () => defect.category,
+              ),
+              floorLevel: parsed['floor'] ?? defect.floorLevel,
+              lengthMm: _parseDouble(info['length']) ?? defect.lengthMm,
+              widthMm: _parseDouble(info['width']) ?? defect.widthMm,
+              remarks: parsed['remarks'] ?? defect.remarks,
+              photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?) ?? defect.photoPath,
+              photoUrl: (image['image_url'] as String?) ?? defect.photoUrl,
+              createdAt: defect.createdAt,
+            );
+          }
+        } catch (e) {
+          debugPrint('[Repository] ⚠️ Failed to populate defect_info in getDefects: $e');
+        }
+      }
+
+      return defects;
     } catch (e) {
       throw Exception('Failed to get defects: $e');
     }
@@ -839,12 +879,73 @@ class InspectionRepository {
       lengthMm: _parseDouble(info['length']) ?? 0,
       widthMm: _parseDouble(info['width']),
       remarks: parsed['remarks'],
-        photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?),
+      photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?),
       photoUrl: image['image_url'] as String?,
       createdAt: row['created_at'] != null
           ? DateTime.parse(row['created_at'] as String)
           : DateTime.now(),
     );
+  }
+
+  /// Populate defect_info for all defects in an inspection
+  /// This is done separately because nested defect_info queries fail with RLS policies
+  Future<void> _populateDefectInfo(Inspection inspection) async {
+    if (inspection.defects.isEmpty) return;
+
+    final defectIds = inspection.defects.map((d) => d.id).toList();
+
+    try {
+      final infosResponse = await _supabase
+          .from('defect_info')
+          .select('defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)')
+          .inFilter('defect_id', defectIds);
+
+      // Create a map of defect_id -> info for quick lookup
+      final infosMap = <String, Map<String, dynamic>>{};
+      for (final info in (infosResponse as List)) {
+        final defectId = (info['defect_id'] as String?) ?? '';
+        if (defectId.isNotEmpty) {
+          infosMap[defectId] = info as Map<String, dynamic>;
+        }
+      }
+
+      // Update each defect with its info
+      for (int i = 0; i < inspection.defects.length; i++) {
+        final defect = inspection.defects[i];
+        final info = infosMap[defect.id] ?? const <String, dynamic>{};
+
+        // Rebuild the defect with updated info
+        final images = (info['defect_image'] as List?) ?? const [];
+        final image = images.isNotEmpty
+            ? images.first as Map<String, dynamic>
+            : const <String, dynamic>{};
+
+        final parsed = _parseDefectRemarks(info['remarks'] as String?);
+
+        inspection.defects[i] = Defect(
+          id: defect.id,
+          inspectionId: defect.inspectionId,
+          notation: DefectNotation.values.firstWhere(
+            (e) => e.code == parsed['notation'],
+            orElse: () => defect.notation,
+          ),
+          category: DefectCategory.values.firstWhere(
+            (e) => e.name == parsed['category'],
+            orElse: () => defect.category,
+          ),
+          floorLevel: parsed['floor'] ?? defect.floorLevel,
+          lengthMm: _parseDouble(info['length']) ?? defect.lengthMm,
+          widthMm: _parseDouble(info['width']) ?? defect.widthMm,
+          remarks: parsed['remarks'] ?? defect.remarks,
+          photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?) ?? defect.photoPath,
+          photoUrl: (image['image_url'] as String?) ?? defect.photoUrl,
+          createdAt: defect.createdAt,
+        );
+      }
+    } catch (e) {
+      debugPrint('[Repository] ⚠️ Failed to populate defect_info: $e');
+      // Don't throw - let the inspection continue with basic defect data
+    }
   }
 
   Future<Map<String, dynamic>?> _resolveSiteByInspectionId(
