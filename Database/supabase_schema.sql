@@ -141,11 +141,7 @@ CREATE TABLE defects (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
-    CONSTRAINT fk_defects_site 
-        FOREIGN KEY (building_reference_no) 
-        REFERENCES sites(building_reference_no) 
-        ON DELETE CASCADE
-);
+    );
 
 CREATE INDEX idx_defects_building_ref ON defects(building_reference_no);
 CREATE INDEX idx_defects_notation ON defects(notation);
@@ -190,10 +186,6 @@ CREATE TABLE defect_media (
     CONSTRAINT fk_media_defect 
         FOREIGN KEY (defect_id) 
         REFERENCES defects(defect_id) 
-        ON DELETE CASCADE,
-    CONSTRAINT fk_media_site 
-        FOREIGN KEY (building_reference_no) 
-        REFERENCES sites(building_reference_no) 
         ON DELETE CASCADE
 );
 

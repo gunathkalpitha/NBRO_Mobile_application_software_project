@@ -95,7 +95,24 @@ CREATE TABLE IF NOT EXISTS specification(
 
 CREATE TABLE IF NOT EXISTS defects(
   defect_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID REFERENCES site(site_id) ON DELETE CASCADE,
+  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE CASCADE,
+  notation TEXT NOT NULL CHECK (
+    notation IN (
+      'C', 'BC', 'CC', 'FC', 'SC', 'TC', 'SP', 
+      'D', 'WD', 'BD', 'CD', 'FD', 'DD', 'TD', 'GD', 'PD', 'RD', 'DP',
+      'BWC', 'BWS', 'BWD', 'BWDP'
+    )
+  ),
+  defect_category TEXT NOT NULL CHECK (
+    defect_category IN ('buildingFloor', 'boundaryWall')
+  ),
+  floor_level TEXT,
+  location_description TEXT,
+  length_mm DOUBLE PRECISION NOT NULL CHECK (length_mm > 0),
+  width_mm DOUBLE PRECISION CHECK (width_mm IS NULL OR width_mm > 0),
+  photo_path TEXT,
+  photo_url TEXT,
+  remarks TEXT,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW() 
@@ -219,3 +236,12 @@ FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
 ALTER TABLE main_building 
 ADD CONSTRAINT main_building_site_id_fkey 
 FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE defects DROP CONSTRAINT IF EXISTS defects_site_id_fkey;
+
+ALTER TABLE defects
+ADD CONSTRAINT defects_site_id_fkey
+FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE site
+ADD COLUMN IF NOT EXISTS location geography(POINT, 4326);

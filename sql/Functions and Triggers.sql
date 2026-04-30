@@ -148,11 +148,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.insert_defect_with_details(
     p_site_id UUID,
-    p_remarks TEXT,
-    p_length TEXT,
-    p_width TEXT,
-    p_image_url TEXT,
-    p_image_path TEXT
+    p_notation TEXT,
+    p_defect_category TEXT,
+    p_floor_level TEXT DEFAULT NULL,
+    p_location_description TEXT DEFAULT NULL,
+    p_length_mm DOUBLE PRECISION DEFAULT 0,
+    p_width_mm DOUBLE PRECISION DEFAULT NULL,
+    p_remarks TEXT DEFAULT NULL,
+    p_image_url TEXT DEFAULT NULL,
+    p_image_path TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -163,16 +167,31 @@ BEGIN
         RAISE EXCEPTION 'Site with id % not found', p_site_id;
     END IF;
 
-    INSERT INTO public.defects (site_id)
-    VALUES (p_site_id)
+    INSERT INTO public.defects (
+        site_id, 
+        notation, 
+        defect_category, 
+        floor_level, 
+        location_description, 
+        length_mm, 
+        width_mm, 
+        remarks, 
+        photo_url, 
+        photo_path
+    )
+    VALUES (
+        p_site_id, 
+        p_notation, 
+        p_defect_category, 
+        p_floor_level, 
+        p_location_description, 
+        p_length_mm, 
+        p_width_mm, 
+        p_remarks, 
+        p_image_url, 
+        p_image_path
+    )
     RETURNING defect_id INTO v_defect_id;
-
-    INSERT INTO public.defect_info (defect_id, remarks, length, width)
-    VALUES (v_defect_id, p_remarks, p_length, p_width)
-    RETURNING info_id INTO v_info_id;
-
-    INSERT INTO public.defect_image (info_id, image_url, image_path)
-    VALUES (v_info_id, p_image_url, p_image_path);
 
     RETURN v_defect_id;
 EXCEPTION WHEN OTHERS THEN
