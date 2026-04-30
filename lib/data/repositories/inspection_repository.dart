@@ -105,6 +105,15 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
+              notation,
+              defect_category,
+              floor_level,
+              location_description,
+              length_mm,
+              width_mm,
+              photo_url,
+              photo_path,
+              remarks,
               created_at
             )
           ''')
@@ -113,11 +122,6 @@ class InspectionRepository {
       final inspections = (response as List)
           .map((json) => _mapInspectionFromSiteRow(json as Map<String, dynamic>))
           .toList();
-
-      // Fetch defect_info separately for each inspection's defects to avoid RLS policy issues
-      for (final inspection in inspections) {
-        await _populateDefectInfo(inspection);
-      }
 
       return inspections;
     } catch (e) {
@@ -154,6 +158,15 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
+              notation,
+              defect_category,
+              floor_level,
+              location_description,
+              length_mm,
+              width_mm,
+              photo_url,
+              photo_path,
+              remarks,
               created_at
             )
           ''')
@@ -186,6 +199,15 @@ class InspectionRepository {
             ),
             defects(
               defect_id,
+              notation,
+              defect_category,
+              floor_level,
+              location_description,
+              length_mm,
+              width_mm,
+              photo_url,
+              photo_path,
+              remarks,
               created_at
             )
           ''')
@@ -197,10 +219,6 @@ class InspectionRepository {
       }
 
       final inspection = _mapInspectionFromSiteRow(siteResponse);
-
-      // Fetch defect_info separately to avoid RLS policy issues
-      await _populateDefectInfo(inspection);
-
       return inspection;
     } catch (e) {
       throw Exception('Failed to get inspection: $e');
@@ -660,9 +678,12 @@ class InspectionRepository {
 
     await _supabase.rpc('insert_defect_with_details', params: {
       'p_site_id': siteId,
-      'p_remarks': _composeDefectRemarks(defect),
-      'p_length': defect.lengthMm.toString(),
-      'p_width': defect.widthMm?.toString(),
+      'p_notation': defect.notation.code,
+      'p_defect_category': defect.category.name,
+      'p_floor_level': defect.floorLevel,
+      'p_length_mm': defect.lengthMm,
+      'p_width_mm': defect.widthMm,
+      'p_remarks': defect.remarks,
       'p_image_url': imageUrl,
       'p_image_path': imagePath,
     });
@@ -886,34 +907,23 @@ class InspectionRepository {
   }
 
   Defect _mapDefectFromRow(Map<String, dynamic> row, String inspectionId) {
-    final infos = (row['defect_info'] as List?) ?? const [];
-    final info = infos.isNotEmpty
-        ? infos.first as Map<String, dynamic>
-        : const <String, dynamic>{};
-    final images = (info['defect_image'] as List?) ?? const [];
-    final image = images.isNotEmpty
-        ? images.first as Map<String, dynamic>
-        : const <String, dynamic>{};
-
-    final parsed = _parseDefectRemarks(info['remarks'] as String?);
-
     return Defect(
       id: (row['defect_id'] as String?) ?? '',
       inspectionId: inspectionId,
       notation: DefectNotation.values.firstWhere(
-        (e) => e.code == parsed['notation'],
+        (e) => e.code == (row['notation'] as String?),
         orElse: () => DefectNotation.c,
       ),
       category: DefectCategory.values.firstWhere(
-        (e) => e.name == parsed['category'],
+        (e) => e.name == (row['defect_category'] as String?),
         orElse: () => DefectCategory.buildingFloor,
       ),
-      floorLevel: parsed['floor'],
-      lengthMm: _parseDouble(info['length']) ?? 0,
-      widthMm: _parseDouble(info['width']),
-      remarks: parsed['remarks'],
-      photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?),
-      photoUrl: image['image_url'] as String?,
+      floorLevel: row['floor_level'] as String?,
+      lengthMm: _parseDouble(row['length_mm']) ?? 0,
+      widthMm: _parseDouble(row['width_mm']),
+      remarks: row['remarks'] as String?,
+      photoPath: (row['photo_url'] as String?) ?? (row['photo_path'] as String?),
+      photoUrl: row['photo_url'] as String?,
       createdAt: row['created_at'] != null
           ? DateTime.parse(row['created_at'] as String)
           : DateTime.now(),
@@ -922,65 +932,6 @@ class InspectionRepository {
 
   /// Populate defect_info for all defects in an inspection
   /// This is done separately because nested defect_info queries fail with RLS policies
-  Future<void> _populateDefectInfo(Inspection inspection) async {
-    if (inspection.defects.isEmpty) return;
-
-    final defectIds = inspection.defects.map((d) => d.id).toList();
-
-    try {
-      final infosResponse = await _supabase
-          .from('defect_info')
-          .select('defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)')
-          .inFilter('defect_id', defectIds);
-
-      // Create a map of defect_id -> info for quick lookup
-      final infosMap = <String, Map<String, dynamic>>{};
-      for (final info in (infosResponse as List)) {
-        final defectId = (info['defect_id'] as String?) ?? '';
-        if (defectId.isNotEmpty) {
-          infosMap[defectId] = info as Map<String, dynamic>;
-        }
-      }
-
-      // Update each defect with its info
-      for (int i = 0; i < inspection.defects.length; i++) {
-        final defect = inspection.defects[i];
-        final info = infosMap[defect.id] ?? const <String, dynamic>{};
-
-        // Rebuild the defect with updated info
-        final images = (info['defect_image'] as List?) ?? const [];
-        final image = images.isNotEmpty
-            ? images.first as Map<String, dynamic>
-            : const <String, dynamic>{};
-
-        final parsed = _parseDefectRemarks(info['remarks'] as String?);
-
-        inspection.defects[i] = Defect(
-          id: defect.id,
-          inspectionId: defect.inspectionId,
-          notation: DefectNotation.values.firstWhere(
-            (e) => e.code == parsed['notation'],
-            orElse: () => defect.notation,
-          ),
-          category: DefectCategory.values.firstWhere(
-            (e) => e.name == parsed['category'],
-            orElse: () => defect.category,
-          ),
-          floorLevel: parsed['floor'] ?? defect.floorLevel,
-          lengthMm: _parseDouble(info['length']) ?? defect.lengthMm,
-          widthMm: _parseDouble(info['width']) ?? defect.widthMm,
-          remarks: parsed['remarks'] ?? defect.remarks,
-          photoPath: (image['image_url'] as String?) ?? (image['image_path'] as String?) ?? defect.photoPath,
-          photoUrl: (image['image_url'] as String?) ?? defect.photoUrl,
-          createdAt: defect.createdAt,
-        );
-      }
-    } catch (e) {
-      debugPrint('[Repository] ⚠️ Failed to populate defect_info: $e');
-      // Don't throw - let the inspection continue with basic defect data
-    }
-  }
-
   Future<Map<String, dynamic>?> _resolveSiteByInspectionId(
       String inspectionId) async {
     final byBuildingRef = await _supabase

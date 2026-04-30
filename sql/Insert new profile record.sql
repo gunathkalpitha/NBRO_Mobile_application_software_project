@@ -1,11 +1,10 @@
 BEGIN;
 
-INSERT INTO profile(id, full_name, role, email)
+INSERT INTO profile(id, full_name, role)
 VALUES(
   'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'Government Officer',
-  'admin',
-  'officer@gov.lk'
+  'admin'
 )
 ON CONFLICT (id) DO NOTHING;
 COMMIT;
@@ -13,7 +12,9 @@ COMMIT;
 BEGIN;
 
 INSERT INTO site (
+  site_id,
   user_id,
+  created_by,
   owner_name,
   owner_contact,
   location,
@@ -22,6 +23,8 @@ INSERT INTO site (
   address
 )
 VALUES (
+  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
+  'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'Mr. Perera',
   '0771234567',
@@ -36,25 +39,37 @@ COMMIT;
 
 BEGIN;
 
+WITH target_site AS (
+  SELECT site_id
+  FROM site
+  WHERE building_ref = 'BR-TEST-001'
+  LIMIT 1
+)
 INSERT INTO general_observation (site_id, type, present_condition, approx_age)
-VALUES (
-  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
+SELECT
+  target_site.site_id,
   'Structural',
   'Good',
   '10-15 years'
-);
+FROM target_site;
 
 COMMIT;
 
 BEGIN;
 
+WITH target_site AS (
+  SELECT site_id
+  FROM site
+  WHERE building_ref = 'BR-TEST-001'
+  LIMIT 1
+)
 INSERT INTO external_services (site_id, pipe_born_water_supply, sewage_waste, electricity_source)
-VALUES (
-  '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
+SELECT
+  target_site.site_id,
   'Available',
   'Connected',
   'Grid'
-);
+FROM target_site;
 
 COMMIT;
 
@@ -62,10 +77,10 @@ BEGIN;
 
 WITH new_building AS (
   INSERT INTO main_building (site_id, no_floors)
-  VALUES (
-    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
-    '3'
-  )
+  SELECT site_id, '3'
+  FROM site
+  WHERE building_ref = 'BR-TEST-001'
+  LIMIT 1
   RETURNING building_id
 )
 INSERT INTO specification (building_id, is_used, element_type, element_properties, floor_details)
@@ -83,10 +98,10 @@ BEGIN;
 
 WITH new_ancillary AS (
   INSERT INTO ancillary_building (site_id, building_type)
-  VALUES (
-    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
-    'Garage'
-  )
+  SELECT site_id, 'Garage'
+  FROM site
+  WHERE building_ref = 'BR-TEST-001'
+  LIMIT 1
   RETURNING structure_id
 ),
 new_detail_type AS (
@@ -103,22 +118,63 @@ COMMIT;
 
 BEGIN;
 
-WITH new_defect AS (
-  INSERT INTO defects (site_id)
-  VALUES (
-    '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7'
-  )
-  RETURNING defect_id
+WITH target_site AS (
+  SELECT site_id
+  FROM site
+  WHERE building_ref = 'BR-TEST-001'
+  LIMIT 1
 ),
-new_defect_info AS (
-  INSERT INTO defect_info (defect_id, remarks, length, width)
-  SELECT defect_id, 'Crack near window', '1.5m', '0.2m'
-  FROM new_defect
-  RETURNING info_id
+new_defect AS (
+  INSERT INTO defects (
+    site_id,
+    notation,
+    defect_category,
+    floor_level,
+    location_description,
+    length_mm,
+    width_mm,
+    photo_path,
+    photo_url,
+    remarks,
+    created_by
+  )
+  SELECT
+    target_site.site_id,
+    'C',
+    'buildingFloor',
+    'Ground',
+    'Near window',
+    1500,
+    200,
+    '/images/defect.jpg',
+    'http://example.com/defect.jpg',
+    'Crack near window',
+    'cc8eefc8-6473-43a7-8530-f5f9202f3581'
+  FROM target_site
+  RETURNING defect_id, site_id
 )
-INSERT INTO defect_image (info_id, image_url, image_path)
-SELECT info_id, 'http://example.com/defect.jpg', '/images/defect.jpg'
-FROM new_defect_info;
+INSERT INTO defect_media (
+  defect_id,
+  site_id,
+  storage_path,
+  storage_url,
+  file_name,
+  file_size,
+  mime_type,
+  created_by,
+  uploaded_by
+)
+SELECT
+  defect_id,
+  site_id,
+  '/images/defect.jpg',
+  'http://example.com/defect.jpg',
+  'defect.jpg',
+  1024,
+  'image/jpeg',
+  'cc8eefc8-6473-43a7-8530-f5f9202f3581',
+  'cc8eefc8-6473-43a7-8530-f5f9202f3581'
+FROM new_defect;
 
 COMMIT;
 
@@ -153,13 +209,11 @@ BEGIN
         s.owner_name,
         s.building_ref,
         s.sync_status,
-        -- check sections_status flags
         COALESCE((s.sections_status->>'general_observation')::boolean, false),
         COALESCE((s.sections_status->>'external_services')::boolean, false),
         COALESCE((s.sections_status->>'main_building')::boolean, false),
         COALESCE((s.sections_status->>'ancillary_building')::boolean, false),
         COALESCE((s.sections_status->>'defects')::boolean, false),
-        -- is fully complete only if all sections are done
         (
             COALESCE((s.sections_status->>'general_observation')::boolean, false) AND
             COALESCE((s.sections_status->>'external_services')::boolean, false) AND
@@ -225,32 +279,50 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION insert_defect_with_details(
   p_site_id UUID,
-  p_remarks TEXT,
-  p_length TEXT,
-  p_width TEXT,
-  p_image_url TEXT,
-  p_image_path TEXT
+  p_notation TEXT,
+  p_defect_category TEXT,
+  p_floor_level TEXT DEFAULT NULL,
+  p_location_description TEXT DEFAULT NULL,
+  p_length_mm DOUBLE PRECISION DEFAULT 0,
+  p_width_mm DOUBLE PRECISION DEFAULT NULL,
+  p_remarks TEXT DEFAULT NULL,
+  p_image_url TEXT DEFAULT NULL,
+  p_image_path TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
   v_defect_id UUID;
-  v_info_id UUID;
 BEGIN
   -- Check site exists
   IF NOT EXISTS (SELECT 1 FROM site WHERE site_id = p_site_id) THEN
     RAISE EXCEPTION 'Site with id % not found', p_site_id;
   END IF;
 
-  INSERT INTO defects (site_id)
-  VALUES (p_site_id)
+  INSERT INTO defects (
+    site_id, 
+    notation, 
+    defect_category, 
+    floor_level, 
+    location_description, 
+    length_mm, 
+    width_mm, 
+    remarks, 
+    photo_url, 
+    photo_path
+  )
+  VALUES (
+    p_site_id, 
+    p_notation, 
+    p_defect_category, 
+    p_floor_level, 
+    p_location_description, 
+    p_length_mm, 
+    p_width_mm, 
+    p_remarks, 
+    p_image_url, 
+    p_image_path
+  )
   RETURNING defect_id INTO v_defect_id;
-
-  INSERT INTO defect_info (defect_id, remarks, length, width)
-  VALUES (v_defect_id, p_remarks, p_length, p_width)
-  RETURNING info_id INTO v_info_id;
-
-  INSERT INTO defect_image (info_id, image_url, image_path)
-  VALUES (v_info_id, p_image_url, p_image_path);
 
   RETURN v_defect_id;
 

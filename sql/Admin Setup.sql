@@ -20,12 +20,11 @@ BEGIN
 
     SELECT id INTO admin_user_id FROM auth.users WHERE email = 'admin@gmail.com';
     IF admin_user_id IS NOT NULL THEN
-        INSERT INTO public.profile (id, full_name, role, email, is_active)
-        VALUES (admin_user_id, 'Administrator', 'admin', 'admin@gmail.com', true)
+        INSERT INTO public.profile (id, full_name, role, is_active)
+        VALUES (admin_user_id, 'Administrator', 'admin', true)
         ON CONFLICT (id) DO UPDATE 
         SET role = 'admin', 
             full_name = 'Administrator', 
-            email = 'admin@gmail.com',
             is_active = true;
         RAISE NOTICE '✓ Admin profile created for admin@gmail.com (ID: %)', admin_user_id;
     ELSE
