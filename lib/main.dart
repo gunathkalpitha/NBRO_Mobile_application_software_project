@@ -16,9 +16,7 @@ import 'presentation/state/inspection_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ CRITICAL FIX: Must AWAIT Supabase init before runApp.
-  // Without await, currentSession is null when officers_screen calls the
-  // Edge Function, which sends "Bearer " with no token → 401 error.
+  
   await _initSupabase();
 
   runApp(const MyApp());

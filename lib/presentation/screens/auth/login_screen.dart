@@ -214,215 +214,255 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final headerHeight = screenHeight * 0.4; // Responsive header height
+
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                NBROColors.primary,
-                NBROColors.primaryDark,
-              ],
-            ),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
-            ),
-            child: IntrinsicHeight(
-              child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: NBROColors.white,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header with Background Image
+            Stack(
               children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.only(top: 60, bottom: 40),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: NBROColors.white,
-                          borderRadius: BorderRadius.circular(50),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(38),
-                          child: Image.asset(
-                            'assets/icons/pasted-image.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Secure Access',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: NBROColors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'National Building Research Organization',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: NBROColors.white,
-                          fontWeight: FontWeight.w300,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Field Surveyor',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: NBROColors.white,
-                          fontWeight: FontWeight.w200,
-                        ),
-                      ),
-                    ],
+                // Background Image
+                Container(
+                  width: double.infinity,
+                  height: headerHeight,
+                  decoration: const BoxDecoration(
+                    color: NBROColors.primary,
+                  ),
+                  child: Image.asset(
+                    'assets/images/login_bg.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(color: NBROColors.primary);
+                    },
                   ),
                 ),
-
-                // Login Form
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: NBROColors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
+                // Gradient Overlay for visibility
+                Container(
+                  height: headerHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        NBROColors.primary.withOpacity(0.4),
+                        NBROColors.primaryDark.withOpacity(0.6),
+                      ],
+                    ),
+                  ),
+                ),
+                // Header Content
+                SizedBox(
+                  height: headerHeight,
+                  width: double.infinity,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color: NBROColors.white.withOpacity(1),
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Image.asset(
+                              'assets/icons/nbro_logo_login.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Secure Access',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: NBROColors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'National Building Research Organization',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: NBROColors.white,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const Text(
+                            'Field Surveyor',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: NBROColors.white,
+                              fontWeight: FontWeight.w300,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Welcome Back',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: NBROColors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Sign in to continue',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: NBROColors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
+                  ),
+                ),
+              ],
+            ),
 
-                        // Email Field
-                        TextField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            hintText: 'Email Address',
-                            hintStyle: const TextStyle(color: NBROColors.grey),
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            enabled: !_isLoading,
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
+            // Login Form
+            Container(
+              transform: Matrix4.translationValues(0, -25, 0),
+              decoration: const BoxDecoration(
+                color: NBROColors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Welcome Back',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: NBROColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Sign in to continue',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: NBROColors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
 
-                        // Password Field
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            hintText: 'Password',
-                            hintStyle: const TextStyle(color: NBROColors.grey),
-                            prefixIcon: const Icon(Icons.lock_outlined),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
+                  // Email Field
+                  TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      hintText: 'Email Address',
+                      hintStyle: const TextStyle(color: NBROColors.grey),
+                      prefixIcon: const Icon(Icons.email_outlined, color: NBROColors.primary),
+                      enabled: !_isLoading,
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password Field
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Password',
+                      hintStyle: const TextStyle(color: NBROColors.grey),
+                      prefixIcon: const Icon(Icons.lock_outlined, color: NBROColors.primary),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          );
+                        },
+                      ),
+                      enabled: !_isLoading,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Login Button
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _handleEmailPasswordLogin,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                NBROColors.white,
                               ),
-                              onPressed: () {
-                                setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                );
-                              },
                             ),
-                            enabled: !_isLoading,
+                          )
+                        : const Text(
+                            'Sign In',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Biometric Login
+                  if (_biometricAvailable)
+                    Column(
+                      children: [
+                        const Row(
+                          children: [
+                            Expanded(child: Divider(color: NBROColors.light)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text('OR', style: TextStyle(color: NBROColors.grey, fontSize: 12)),
+                            ),
+                            Expanded(child: Divider(color: NBROColors.light)),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-
-                        // Login Button
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _handleEmailPasswordLogin,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      NBROColors.white,
-                                    ),
-                                  ),
-                                )
-                              : const Text('Sign In'),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Biometric Login
-                        if (_biometricAvailable)
-                          Column(
-                            children: [
-                              const Divider(
-                                color: NBROColors.light,
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                onPressed: _authenticateWithBiometric,
-                                icon: const Icon(Icons.fingerprint),
-                                label: const Text('Use Biometric Login'),
-                              ),
-                            ],
-                          ),
-
-                        const SizedBox(height: 24),
-
-                        // Forgot Password Link
-                        Center(
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/forgot-password');
-                            },
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(color: NBROColors.primary),
+                        const SizedBox(height: 18),
+                        OutlinedButton.icon(
+                          onPressed: _authenticateWithBiometric,
+                          icon: const Icon(Icons.fingerprint),
+                          label: const Text('Use Biometric Login'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                  const SizedBox(height: 24),
+
+                  // Forgot Password Link
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed('/forgot-password');
+                      },
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: NBROColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            ),
-          ),
-        ),
+          ],
         ),
       ),
     );

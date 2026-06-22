@@ -5,8 +5,7 @@ VALUES(
   'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'Government Officer',
   'admin'
-)
-ON CONFLICT (id) DO NOTHING;
+);
 COMMIT;
 
 BEGIN;
@@ -14,7 +13,6 @@ BEGIN;
 INSERT INTO site (
   site_id,
   user_id,
-  created_by,
   owner_name,
   owner_contact,
   location,
@@ -25,7 +23,6 @@ INSERT INTO site (
 VALUES (
   '2d8d26f5-290d-4895-b4f6-8b4dc2e7d7e7',
   'cc8eefc8-6473-43a7-8530-f5f9202f3581',
-  'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'Mr. Perera',
   '0771234567',
   ST_SetSRID(ST_MakePoint(79.8612, 6.9271), 4326),
@@ -33,7 +30,6 @@ VALUES (
   15.5,
   'Colombo 07'
 )
-ON CONFLICT (building_ref) DO NOTHING
 RETURNING site_id;
 COMMIT;
 
@@ -135,8 +131,7 @@ new_defect AS (
     width_mm,
     photo_path,
     photo_url,
-    remarks,
-    created_by
+    remarks
   )
   SELECT
     target_site.site_id,
@@ -148,31 +143,26 @@ new_defect AS (
     200,
     '/images/defect.jpg',
     'http://example.com/defect.jpg',
-    'Crack near window',
-    'cc8eefc8-6473-43a7-8530-f5f9202f3581'
+    'Crack near window'
   FROM target_site
   RETURNING defect_id, site_id
 )
 INSERT INTO defect_media (
   defect_id,
-  site_id,
   storage_path,
   storage_url,
   file_name,
   file_size,
   mime_type,
-  created_by,
   uploaded_by
 )
 SELECT
   defect_id,
-  site_id,
   '/images/defect.jpg',
   'http://example.com/defect.jpg',
   'defect.jpg',
   1024,
   'image/jpeg',
-  'cc8eefc8-6473-43a7-8530-f5f9202f3581',
   'cc8eefc8-6473-43a7-8530-f5f9202f3581'
 FROM new_defect;
 

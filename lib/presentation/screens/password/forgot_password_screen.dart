@@ -30,7 +30,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       debugPrint('[ForgotPasswordScreen] Requesting password reset for: $email');
       
       // Request password reset from Supabase
-      // Uses GitHub hosted page for email compatibility, then redirects to app
+     
       await Supabase.instance.client.auth.resetPasswordForEmail(
         email,
         redirectTo: 'https://gunathkalpitha.github.io/nbro-auth-redirect/?type=recovery',
