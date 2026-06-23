@@ -565,7 +565,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             
             const SizedBox(height: 12),
             
+
             // Option 2: Direct Creation
+
             Card(
               elevation: 2,
               child: ListTile(
@@ -580,10 +582,13 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 title: const Text('Create Account Directly'),
                 subtitle: const Text('Set password without email (bypasses rate limit)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
+
+                //Disable the Direct account create option
+                /* onTap: () {
                   Navigator.pop(ctx);
                   _showDirectCreationDialog();
-                },
+                },*/
+
               ),
             ),
           ],
@@ -1103,30 +1108,35 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               ),
             )
           : _officers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 80,
-                        color: NBROColors.grey.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No officers yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: NBROColors.darkGrey,
+              ? SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height - 150, // Approximate height to center
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 80,
+                          color: NBROColors.grey.withValues(alpha: 0.5),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Add your first officer to get started',
-                        style: TextStyle(color: NBROColors.grey),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No officers yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: NBROColors.darkGrey,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Add your first officer to get started',
+                          style: TextStyle(color: NBROColors.grey),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : RefreshIndicator(

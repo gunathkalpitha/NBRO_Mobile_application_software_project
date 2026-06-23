@@ -98,6 +98,9 @@ class InspectionRepository {
               sync_status,
               created_at,
               updated_at,
+              updated_by,
+              creator:profile!user_id(full_name),
+              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -158,6 +161,9 @@ class InspectionRepository {
               sync_status,
               created_at,
               updated_at,
+              updated_by,
+              creator:profile!user_id(full_name),
+              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -199,6 +205,9 @@ class InspectionRepository {
               sync_status,
               created_at,
               updated_at,
+              updated_by,
+              creator:profile!user_id(full_name),
+              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -974,8 +983,8 @@ class InspectionRepository {
       updatedAt: row['updated_at'] != null
           ? DateTime.parse(row['updated_at'] as String)
           : null,
-      createdBy: row['user_id'] as String?,
-      updatedBy: row['user_id'] as String?,
+      createdBy: row['creator']?['full_name'] as String? ?? row['user_id'] as String?,
+      updatedBy: row['updater']?['full_name'] as String? ?? row['updated_by'] as String? ?? row['user_id'] as String?,
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
   }

@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS profile (
 
 -- Site table (no FK to profile)
 CREATE TABLE IF NOT EXISTS site (
-  site_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  site_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   owner_name TEXT,
   owner_contact TEXT,
@@ -33,12 +33,15 @@ CREATE TABLE IF NOT EXISTS site (
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   sections_status JSONB DEFAULT '{"general_observation": false, "external_services": false, "main_building": false, "ancillary_building": false, "defects": false}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID,
+  CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id),
+  CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id)
 );
 
 -- General observation (no FK constraint)
 CREATE TABLE IF NOT EXISTS general_observation (
-  observation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
   type TEXT,
   present_condition TEXT,
@@ -50,7 +53,7 @@ CREATE TABLE IF NOT EXISTS general_observation (
 
 -- External services (no FK)
 CREATE TABLE IF NOT EXISTS external_services (
-  service_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  service_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
   pipe_born_water_supply TEXT,
   sewage_waste TEXT,
@@ -61,7 +64,7 @@ CREATE TABLE IF NOT EXISTS external_services (
 
 -- Ancillary building (no FK)
 CREATE TABLE IF NOT EXISTS ancillary_building (
-  structure_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  structure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
   building_type TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -70,14 +73,14 @@ CREATE TABLE IF NOT EXISTS ancillary_building (
 
 -- Detail type (no FK)
 CREATE TABLE IF NOT EXISTS detail_type (
-  detail_type_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  detail_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   structure_id UUID NOT NULL,
   name TEXT NOT NULL
 );
 
 -- Building detail (no FK)
 CREATE TABLE IF NOT EXISTS building_detail (
-  building_detail_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  building_detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   detail_type_id UUID NOT NULL,
   front BOOLEAN DEFAULT FALSE,
   left_side BOOLEAN DEFAULT FALSE,
@@ -87,7 +90,7 @@ CREATE TABLE IF NOT EXISTS building_detail (
 
 -- Main building (no FK)
 CREATE TABLE IF NOT EXISTS main_building (
-  building_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  building_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
   no_floors TEXT,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
@@ -97,7 +100,7 @@ CREATE TABLE IF NOT EXISTS main_building (
 
 -- Specification (no FK)
 CREATE TABLE IF NOT EXISTS specification (
-  spec_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  spec_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   building_id UUID,
   is_used BOOLEAN,
   element_type TEXT,
@@ -107,7 +110,7 @@ CREATE TABLE IF NOT EXISTS specification (
 
 -- Defects (no FK)
 CREATE TABLE IF NOT EXISTS defects (
-  defect_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  defect_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -126,9 +129,38 @@ ADD COLUMN IF NOT EXISTS photo_path TEXT,
 ADD COLUMN IF NOT EXISTS photo_url TEXT,
 ADD COLUMN IF NOT EXISTS remarks TEXT;
 
+-- Ensure all tables have UUID defaults and Foreign Keys for Supabase joins
+ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site ADD CONSTRAINT IF NOT EXISTS fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
+ALTER TABLE IF EXISTS site ADD CONSTRAINT IF NOT EXISTS fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT IF NOT EXISTS fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS external_services ADD CONSTRAINT IF NOT EXISTS fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS main_building ADD CONSTRAINT IF NOT EXISTS fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS specification ADD CONSTRAINT IF NOT EXISTS fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS defects ADD CONSTRAINT IF NOT EXISTS fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+-- Ensure missing columns exist in site table
+ALTER TABLE IF EXISTS site
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS building_photo_url TEXT,
+ADD COLUMN IF NOT EXISTS building_photo_path TEXT,
+ADD COLUMN IF NOT EXISTS sections_status JSONB DEFAULT '{"general_observation": false, "external_services": false, "main_building": false, "ancillary_building": false, "defects": false}'::jsonb,
+ADD COLUMN IF NOT EXISTS updated_by UUID;
+
 -- Defect info (no FK)
 CREATE TABLE IF NOT EXISTS defect_info (
-  info_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  info_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   defect_id UUID,
   remarks TEXT,
   length TEXT,
@@ -137,7 +169,7 @@ CREATE TABLE IF NOT EXISTS defect_info (
 
 -- Defect image (no FK)
 CREATE TABLE IF NOT EXISTS defect_image (
-  image_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  image_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   info_id UUID,
   image_url TEXT,
   image_path TEXT,
@@ -148,7 +180,7 @@ CREATE TABLE IF NOT EXISTS defect_image (
 
 -- Optional legacy tables (if you have defect_media)
 CREATE TABLE IF NOT EXISTS defect_media (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   defect_id UUID,
   building_reference_no TEXT,
   storage_path TEXT NOT NULL,

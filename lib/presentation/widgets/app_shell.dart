@@ -61,7 +61,7 @@ class _AdminAppShellState extends State<AdminAppShell> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        widget.child,
+        Positioned.fill(child: widget.child),
         ValueListenableBuilder<bool>(
           valueListenable: NavRailController.isVisible,
           builder: (_, visible, __) => visible
@@ -245,8 +245,8 @@ class _AppShellState extends State<AppShell> {
     // Unified layout with slide-in side navigation for all devices
     return Stack(
       children: [
-        // Main content - directly render without Positioned.fill
-        widget.child,
+        // Main content
+        Positioned.fill(child: widget.child),
 
         // Optional dimmed scrim when rail is visible (click to close)
         ValueListenableBuilder<bool>(

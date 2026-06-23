@@ -45,59 +45,54 @@ class _InspectionsScreenState extends State<InspectionsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: NBROColors.light,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [NBROColors.primary, NBROColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: NBROColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      appBar: AppBar(
+        toolbarHeight: 80,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [NBROColors.primary, NBROColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: AppBar(
-              toolbarHeight: 80,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leadingWidth: 48,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: NBROColors.white),
-                iconSize: 24,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  NavRailController.toggleVisibility();
-                },
+            boxShadow: [
+              BoxShadow(
+                color: NBROColors.primary.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-              title: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'All Inspections',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: NBROColors.white,
-                    ),
-                  ),
-                  Text(
-                    'Manage your site inspections',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: NBROColors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
+        ),
+        leadingWidth: 48,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: NBROColors.white),
+          iconSize: 24,
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            NavRailController.toggleVisibility();
+          },
+        ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'All Inspections',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: NBROColors.white,
+              ),
+            ),
+            Text(
+              'Manage your site inspections',
+              style: TextStyle(
+                fontSize: 12,
+                color: NBROColors.white,
+              ),
+            ),
+          ],
         ),
       ),
       body: BlocBuilder<InspectionBloc, InspectionState>(
@@ -287,6 +282,7 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                   // Inspections List
                   if (state.inspections.isEmpty)
                     SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

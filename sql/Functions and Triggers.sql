@@ -118,7 +118,9 @@ BEGIN
         distance_from_row,
         address,
         latitude,
-        longitude
+        longitude,
+        updated_by,
+        sections_status
     ) VALUES (
         p_user_id,
         p_owner_name,
@@ -127,7 +129,9 @@ BEGIN
         p_distance_from_row,
         p_address,
         p_latitude,
-        p_longitude
+        p_longitude,
+        p_user_id,
+        '{"general_observation": true, "external_services": true, "main_building": true, "ancillary_building": true, "defects": true}'::jsonb
     )
     RETURNING site_id INTO v_site_id;
 
@@ -192,6 +196,17 @@ BEGIN
         p_image_path
     )
     RETURNING defect_id INTO v_defect_id;
+
+    -- Also insert into defect_info for compatibility
+    INSERT INTO public.defect_info (defect_id, remarks, length, width)
+    VALUES (v_defect_id, p_remarks, p_length_mm::text, p_width_mm::text)
+    RETURNING info_id INTO v_info_id;
+
+    -- Also insert into defect_image if URL/Path provided
+    IF p_image_url IS NOT NULL OR p_image_path IS NOT NULL THEN
+        INSERT INTO public.defect_image (info_id, image_url, image_path)
+        VALUES (v_info_id, p_image_url, p_image_path);
+    END IF;
 
     RETURN v_defect_id;
 EXCEPTION WHEN OTHERS THEN
