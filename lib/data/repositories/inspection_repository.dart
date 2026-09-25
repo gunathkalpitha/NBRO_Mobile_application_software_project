@@ -79,8 +79,11 @@ class InspectionRepository {
   /// Get all inspections for the current user
   Future<List<Inspection>> getInspections() async {
     try {
+      final profileMap = await _getProfileNamesMap();
+      dynamic response;
+
       try {
-        final response = await _supabase
+        response = await _supabase
             .from('site')
             .select('''
               site_id,
@@ -99,8 +102,6 @@ class InspectionRepository {
               created_at,
               updated_at,
               updated_by,
-              creator:profile!user_id(full_name),
-              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -122,16 +123,24 @@ class InspectionRepository {
               )
             ''')
             .order('created_at', ascending: false);
-
-        return (response as List)
-            .map((json) => _mapInspectionFromSiteRow(json as Map<String, dynamic>))
-            .toList();
-      } on PostgrestException catch (e) {
-        if (!_isMissingRelationshipError(e)) rethrow;
-
-        debugPrint('[Repository] Falling back to non-join inspection query: ${e.message}');
+      } catch (e) {
+        debugPrint('[Repository] Query with sections failed ($e), falling back to non-join query...');
         return _getInspectionsWithoutJoins();
       }
+
+      final list = (response as List);
+      if (list.isEmpty) {
+        debugPrint('[Repository] Joined select returned 0 rows, checking fallback query...');
+        final fallback = await _getInspectionsWithoutJoins();
+        return fallback;
+      }
+
+      return list
+          .map((json) => _mapInspectionFromSiteRow(
+                json as Map<String, dynamic>,
+                profileMap: profileMap,
+              ))
+          .toList();
     } catch (e) {
       throw Exception('Failed to get inspections: $e');
     }
@@ -140,6 +149,7 @@ class InspectionRepository {
   /// Get a single inspection with its defects
   Future<Inspection?> getInspection(String id) async {
     try {
+      final profileMap = await _getProfileNamesMap();
       Map<String, dynamic>? siteResponse;
 
       try {
@@ -162,8 +172,6 @@ class InspectionRepository {
               created_at,
               updated_at,
               updated_by,
-              creator:profile!user_id(full_name),
-              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -206,8 +214,6 @@ class InspectionRepository {
               created_at,
               updated_at,
               updated_by,
-              creator:profile!user_id(full_name),
-              updater:profile!updated_by(full_name),
               general_observation(type, present_condition, approx_age),
               external_services(pipe_born_water_supply, sewage_waste, electricity_source),
               main_building(
@@ -230,10 +236,8 @@ class InspectionRepository {
             ''')
             .eq('site_id', id)
             .maybeSingle();
-      } on PostgrestException catch (e) {
-        if (!_isMissingRelationshipError(e)) rethrow;
-
-        debugPrint('[Repository] Falling back to single inspection non-join query: ${e.message}');
+      } catch (e) {
+        debugPrint('[Repository] Single query failed ($e), using fallback...');
         siteResponse = await _getSingleInspectionWithoutJoins(id);
       }
 
@@ -241,8 +245,7 @@ class InspectionRepository {
         return null;
       }
 
-      final inspection = _mapInspectionFromSiteRow(siteResponse);
-      return inspection;
+      return _mapInspectionFromSiteRow(siteResponse, profileMap: profileMap);
     } catch (e) {
       throw Exception('Failed to get inspection: $e');
     }
@@ -776,11 +779,7 @@ class InspectionRepository {
     return double.tryParse(match.group(0)!);
   }
 
-  bool _isMissingRelationshipError(PostgrestException error) {
-    final message = error.message.toLowerCase();
-    return message.contains('could not find a relationship between') ||
-        message.contains('no relationship found');
-  }
+
 
   Future<List<Inspection>> _getInspectionsWithoutJoins() async {
     final response = await _supabase
@@ -858,7 +857,10 @@ class InspectionRepository {
     return const [];
   }
 
-  Inspection _mapInspectionFromSiteRow(Map<String, dynamic> row) {
+  Inspection _mapInspectionFromSiteRow(
+    Map<String, dynamic> row, {
+    Map<String, String>? profileMap,
+  }) {
     final observationList = (row['general_observation'] as List?) ?? const [];
     final serviceList = (row['external_services'] as List?) ?? const [];
     final buildingList = (row['main_building'] as List?) ?? const [];
@@ -983,10 +985,33 @@ class InspectionRepository {
       updatedAt: row['updated_at'] != null
           ? DateTime.parse(row['updated_at'] as String)
           : null,
-      createdBy: row['creator']?['full_name'] as String? ?? row['user_id'] as String?,
-      updatedBy: row['updater']?['full_name'] as String? ?? row['updated_by'] as String? ?? row['user_id'] as String?,
+      createdBy: (row['creator']?['full_name'] as String?) ??
+          profileMap?[row['user_id']] ??
+          (row['user_id'] as String?),
+      updatedBy: (row['updater']?['full_name'] as String?) ??
+          profileMap?[row['updated_by']] ??
+          profileMap?[row['user_id']] ??
+          (row['updated_by'] as String?) ??
+          (row['user_id'] as String?),
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
+  }
+
+  Future<Map<String, String>> _getProfileNamesMap() async {
+    try {
+      final response = await _supabase.from('profile').select('id, full_name');
+      final map = <String, String>{};
+      for (final item in (response as List)) {
+        final id = item['id'] as String?;
+        final name = item['full_name'] as String?;
+        if (id != null && name != null && name.isNotEmpty) {
+          map[id] = name;
+        }
+      }
+      return map;
+    } catch (e) {
+      return {};
+    }
   }
 
   Future<void> _persistSiteCoordinates(

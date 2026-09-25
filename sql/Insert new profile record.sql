@@ -8,6 +8,7 @@ END $$;
 
 -- 2. Add missing columns to existing site table
 ALTER TABLE IF EXISTS site
+ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326),
 ADD COLUMN IF NOT EXISTS building_photo_url TEXT,
 ADD COLUMN IF NOT EXISTS building_photo_path TEXT,
 ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
@@ -102,3 +103,37 @@ BEGIN
     ON CONFLICT (spec_id) DO NOTHING;
   END IF;
 END $$;
+
+-- 8. Enable Row Level Security (RLS) Policies
+ALTER TABLE public.site ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.general_observation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.external_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.main_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.specification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON public.site;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.profile;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.general_observation;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.external_services;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.main_building;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.specification;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defects;
+
+CREATE POLICY "Allow select for authenticated users" ON public.site FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow insert for authenticated users" ON public.site FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow update for authenticated users" ON public.site FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Allow delete for authenticated users" ON public.site FOR DELETE TO anon, authenticated USING (true);
+
+CREATE POLICY "Allow select for authenticated users" ON public.profile FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.general_observation FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.external_services FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.main_building FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.specification FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.defects FOR SELECT TO anon, authenticated USING (true);
+

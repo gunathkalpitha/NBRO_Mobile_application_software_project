@@ -129,34 +129,43 @@ ADD COLUMN IF NOT EXISTS photo_path TEXT,
 ADD COLUMN IF NOT EXISTS photo_url TEXT,
 ADD COLUMN IF NOT EXISTS remarks TEXT;
 
--- Ensure all tables have UUID defaults and Foreign Keys for Supabase joins
-ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS site ADD CONSTRAINT IF NOT EXISTS fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
-ALTER TABLE IF EXISTS site ADD CONSTRAINT IF NOT EXISTS fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
-
-ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT IF NOT EXISTS fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS external_services ADD CONSTRAINT IF NOT EXISTS fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS main_building ADD CONSTRAINT IF NOT EXISTS fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS specification ADD CONSTRAINT IF NOT EXISTS fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS defects ADD CONSTRAINT IF NOT EXISTS fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
 -- Ensure missing columns exist in site table
 ALTER TABLE IF EXISTS site
+ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326),
 ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
 ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
 ADD COLUMN IF NOT EXISTS building_photo_url TEXT,
 ADD COLUMN IF NOT EXISTS building_photo_path TEXT,
 ADD COLUMN IF NOT EXISTS sections_status JSONB DEFAULT '{"general_observation": false, "external_services": false, "main_building": false, "ancillary_building": false, "defects": false}'::jsonb,
 ADD COLUMN IF NOT EXISTS updated_by UUID;
+
+-- Ensure all tables have UUID defaults and Foreign Keys for Supabase joins
+ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
+ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
+ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
+ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
+ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
+ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
 
 -- Defect info (no FK)
 CREATE TABLE IF NOT EXISTS defect_info (
@@ -271,4 +280,48 @@ CREATE TRIGGER update_defect_image_at
 BEFORE UPDATE ON defect_image
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- Allows authenticated users (Officers & Admins) to READ and MANAGE inspections
+-- ============================================================================
+ALTER TABLE public.site ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.general_observation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.external_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.main_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.specification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_info ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_image ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies to prevent conflicts
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON public.site;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.profile;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.general_observation;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.external_services;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.main_building;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.specification;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defects;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_info;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_image;
+
+-- Create ALL-ACCESS policies for authenticated and anon users
+CREATE POLICY "Allow select for authenticated users" ON public.site FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow insert for authenticated users" ON public.site FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Allow update for authenticated users" ON public.site FOR UPDATE TO anon, authenticated USING (true);
+CREATE POLICY "Allow delete for authenticated users" ON public.site FOR DELETE TO anon, authenticated USING (true);
+
+CREATE POLICY "Allow select for authenticated users" ON public.profile FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.general_observation FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.external_services FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.main_building FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.specification FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.defects FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.defect_info FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow select for authenticated users" ON public.defect_image FOR SELECT TO anon, authenticated USING (true);
 

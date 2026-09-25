@@ -583,11 +583,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 subtitle: const Text('Set password without email (bypasses rate limit)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
 
-                //Disable the Direct account create option
-                /* onTap: () {
+                onTap: () {
                   Navigator.pop(ctx);
                   _showDirectCreationDialog();
-                },*/
+                },
 
               ),
             ),
