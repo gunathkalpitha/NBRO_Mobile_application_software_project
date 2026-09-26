@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:io';
 
 /// Repository for managing inspections in Supabase
@@ -667,12 +668,14 @@ class InspectionRepository {
     await _supabase.from('specification').delete().eq('building_id', buildingId);
 
     final rows = <Map<String, dynamic>>[];
+    const uuid = Uuid();
 
     void appendSelected(String scope, Map<String, bool>? materials) {
       if (materials == null || materials.isEmpty) return;
       materials.forEach((key, value) {
         if (value == true) {
           rows.add({
+            'spec_id': uuid.v4(),
             'building_id': buildingId,
             'is_used': true,
             'element_type': '$scope|$key',
@@ -685,6 +688,15 @@ class InspectionRepository {
     appendSelected('door', inspection.doorMaterials);
     appendSelected('floor', inspection.floorMaterials);
     appendSelected('roof', inspection.roofMaterials);
+
+    if (inspection.roofCovering != null && inspection.roofCovering!.trim().isNotEmpty) {
+      rows.add({
+        'spec_id': uuid.v4(),
+        'building_id': buildingId,
+        'is_used': true,
+        'element_type': 'roofcovering|${inspection.roofCovering!.trim()}',
+      });
+    }
 
     if (rows.isNotEmpty) {
       await _supabase.from('specification').insert(rows);
@@ -784,10 +796,11 @@ class InspectionRepository {
   Future<List<Inspection>> _getInspectionsWithoutJoins() async {
     final response = await _supabase
         .from('site')
-        .select()
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
         .order('created_at', ascending: false);
 
     final rows = (response as List).cast<Map<String, dynamic>>();
+    final profileMap = await _getProfileNamesMap();
     final inspections = <Inspection>[];
 
     for (final row in rows) {
@@ -795,7 +808,7 @@ class InspectionRepository {
       final siteId = row['site_id'] as String?;
       final buildingRef = row['building_ref'] as String?;
       withDefects['defects'] = await _fetchDefectsForSite(siteId, buildingRef);
-      inspections.add(_mapInspectionFromSiteRow(withDefects));
+      inspections.add(_mapInspectionFromSiteRow(withDefects, profileMap: profileMap));
     }
 
     return inspections;
@@ -804,13 +817,13 @@ class InspectionRepository {
   Future<Map<String, dynamic>?> _getSingleInspectionWithoutJoins(String id) async {
     Map<String, dynamic>? row = await _supabase
         .from('site')
-        .select()
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
         .eq('building_ref', id)
         .maybeSingle();
 
     row ??= await _supabase
         .from('site')
-        .select()
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
         .eq('site_id', id)
         .maybeSingle();
 
@@ -893,6 +906,7 @@ class InspectionRepository {
     final doorMaterials = <String, bool>{};
     final floorMaterials = <String, bool>{};
     final roofMaterials = <String, bool>{};
+    String? roofCoveringSpec;
 
     for (final spec in specs) {
       final item = spec as Map<String, dynamic>;
@@ -917,6 +931,9 @@ class InspectionRepository {
           break;
         case 'roof':
           roofMaterials[key] = true;
+          break;
+        case 'roofcovering':
+          roofCoveringSpec = key;
           break;
       }
     }
@@ -973,7 +990,7 @@ class InspectionRepository {
         roofMaterials: roofMaterials.isNotEmpty
           ? roofMaterials
           : (directRoofMaterials.isEmpty ? null : directRoofMaterials),
-        roofCovering: row['roof_covering'] as String?,
+        roofCovering: roofCoveringSpec ?? (row['roof_covering'] as String?),
       defects: defects,
       syncStatus: SyncStatus.values.firstWhere(
         (e) => e.name == row['sync_status'],

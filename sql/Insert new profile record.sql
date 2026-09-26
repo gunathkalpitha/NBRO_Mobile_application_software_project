@@ -104,36 +104,69 @@ BEGIN
   END IF;
 END $$;
 
--- 8. Enable Row Level Security (RLS) Policies
+-- 8. Enable Row Level Security (RLS) Policies (FOR ALL operations)
 ALTER TABLE public.site ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.general_observation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.external_services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.main_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ancillary_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.detail_type ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.building_detail ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.specification ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.defects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_info ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_image ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.site;
 DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.site;
 DROP POLICY IF EXISTS "Allow update for authenticated users" ON public.site;
 DROP POLICY IF EXISTS "Allow delete for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.site;
 
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.profile;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.profile;
+
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.general_observation;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.general_observation;
+
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.external_services;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.external_services;
+
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.main_building;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.main_building;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.ancillary_building;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.ancillary_building;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.detail_type;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.detail_type;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.building_detail;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.building_detail;
+
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.specification;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.specification;
+
 DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defects;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defects;
 
-CREATE POLICY "Allow select for authenticated users" ON public.site FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow insert for authenticated users" ON public.site FOR INSERT TO anon, authenticated WITH CHECK (true);
-CREATE POLICY "Allow update for authenticated users" ON public.site FOR UPDATE TO anon, authenticated USING (true);
-CREATE POLICY "Allow delete for authenticated users" ON public.site FOR DELETE TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_info;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_info;
 
-CREATE POLICY "Allow select for authenticated users" ON public.profile FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow select for authenticated users" ON public.general_observation FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow select for authenticated users" ON public.external_services FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow select for authenticated users" ON public.main_building FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow select for authenticated users" ON public.specification FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY "Allow select for authenticated users" ON public.defects FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_image;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_image;
+
+CREATE POLICY "Allow all for authenticated users" ON public.site FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.profile FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.general_observation FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.external_services FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.main_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.ancillary_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.detail_type FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.building_detail FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.specification FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defect_info FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defect_image FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
