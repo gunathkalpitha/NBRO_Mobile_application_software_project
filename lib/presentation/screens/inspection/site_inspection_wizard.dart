@@ -10,10 +10,9 @@ import 'package:nbro_mobile_application/presentation/widgets/defect_capture_card
 import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
 import 'package:uuid/uuid.dart';
 
-/// Site Inspection Wizard matching NBRO Physical Forms
-/// Flow: Site Data Sheet → Building Profile → Defect Capture → Review
+/// Professional Slide-by-Slide Pre-Crack Survey Wizard (Site Inspection)
 class SiteInspectionWizard extends StatefulWidget {
-  final String? draftId; // For restoring a draft
+  final String? draftId;
   final Map<String, dynamic>? draftData;
   
   const SiteInspectionWizard({super.key, this.draftId, this.draftData});
@@ -22,11 +21,13 @@ class SiteInspectionWizard extends StatefulWidget {
   State<SiteInspectionWizard> createState() => _SiteInspectionWizardState();
 }
 
-class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
+class _SiteInspectionWizardState extends State<SiteInspectionWizard>
+    with SingleTickerProviderStateMixin {
+  late PageController _pageController;
+  late TabController _tabController;
   int _currentStep = 0;
-  final ScrollController _scrollController = ScrollController();
   
-  // Building Reference and Owner Information (Step 1)
+  // Step 1: Site Data
   final _buildingRefController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _addressController = TextEditingController();
@@ -39,10 +40,18 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   final _distanceController = TextEditingController();
   bool _isGettingLocation = false;
   
-  // General Observations (Step 2)
+  // Step 2: Observations & Utilities
   final _ageController = TextEditingController();
   String? _typeOfStructure;
-  final List<String> _structureTypes = ['House', 'Office/Shop', 'Office Building', 'Others (Please specify)', 'Permanent', 'Semi-permanent', 'Temporary'];
+  final List<String> _structureTypes = [
+    'House',
+    'Office/Shop',
+    'Office Building',
+    'Others (Please specify)',
+    'Permanent',
+    'Semi-permanent',
+    'Temporary'
+  ];
   String? _presentCondition;
   
   // External Services
@@ -53,14 +62,14 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   bool _hasSewageWaste = false;
   String? _sewageType;
   
-  // Ancillary Buildings/Structures (Step 2)
+  // Ancillary Structures
   final Map<String, Map<String, bool>> _ancillaryStructures = {
     'Boundary walls': {'Brick': false, 'Block wall': false, 'Parapet': false, 'Not Painted': false},
     'Others': {'Wall cracks': false, 'External Toilets': false, 'Water Tanks': false},
   };
   
-  // Building Profile (Step 3)
-  final _numberOfFloorsController = TextEditingController(); // G+2
+  // Step 3: Building Profile
+  final _numberOfFloorsController = TextEditingController();
   
   final Map<String, Map<String, bool>> _buildingElements = {
     'Walls': {
@@ -99,29 +108,65 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     },
   };
   
-  String? _roofCovering; // Clay Tiles, Asbestos, Covering Metal, Zinc/Al
+  String? _roofCovering;
   
-  // Defects (Step 4)
+  // Step 4: Defects
   final List<Defect> _capturedDefects = [];
   
-  // Inspection ID
+  // Draft Storage
   late String _inspectionId;
   final DraftStorageService _draftService = DraftStorageService();
   String? _currentDraftId;
 
+  final List<String> _stepTitles = [
+    'Site Data',
+    'Observations',
+    'Building Profile',
+    'Defects',
+    'Review',
+  ];
+
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
+    _tabController = TabController(length: 5, vsync: this);
+
     if (widget.draftId != null && widget.draftData != null) {
-      // Restoring from draft
       _currentDraftId = widget.draftId;
       _restoreFromDraft(widget.draftData!);
     } else {
-      // New inspection
       _inspectionId = 'H-';
       _buildingRefController.text = _inspectionId;
       _currentDraftId = const Uuid().v4();
     }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _tabController.dispose();
+    _buildingRefController.dispose();
+    _ownerNameController.dispose();
+    _addressController.dispose();
+    _contactController.dispose();
+    _distanceController.dispose();
+    _ageController.dispose();
+    _numberOfFloorsController.dispose();
+    super.dispose();
+  }
+
+  void _goToStep(int step) {
+    if (step < 0 || step > 4) return;
+    setState(() {
+      _currentStep = step;
+      _tabController.animateTo(step);
+    });
+    _pageController.animateToPage(
+      step,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _takeBuildingPhoto() async {
@@ -149,34 +194,79 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     setState(() => _isGettingLocation = true);
 
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enable GPS location services on your device')),
+          );
+        }
+        return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Location permission denied')),
+            );
+          }
+          return;
+        }
+      }
 
-      setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-      });
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission permanently denied in settings')),
+          );
+        }
+        return;
+      }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location obtained successfully')),
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 12),
         );
+      } catch (e) {
+        debugPrint('[Wizard] getCurrentPosition failed ($e), trying last known...');
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position != null) {
+        final pos = position;
+        setState(() {
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Location obtained successfully'),
+              backgroundColor: NBROColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to obtain GPS fix')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error getting location: $e')),
         );
       }
     } finally {
-      setState(() => _isGettingLocation = false);
+      if (mounted) setState(() => _isGettingLocation = false);
     }
   }
 
@@ -187,24 +277,23 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   }
 
   Future<void> _completeInspection() async {
-    if (_ownerNameController.text.isEmpty) {
+    if (_ownerNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter owner name')),
       );
-      setState(() => _currentStep = 0);
+      _goToStep(0);
       return;
     }
 
-    if (_addressController.text.isEmpty) {
+    if (_addressController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter site address')),
       );
-      setState(() => _currentStep = 0);
+      _goToStep(0);
       return;
     }
 
-    // Update all defects with the inspection ID
-    final inspectionId = _buildingRefController.text;
+    final inspectionId = _buildingRefController.text.trim();
     final defectsWithInspectionId = _capturedDefects.map((defect) {
       return Defect(
         id: defect.id,
@@ -222,13 +311,13 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
 
     final inspection = Inspection(
       id: inspectionId,
-      ownerName: _ownerNameController.text,
-      siteAddress: _addressController.text,
-      contactNo: _contactController.text.isEmpty ? null : _contactController.text,
+      ownerName: _ownerNameController.text.trim(),
+      siteAddress: _addressController.text.trim(),
+      contactNo: _contactController.text.trim().isEmpty ? null : _contactController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
-      distanceFromRow: _distanceController.text.isEmpty ? null : double.tryParse(_distanceController.text),
-      ageOfStructure: _ageController.text.isEmpty ? null : int.tryParse(_ageController.text),
+      distanceFromRow: _distanceController.text.trim().isEmpty ? null : double.tryParse(_distanceController.text.trim()),
+      ageOfStructure: _ageController.text.trim().isEmpty ? null : int.tryParse(_ageController.text.trim()),
       typeOfStructure: _typeOfStructure,
       presentCondition: _presentCondition,
       hasPipeBorneWater: _hasPipeBorneWater,
@@ -237,7 +326,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       electricitySource: _electricitySource,
       hasSewageWaste: _hasSewageWaste,
       sewageType: _sewageType,
-      numberOfFloors: _numberOfFloorsController.text.isEmpty ? null : _numberOfFloorsController.text,
+      numberOfFloors: _numberOfFloorsController.text.trim().isEmpty ? null : _numberOfFloorsController.text.trim(),
       wallMaterials: _buildingElements['Walls'],
       doorMaterials: _buildingElements['Doors'],
       floorMaterials: _buildingElements['Floors'],
@@ -253,7 +342,6 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
           buildingPhotoPath: _buildingPhotoPath,
         ));
 
-    // Delete the draft after completing inspection
     if (_currentDraftId != null) {
       await _draftService.deleteDraft(_currentDraftId!);
     }
@@ -261,48 +349,27 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Inspection saved successfully')),
+      const SnackBar(
+        content: Text('✓ Inspection saved successfully'),
+        backgroundColor: NBROColors.success,
+      ),
     );
 
     Navigator.of(context).pop();
   }
 
-  @override
-  void dispose() {
-    _buildingRefController.dispose();
-    _ownerNameController.dispose();
-    _addressController.dispose();
-    _contactController.dispose();
-    _distanceController.dispose();
-    _ageController.dispose();
-    _numberOfFloorsController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToCurrentStep() {
-    // Use a small delay to ensure the step content is rendered before scrolling
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (_scrollController.hasClients && mounted) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
   Future<void> _saveDraft() async {
     final draftData = {
+      'draft_id': _currentDraftId ?? const Uuid().v4(),
+      'saved_at': DateTime.now().toIso8601String(),
+      'current_step': _currentStep,
       'building_ref': _buildingRefController.text,
       'owner_name': _ownerNameController.text,
       'address': _addressController.text,
       'contact': _contactController.text,
-      'building_photo_path': _buildingPhotoPath,
       'latitude': _latitude,
       'longitude': _longitude,
-      'distance': _distanceController.text,
+      'distance_from_row': _distanceController.text,
       'age': _ageController.text,
       'type_of_structure': _typeOfStructure,
       'present_condition': _presentCondition,
@@ -317,23 +384,20 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       'building_elements': _buildingElements,
       'roof_covering': _roofCovering,
       'defects': _capturedDefects.map((d) => d.toJson()).toList(),
-      'current_step': _currentStep,
-      'inspection_id': _inspectionId,
+      'building_photo_path': _buildingPhotoPath,
     };
-    
+
     await _draftService.saveDraft(draftId: _currentDraftId!, draftData: draftData);
   }
 
   void _restoreFromDraft(Map<String, dynamic> data) {
-    _inspectionId = data['inspection_id'] ?? 'H-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    _buildingRefController.text = data['building_ref'] ?? _inspectionId;
+    _buildingRefController.text = data['building_ref'] ?? '';
     _ownerNameController.text = data['owner_name'] ?? '';
     _addressController.text = data['address'] ?? '';
     _contactController.text = data['contact'] ?? '';
-    _buildingPhotoPath = data['building_photo_path'];
     _latitude = data['latitude'];
     _longitude = data['longitude'];
-    _distanceController.text = data['distance'] ?? '';
+    _distanceController.text = data['distance_from_row'] ?? '';
     _ageController.text = data['age'] ?? '';
     _typeOfStructure = data['type_of_structure'];
     _presentCondition = data['present_condition'];
@@ -343,6 +407,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     _electricitySource = data['electricity_source'];
     _hasSewageWaste = data['has_sewage_waste'] ?? false;
     _sewageType = data['sewage_type'];
+    _buildingPhotoPath = data['building_photo_path'];
     
     if (data['ancillary_structures'] != null) {
       final saved = Map<String, dynamic>.from(data['ancillary_structures']);
@@ -377,45 +442,36 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   }
 
   Future<bool> _handleBackPress() async {
-    // Check if there's any data entered
     final hasData = _buildingRefController.text.isNotEmpty ||
                     _ownerNameController.text.isNotEmpty ||
                     _addressController.text.isNotEmpty ||
                     _capturedDefects.isNotEmpty;
     
-    if (!hasData) {
-      return true; // Allow navigation without dialog
-    }
+    if (!hasData) return true;
     
-    // Show save draft dialog
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.save_outlined, color: NBROColors.primary),
-            const SizedBox(width: 12),
-            const Text('Save as Draft?'),
+            SizedBox(width: 12),
+            Text('Save Draft?'),
           ],
         ),
         content: const Text(
-          'Do you want to save this inspection as a draft? You can continue editing it later.',
+          'Do you want to save this inspection as a draft to continue later?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'discard'),
-            child: const Text(
-              'Discard',
-              style: TextStyle(color: NBROColors.error),
-            ),
+            child: const Text('Discard', style: TextStyle(color: NBROColors.error)),
           ),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context, 'save'),
             icon: const Icon(Icons.save),
             label: const Text('Save Draft'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: NBROColors.primary,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: NBROColors.primary),
           ),
         ],
       ),
@@ -426,28 +482,20 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: NBROColors.white),
-                SizedBox(width: 12),
-                Text('Draft saved successfully'),
-              ],
-            ),
+            content: Text('Draft saved successfully'),
             backgroundColor: NBROColors.success,
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }
       return true;
     } else if (result == 'discard') {
-      // Delete draft if exists
       if (_currentDraftId != null) {
         await _draftService.deleteDraft(_currentDraftId!);
       }
       return true;
     }
     
-    return false; // Cancel navigation
+    return false;
   }
 
   @override
@@ -455,843 +503,765 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
     return WillPopScope(
       onWillPop: _handleBackPress,
       child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
-          title: const Text('Pre-Crack Survey Report'),
+          toolbarHeight: 65,
+          backgroundColor: NBROColors.primary,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: NBROColors.white),
+            onPressed: () async {
+              final pop = await _handleBackPress();
+              if (pop && context.mounted) Navigator.of(context).pop();
+            },
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pre-Crack Survey Report',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.white,
+                ),
+              ),
+              Text(
+                'Step ${_currentStep + 1} of 5: ${_stepTitles[_currentStep]}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: NBROColors.white.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.save_outlined, color: NBROColors.white),
+              tooltip: 'Save Draft',
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                await _saveDraft();
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('✓ Draft saved successfully'),
+                    backgroundColor: NBROColors.success,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Container(
+              color: NBROColors.white,
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorColor: NBROColors.primary,
+                indicatorWeight: 3,
+                labelColor: NBROColors.primary,
+                unselectedLabelColor: NBROColors.grey,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 13),
+                onTap: (index) {
+                  _goToStep(index);
+                },
+                tabs: const [
+                  Tab(text: '1. Site Data'),
+                  Tab(text: '2. Observations'),
+                  Tab(text: '3. Profile'),
+                  Tab(text: '4. Defects'),
+                  Tab(text: '5. Review'),
+                ],
+              ),
+            ),
+          ),
         ),
-        body: SingleChildScrollView(
-          controller: _scrollController,
-          child: Stepper(
-        physics: const NeverScrollableScrollPhysics(),
-        currentStep: _currentStep,
-        controlsBuilder: (context, details) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 16),
+        body: Column(
+          children: [
+            // Linear Progress Line
+            LinearProgressIndicator(
+              value: (_currentStep + 1) / 5,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: const AlwaysStoppedAnimation<Color>(NBROColors.primary),
+              minHeight: 3,
+            ),
+
+            // Slide PageView
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (page) {
+                  setState(() {
+                    _currentStep = page;
+                    _tabController.animateTo(page);
+                  });
+                },
+                children: [
+                  _buildPageWrapper(_buildSiteDataPage()),
+                  _buildPageWrapper(_buildGeneralObservationsPage()),
+                  _buildPageWrapper(_buildBuildingProfilePage()),
+                  _buildPageWrapper(_buildDefectCapturePage()),
+                  _buildPageWrapper(_buildReviewPage()),
+                ],
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: NBROColors.white,
+            boxShadow: [
+              BoxShadow(
+                color: NBROColors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -3),
+              ),
+            ],
+          ),
+          child: SafeArea(
             child: Row(
               children: [
-                ElevatedButton(
-                  onPressed: details.onStepContinue,
-                  child: Text(_currentStep == 4 ? 'Complete' : 'Continue'),
-                ),
+                if (_currentStep > 0)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _goToStep(_currentStep - 1),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Back'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () async {
+                        final pop = await _handleBackPress();
+                        if (pop && context.mounted) Navigator.pop(context);
+                      },
+                      child: const Text('Cancel', style: TextStyle(color: NBROColors.grey)),
+                    ),
+                  ),
                 const SizedBox(width: 12),
-                TextButton(
-                  onPressed: details.onStepCancel,
-                  child: Text(_currentStep == 0 ? 'Cancel' : 'Back'),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      if (_currentStep < 4) {
+                        _goToStep(_currentStep + 1);
+                      } else {
+                        _completeInspection();
+                      }
+                    },
+                    icon: Icon(_currentStep == 4 ? Icons.check_circle : Icons.arrow_forward),
+                    label: Text(_currentStep == 4 ? 'Complete Inspection' : 'Next Step'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: NBROColors.primary,
+                      foregroundColor: NBROColors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                    ),
+                  ),
                 ),
               ],
             ),
-          );
-        },
-        onStepTapped: (step) {
-          setState(() {
-            _currentStep = step;
-          });
-          _scrollToCurrentStep();
-        },
-        onStepContinue: () {
-          if (_currentStep < 4) {
-            setState(() => _currentStep += 1);
-            _scrollToCurrentStep();
-          } else {
-            _completeInspection();
-          }
-        },
-        onStepCancel: () async {
-          if (_currentStep > 0) {
-            setState(() => _currentStep -= 1);
-          } else {
-            final navigator = Navigator.of(context);
-            final shouldPop = await _handleBackPress();
-            if (shouldPop && mounted) {
-              navigator.pop();
-            }
-          }
-        },
-        steps: [
-          _buildSiteDataStep(),
-          _buildGeneralObservationsStep(),
-          _buildBuildingProfileStep(),
-          _buildDefectCaptureStep(),
-          _buildReviewStep(),
-        ],
-        ),
+          ),
         ),
       ),
     );
   }
 
-  // Step 1: Site Data Sheet
-  Step _buildSiteDataStep() {
-    return Step(
-      title: const Text('Site Data Sheet'),
-      subtitle: const Text('Building & Owner Info'),
-      isActive: _currentStep >= 0,
-      state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Building Reference Photo
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Front View of the Building',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_buildingPhotoPath != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(_buildingPhotoPath!),
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else
-                    Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.add_a_photo, size: 48, color: Colors.grey),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: _takeBuildingPhoto,
-                    icon: const Icon(Icons.camera_alt),
-                    label: Text(_buildingPhotoPath == null ? 'Take Photo' : 'Retake Photo'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Building Reference No
-          TextField(
-            controller: _buildingRefController,
-            decoration: const InputDecoration(
-              labelText: 'Building Ref. No *',
-              hintText: 'e.g., H-01',
-              prefixIcon: Icon(Icons.tag),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Name of Owner
-          TextField(
-            controller: _ownerNameController,
-            decoration: const InputDecoration(
-              labelText: 'Name of the Owner *',
-              prefixIcon: Icon(Icons.person),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Address of Premises
-          TextField(
-            controller: _addressController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Address of Premises *',
-              prefixIcon: Icon(Icons.location_on),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Contact No
-          TextField(
-            controller: _contactController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Contact No.',
-              prefixIcon: Icon(Icons.phone),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // GPS Location
-          Text(
-            'Location of Premises',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (_latitude != null && _longitude != null)
-            Card(
-              color: NBROColors.success.withValues(alpha: 0.1),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: NBROColors.success),
-                        const SizedBox(width: 8),
-                        Text(
-                          'GPS Coordinates',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: NBROColors.success,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Latitude: ${_latitude!.toStringAsFixed(6)}°'),
-                    Text('Longitude: ${_longitude!.toStringAsFixed(6)}°'),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _getCurrentLocation,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Update Location'),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: _isGettingLocation ? null : _getCurrentLocation,
-              icon: _isGettingLocation
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location),
-              label: const Text('Get GPS Coordinates'),
-            ),
-          const SizedBox(height: 16),
-          
-          // Distance from Row
-          TextField(
-            controller: _distanceController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Distance from Row (meters)',
-              prefixIcon: Icon(Icons.straighten),
-            ),
-          ),
-        ],
-      ),
+  Widget _buildPageWrapper(Widget child) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: child,
     );
   }
 
-  // Step 2: General Observations & Services
-  Step _buildGeneralObservationsStep() {
-    return Step(
-      title: const Text('General Observations'),
-      subtitle: const Text('Structure Info & Services'),
-      isActive: _currentStep >= 1,
-      state: _currentStep > 1 ? StepState.complete : (_currentStep == 1 ? StepState.editing : StepState.indexed),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '1. General Observations',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Age of Structure
-          TextField(
-            controller: _ageController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Approx. Age of existing structures (years)',
-              prefixIcon: Icon(Icons.calendar_today),
-              hintText: '15-20 years',
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Type of Structure
-          DropdownButtonFormField<String>(
-            initialValue: _typeOfStructure,
-            decoration: const InputDecoration(
-              labelText: 'Type of existing structures',
-              prefixIcon: Icon(Icons.home_work),
-            ),
-            items: _structureTypes.map((type) {
-              return DropdownMenuItem(value: type, child: Text(type));
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _typeOfStructure = value;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Present Condition
-          Text(
-            'Present condition of structures',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          RadioGroup<String?>(
-            groupValue: _presentCondition,
-            onChanged: (value) {
-              setState(() {
-                _presentCondition = value;
-              });
-            },
-            child: Column(
-              children: [
-                RadioListTile<String?>(
-                  title: const Text('Permanent'),
-                  value: 'Permanent',
-                ),
-                RadioListTile<String?>(
-                  title: const Text('Semi-permanent / Temporary'),
-                  value: 'Semi-permanent / Temporary',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // External Services
-          Text(
-            '2. External Services',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Pipe-borne water supply
-          SwitchListTile(
-            title: const Text('Pipe-borne water supply'),
-            value: _hasPipeBorneWater,
-            onChanged: (value) {
-              setState(() {
-                _hasPipeBorneWater = value;
-              });
-            },
-          ),
-          if (_hasPipeBorneWater) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: RadioGroup<String?>(
-                groupValue: _waterSource,
-                onChanged: (value) {
-                  setState(() {
-                    _waterSource = value;
-                  });
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<String?>(
-                      title: const Text('From Well'),
-                      value: 'From Well',
-                    ),
-                    RadioListTile<String?>(
-                      title: const Text('From main supply'),
-                      value: 'From main supply',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          
-          // Electricity
-          SwitchListTile(
-            title: const Text('Electricity Main Supply'),
-            value: _hasElectricity,
-            onChanged: (value) {
-              setState(() {
-                _hasElectricity = value;
-              });
-            },
-          ),
-          if (_hasElectricity) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: RadioGroup<String?>(
-                groupValue: _electricitySource,
-                onChanged: (value) {
-                  setState(() {
-                    _electricitySource = value;
-                  });
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<String?>(
-                      title: const Text('From Private Solar supply'),
-                      value: 'From Private Solar supply',
-                    ),
-                    RadioListTile<String?>(
-                      title: const Text('From Main supply'),
-                      value: 'From Main supply',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          
-          // Sewage & Waste Water Disposal
-          SwitchListTile(
-            title: const Text('Sewage & Waste Water Disposal'),
-            value: _hasSewageWaste,
-            onChanged: (value) {
-              setState(() {
-                _hasSewageWaste = value;
-              });
-            },
-          ),
-          if (_hasSewageWaste) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: RadioGroup<String?>(
-                groupValue: _sewageType,
-                onChanged: (value) {
-                  setState(() {
-                    _sewageType = value;
-                  });
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<String?>(
-                      title: const Text('Private Septic tank & Soakage pits'),
-                      value: 'Private Septic tank & Soakage pits',
-                    ),
-                    RadioListTile<String?>(
-                      title: const Text('Connected to Sewer Main'),
-                      value: 'Connected to Sewer Main',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 24),
-          
-          // Ancillary Buildings/Structures
-          Text(
-            '3. Details of Ancillary Buildings/Structures',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._ancillaryStructures.entries.map((category) {
-            return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      category.key,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...category.value.entries.map((item) {
-                      return CheckboxListTile(
-                        title: Text(item.key),
-                        value: item.value,
-                        onChanged: (value) {
-                          setState(() {
-                            _ancillaryStructures[category.key]![item.key] = value ?? false;
-                          });
-                        },
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  // Step 3: Building Profile (Details of Main Building Elements)
-  Step _buildBuildingProfileStep() {
-    return Step(
-      title: const Text('Building Profile'),
-      subtitle: const Text('Main Building Elements'),
-      isActive: _currentStep >= 2,
-      state: _currentStep > 2 ? StepState.complete : (_currentStep == 2 ? StepState.editing : StepState.indexed),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '4. Details of Main Building Elements',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Number of Floors
-          TextField(
-            controller: _numberOfFloorsController,
-            decoration: const InputDecoration(
-              labelText: 'No. of Floors (e.g., G+2)',
-              hintText: 'G+2',
-              prefixIcon: Icon(Icons.layers),
-              helperText: 'G = Ground Floor, +2 = Two additional floors',
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Building Elements
-          ..._buildingElements.entries.map((category) {
-            return Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+  // ─── STEP 1: SITE DATA SHEET ──────────────────────────────────────────────
+  Widget _buildSiteDataPage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FormCard(
+          title: 'Building Front View Photo',
+          icon: Icons.camera_alt_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_buildingPhotoPath != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(
+                    File(_buildingPhotoPath!),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else
+                Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                  ),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          _getIconForCategory(category.key),
-                          color: NBROColors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          category.key,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: NBROColors.primary,
-                          ),
-                        ),
+                        Icon(Icons.add_a_photo_outlined, size: 40, color: NBROColors.grey),
+                        SizedBox(height: 8),
+                        Text('No photo captured', style: TextStyle(color: NBROColors.grey, fontSize: 13)),
                       ],
                     ),
-                    const Divider(),
-                    ...category.value.entries.map((item) {
-                      return CheckboxListTile(
-                        title: Text(item.key),
-                        value: item.value,
-                        onChanged: (value) {
-                          setState(() {
-                            _buildingElements[category.key]![item.key] = value ?? false;
-                          });
-                        },
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      );
-                    }),
-                  ],
+                  ),
+                ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _takeBuildingPhoto,
+                icon: const Icon(Icons.camera_alt),
+                label: Text(_buildingPhotoPath == null ? 'Capture Photo' : 'Retake Photo'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FormCard(
+          title: 'General Premises Information',
+          icon: Icons.business_outlined,
+          child: Column(
+            children: [
+              TextField(
+                controller: _buildingRefController,
+                decoration: const InputDecoration(
+                  labelText: 'Building Ref. No *',
+                  hintText: 'e.g., H-01',
+                  prefixIcon: Icon(Icons.tag),
+                  border: OutlineInputBorder(),
                 ),
               ),
-            );
-          }),
-          
-          // Roof Covering
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              const SizedBox(height: 14),
+              TextField(
+                controller: _ownerNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name of the Owner *',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _addressController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Address of Premises *',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _contactController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Contact Phone Number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FormCard(
+          title: 'GPS Coordinates & ROW',
+          icon: Icons.my_location,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_latitude != null && _longitude != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: NBROColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: NBROColors.success.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
                     children: [
-                      const Icon(Icons.roofing, color: NBROColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Roof Covering',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: NBROColors.primary,
+                      const Icon(Icons.check_circle, color: NBROColors.success, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'GPS: ${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: NBROColors.success, fontSize: 13),
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 18, color: NBROColors.success),
+                        onPressed: _getCurrentLocation,
                       ),
                     ],
                   ),
-                  const Divider(),
-                  DropdownButtonFormField<String>(
-                    initialValue: _roofCovering,
-                    decoration: const InputDecoration(
-                      labelText: 'Select Covering Type',
-                      border: OutlineInputBorder(),
-                    ),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                  icon: _isGettingLocation
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.my_location),
+                  label: const Text('Get Live GPS Coordinates'),
+                ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _distanceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Distance from Right-of-Way (m)',
+                  prefixIcon: Icon(Icons.straighten),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── STEP 2: GENERAL OBSERVATIONS & SERVICES ─────────────────────────────
+  Widget _buildGeneralObservationsPage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormCard(
+          title: 'General Observations',
+          icon: Icons.fact_check_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _ageController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Approx. Age of Structure (years)',
+                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: _typeOfStructure,
+                decoration: const InputDecoration(
+                  labelText: 'Type of Existing Structure',
+                  prefixIcon: Icon(Icons.apartment),
+                  border: OutlineInputBorder(),
+                ),
+                items: _structureTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                onChanged: (val) => setState(() => _typeOfStructure = val),
+              ),
+              const SizedBox(height: 14),
+              const Text('Present Condition', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: NBROColors.grey)),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<String>(
+                value: _presentCondition,
+                decoration: const InputDecoration(
+                  labelText: 'Select Condition',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Permanent', child: Text('Permanent')),
+                  DropdownMenuItem(value: 'Semi-permanent / Temporary', child: Text('Semi-permanent / Temporary')),
+                ],
+                onChanged: (val) => setState(() => _presentCondition = val),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FormCard(
+          title: 'External Utility Services',
+          icon: Icons.electrical_services_outlined,
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: const Text('Pipe-borne water supply', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                value: _hasPipeBorneWater,
+                onChanged: (val) => setState(() => _hasPipeBorneWater = val),
+              ),
+              if (_hasPipeBorneWater)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: DropdownButtonFormField<String>(
+                    value: _waterSource,
+                    decoration: const InputDecoration(labelText: 'Water Source', border: OutlineInputBorder()),
                     items: const [
-                      DropdownMenuItem(value: 'Clay Tiles', child: Text('Clay Tiles')),
-                      DropdownMenuItem(value: 'Asbestos', child: Text('Asbestos')),
-                      DropdownMenuItem(value: 'Covering Metal', child: Text('Covering Metal')),
-                      DropdownMenuItem(value: 'Zinc/Al', child: Text('Zinc/Al')),
+                      DropdownMenuItem(value: 'From Well', child: Text('From Well')),
+                      DropdownMenuItem(value: 'From main supply', child: Text('From main supply')),
                     ],
-                    onChanged: (value) {
+                    onChanged: (val) => setState(() => _waterSource = val),
+                  ),
+                ),
+              const Divider(),
+              SwitchListTile(
+                title: const Text('Electricity Main Supply', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                value: _hasElectricity,
+                onChanged: (val) => setState(() => _hasElectricity = val),
+              ),
+              if (_hasElectricity)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: DropdownButtonFormField<String>(
+                    value: _electricitySource,
+                    decoration: const InputDecoration(labelText: 'Electricity Source', border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(value: 'From Private Solar supply', child: Text('From Private Solar supply')),
+                      DropdownMenuItem(value: 'From Main supply', child: Text('From Main supply')),
+                    ],
+                    onChanged: (val) => setState(() => _electricitySource = val),
+                  ),
+                ),
+              const Divider(),
+              SwitchListTile(
+                title: const Text('Sewage & Waste Water Disposal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                value: _hasSewageWaste,
+                onChanged: (val) => setState(() => _hasSewageWaste = val),
+              ),
+              if (_hasSewageWaste)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: DropdownButtonFormField<String>(
+                    value: _sewageType,
+                    decoration: const InputDecoration(labelText: 'Sewage Disposal Type', border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(value: 'Private Septic tank & Soakage pits', child: Text('Private Septic tank & Soakage pits')),
+                      DropdownMenuItem(value: 'Connected to Sewer Main', child: Text('Connected to Sewer Main')),
+                    ],
+                    onChanged: (val) => setState(() => _sewageType = val),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── STEP 3: BUILDING PROFILE ─────────────────────────────────────────────
+  Widget _buildBuildingProfilePage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormCard(
+          title: 'Floors & Roof Structure',
+          icon: Icons.layers_outlined,
+          child: Column(
+            children: [
+              TextField(
+                controller: _numberOfFloorsController,
+                decoration: const InputDecoration(
+                  labelText: 'No. of Floors (e.g., G+2)',
+                  hintText: 'G+2',
+                  prefixIcon: Icon(Icons.layers),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: _roofCovering,
+                decoration: const InputDecoration(
+                  labelText: 'Roof Covering Type',
+                  prefixIcon: Icon(Icons.roofing),
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Clay Tiles', child: Text('Clay Tiles')),
+                  DropdownMenuItem(value: 'Asbestos', child: Text('Asbestos')),
+                  DropdownMenuItem(value: 'Covering Metal', child: Text('Covering Metal')),
+                  DropdownMenuItem(value: 'Zinc/Al', child: Text('Zinc/Al')),
+                ],
+                onChanged: (val) => setState(() => _roofCovering = val),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        ..._buildingElements.entries.map((category) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _FormCard(
+              title: category.key,
+              icon: _getIconForCategory(category.key),
+              child: Column(
+                children: category.value.entries.map((item) {
+                  return CheckboxListTile(
+                    title: Text(item.key, style: const TextStyle(fontSize: 13)),
+                    value: item.value,
+                    onChanged: (val) {
                       setState(() {
-                        _roofCovering = value;
+                        _buildingElements[category.key]![item.key] = val ?? false;
                       });
                     },
-                  ),
-                ],
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  );
+                }).toList(),
               ),
             ),
-          ),
-        ],
-      ),
+          );
+        }),
+      ],
     );
   }
 
-  // Step 4: Defect Capture
-  Step _buildDefectCaptureStep() {
-    return Step(
-      title: const Text('Defect Capture'),
-      subtitle: Text('${_capturedDefects.length} defects captured'),
-      isActive: _currentStep >= 3,
-      state: _currentStep > 3 ? StepState.complete : (_currentStep == 3 ? StepState.editing : StepState.indexed),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '5. Details/Photographs of Defects',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Capture defects using standardized NBRO notation system',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Defect Capture Card
-          DefectCaptureCard(
+  // ─── STEP 4: DEFECT CAPTURE ───────────────────────────────────────────────
+  Widget _buildDefectCapturePage() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormCard(
+          title: 'Capture New Defect',
+          icon: Icons.report_problem_outlined,
+          child: DefectCaptureCard(
             onDefectCapture: (defect) {
               setState(() {
                 _capturedDefects.add(defect);
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Defect captured successfully!')),
+                const SnackBar(content: Text('✓ Defect added')),
               );
             },
           ),
-          const SizedBox(height: 24),
-          
-          // Captured Defects List
-          if (_capturedDefects.isNotEmpty) ...[
-            Text(
-              'Captured Defects (${_capturedDefects.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _capturedDefects.length,
-              itemBuilder: (context, index) {
-                final defect = _capturedDefects[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: Container(
-                      width: 60,
-                      height: 60,
+        ),
+        const SizedBox(height: 16),
+        if (_capturedDefects.isNotEmpty) ...[
+          Text(
+            'Captured Defects (${_capturedDefects.length})',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NBROColors.black),
+          ),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _capturedDefects.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final defect = _capturedDefects[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: NBROColors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: NBROColors.primary.withValues(alpha: 0.1),
+                        color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: defect.photoPath != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(defect.photoPath!),
-                                fit: BoxFit.cover,
-                              ),
+                              child: Image.file(File(defect.photoPath!), fit: BoxFit.cover),
                             )
-                          : const Icon(Icons.image, color: NBROColors.primary),
+                          : const Icon(Icons.image, color: NBROColors.grey),
                     ),
-                    title: Text(
-                      defect.notation.displayName,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(defect.notation.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text('${defect.lengthMm}mm${defect.widthMm != null ? ' × ${defect.widthMm}mm' : ''}', style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+                        ],
+                      ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${defect.lengthMm}mm × ${defect.widthMm ?? '-'}mm'),
-                        if (defect.floorLevel != null)
-                          Text('Floor: ${defect.floorLevel}'),
-                        if (defect.remarks != null)
-                          Text(
-                            defect.remarks!,
-                            style: const TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                      ],
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: NBROColors.error),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: NBROColors.error),
                       onPressed: () => _removeDefect(index),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ] else
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No defects captured yet',
-                      style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
                 ),
+              );
+            },
+          ),
+        ] else
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey.shade400),
+                  const SizedBox(height: 10),
+                  const Text('No defects captured yet', style: TextStyle(color: NBROColors.grey)),
+                ],
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
-  // Step 5: Review & Complete
-  Step _buildReviewStep() {
-    return Step(
-      title: const Text('Review & Complete'),
-      subtitle: const Text('Verify all information'),
-      isActive: _currentStep >= 4,
-      state: _currentStep == 4 ? StepState.editing : StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildReviewSection('Site Information', [
-            _buildReviewItem('Building Ref.', _buildingRefController.text),
-            _buildReviewItem('Owner Name', _ownerNameController.text),
-            _buildReviewItem('Address', _addressController.text),
-            if (_contactController.text.isNotEmpty)
-              _buildReviewItem('Contact', _contactController.text),
-            if (_latitude != null && _longitude != null)
-              _buildReviewItem('GPS', '${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'),
-          ]),
-          
-          _buildReviewSection('General Observations', [
-            if (_ageController.text.isNotEmpty)
-              _buildReviewItem('Age', '${_ageController.text} years'),
-            if (_typeOfStructure != null)
-              _buildReviewItem('Type', _typeOfStructure!),
-            if (_presentCondition != null)
-              _buildReviewItem('Condition', _presentCondition!),
-          ]),
-          
-          _buildReviewSection('Building Profile', [
-            if (_numberOfFloorsController.text.isNotEmpty)
-              _buildReviewItem('Floors', _numberOfFloorsController.text),
-            ..._buildingElements.entries.map((category) {
-              final selected = category.value.entries
-                  .where((e) => e.value)
-                  .map((e) => e.key)
-                  .toList();
-              if (selected.isNotEmpty) {
-                return _buildReviewItem(category.key, selected.join(', '));
-              }
-              return const SizedBox.shrink();
-            }),
-          ]),
-          
-          _buildReviewSection('Defects', [
-            _buildReviewItem('Total Defects', '${_capturedDefects.length}'),
-          ]),
-          
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: NBROColors.warning.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: NBROColors.warning),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: NBROColors.warning),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Please review all information carefully before completing the survey.',
-                    style: TextStyle(color: Colors.grey[800]),
-                  ),
+  // ─── STEP 5: REVIEW ───────────────────────────────────────────────────────
+  Widget _buildReviewPage() {
+    final selectedMaterialsList = <String>[];
+    _buildingElements.forEach((cat, items) {
+      items.forEach((item, selected) {
+        if (selected) selectedMaterialsList.add('$cat: $item');
+      });
+    });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _FormCard(
+          title: 'Site & Owner Details',
+          icon: Icons.business_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildReviewRow('Ref No.', _buildingRefController.text),
+              _buildReviewRow('Owner Name', _ownerNameController.text),
+              _buildReviewRow('Address', _addressController.text),
+              if (_contactController.text.isNotEmpty)
+                _buildReviewRow('Contact No.', _contactController.text),
+              if (_latitude != null && _longitude != null)
+                _buildReviewRow('GPS Coordinates', '${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°'),
+              if (_distanceController.text.isNotEmpty)
+                _buildReviewRow('Distance from ROW', '${_distanceController.text} m'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _FormCard(
+          title: 'Observations & Utility Services',
+          icon: Icons.fact_check_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_typeOfStructure != null) _buildReviewRow('Structure Type', _typeOfStructure!),
+              if (_presentCondition != null) _buildReviewRow('Present Condition', _presentCondition!),
+              if (_ageController.text.isNotEmpty) _buildReviewRow('Approx. Age', '${_ageController.text} years'),
+              _buildReviewRow('Water Supply', _hasPipeBorneWater ? (_waterSource ?? 'Available') : 'Not Available'),
+              _buildReviewRow('Electricity', _hasElectricity ? (_electricitySource ?? 'Available') : 'Not Available'),
+              _buildReviewRow('Sewage & Waste', _hasSewageWaste ? (_sewageType ?? 'Available') : 'Not Available'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        _FormCard(
+          title: 'Building Profile & Materials',
+          icon: Icons.construction_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_numberOfFloorsController.text.isNotEmpty)
+                _buildReviewRow('Number of Floors', _numberOfFloorsController.text),
+              if (_roofCovering != null)
+                _buildReviewRow('Roof Covering', _roofCovering!),
+              if (selectedMaterialsList.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text('Selected Specifications:', style: TextStyle(fontSize: 12, color: NBROColors.grey, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: selectedMaterialsList
+                      .map((mat) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: NBROColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(mat, style: const TextStyle(fontSize: 11, color: NBROColors.primary, fontWeight: FontWeight.w600)),
+                          ))
+                      .toList(),
                 ),
               ],
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewSection(String title, List<Widget> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: NBROColors.primary,
-              ),
-            ),
-            const Divider(),
-            ...items,
-          ],
         ),
-      ),
+        const SizedBox(height: 16),
+
+        _FormCard(
+          title: 'Captured Defects (${_capturedDefects.length})',
+          icon: Icons.report_problem_outlined,
+          child: _capturedDefects.isNotEmpty
+              ? Column(
+                  children: _capturedDefects.map((defect) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: NBROColors.error,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(defect.notation.code, style: const TextStyle(color: NBROColors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(defect.notation.displayName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          Text('${defect.lengthMm}mm', style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                )
+              : const Text('No defects captured for this inspection.', style: TextStyle(fontSize: 13, color: NBROColors.grey)),
+        ),
+        const SizedBox(height: 16),
+
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: NBROColors.info.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: NBROColors.info.withValues(alpha: 0.3)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: NBROColors.info),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Please review all survey details above. Tap "Complete Inspection" below to finalize.',
+                  style: TextStyle(fontSize: 13, color: NBROColors.darkGrey),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildReviewItem(String label, String value) {
+  Widget _buildReviewRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 13, color: NBROColors.grey)),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.black)),
         ],
       ),
     );
@@ -1300,17 +1270,72 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard> {
   IconData _getIconForCategory(String category) {
     switch (category) {
       case 'Walls':
-        return Icons.view_column;
+        return Icons.foundation;
       case 'Doors':
         return Icons.door_front_door;
       case 'Floors':
-        return Icons.layers;
+        return Icons.texture;
       case 'Finishes':
-        return Icons.format_paint;
+        return Icons.brush;
       case 'Roof':
         return Icons.roofing;
       default:
-        return Icons.home;
+        return Icons.business;
     }
+  }
+}
+
+class _FormCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  const _FormCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: NBROColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: NBROColors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: NBROColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
   }
 }

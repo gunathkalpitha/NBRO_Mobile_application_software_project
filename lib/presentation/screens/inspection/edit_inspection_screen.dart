@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
@@ -221,6 +222,94 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     );
     _roofCovering = widget.inspection.roofCovering;
     _buildingPhotoUrl = widget.inspection.buildingPhotoUrl;
+    _latitude = widget.inspection.latitude;
+    _longitude = widget.inspection.longitude;
+  }
+
+  // GPS Location
+  double? _latitude;
+  double? _longitude;
+  bool _isGettingLocation = false;
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isGettingLocation = true);
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please enable GPS location services on your device')),
+          );
+        }
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Location permission denied')),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location permission permanently denied in settings')),
+          );
+        }
+        return;
+      }
+
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 12),
+        );
+      } catch (e) {
+        debugPrint('[EditInspection] getCurrentPosition failed ($e), trying last known...');
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position != null) {
+        final pos = position;
+        setState(() {
+          _latitude = pos.latitude;
+          _longitude = pos.longitude;
+          _hasChanges = true;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Location updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to obtain GPS fix')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error getting location: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGettingLocation = false);
+    }
   }
 
   void _loadDefects() {
@@ -283,6 +372,8 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
         contactNo: _contactNoController.text.trim().isEmpty 
             ? null 
             : _contactNoController.text.trim(),
+        latitude: _latitude,
+        longitude: _longitude,
         remarks: _remarksController.text.trim().isEmpty 
             ? null 
             : _remarksController.text.trim(),
@@ -564,6 +655,43 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 16),
+
+          // GPS Location
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.my_location, color: NBROColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'GPS Location Coordinates',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  if (_latitude != null && _longitude != null) ...[
+                    Text('Latitude: ${_latitude!.toStringAsFixed(6)}°'),
+                    const SizedBox(height: 4),
+                    Text('Longitude: ${_longitude!.toStringAsFixed(6)}°'),
+                    const SizedBox(height: 12),
+                  ],
+                  ElevatedButton.icon(
+                    onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                    icon: _isGettingLocation
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.my_location),
+                    label: Text(_latitude != null ? 'Update GPS Coordinates' : 'Get GPS Coordinates'),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 16),
 

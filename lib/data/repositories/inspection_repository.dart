@@ -959,24 +959,18 @@ class InspectionRepository {
         ageOfStructure: _parseDouble(observation['approx_age'] ?? row['age_of_structure'])?.round(),
         typeOfStructure: (observation['type'] ?? row['type_of_structure']) as String?,
         presentCondition: (observation['present_condition'] ?? row['present_condition']) as String?,
-      hasPipeBorneWater: (services['pipe_born_water_supply'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          (row['has_pipe_borne_water'] as bool?) ??
-          false,
-        waterSource: (services['pipe_born_water_supply'] ?? row['water_source']) as String?,
-      hasElectricity: (services['electricity_source'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          (row['has_electricity'] as bool?) ??
-          false,
-        electricitySource: (services['electricity_source'] ?? row['electricity_source']) as String?,
-      hasSewageWaste: (services['sewage_waste'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          (row['has_sewage_waste'] as bool?) ??
-          false,
-        sewageType: (services['sewage_waste'] ?? row['sewage_type']) as String?,
+      hasPipeBorneWater: services['pipe_born_water_supply'] != null
+          ? !services['pipe_born_water_supply'].toString().toLowerCase().contains('not available')
+          : (row['has_pipe_borne_water'] as bool?) ?? false,
+      waterSource: (services['pipe_born_water_supply'] ?? row['water_source']) as String?,
+      hasElectricity: services['electricity_source'] != null
+          ? !services['electricity_source'].toString().toLowerCase().contains('not available')
+          : (row['has_electricity'] as bool?) ?? false,
+      electricitySource: (services['electricity_source'] ?? row['electricity_source']) as String?,
+      hasSewageWaste: services['sewage_waste'] != null
+          ? !services['sewage_waste'].toString().toLowerCase().contains('not available')
+          : (row['has_sewage_waste'] as bool?) ?? false,
+      sewageType: (services['sewage_waste'] ?? row['sewage_type']) as String?,
         numberOfFloors: (building['no_floors'] ?? row['number_of_floors']) as String?,
         wallMaterials: wallMaterials.isNotEmpty
           ? wallMaterials
