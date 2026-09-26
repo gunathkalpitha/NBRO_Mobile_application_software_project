@@ -91,100 +91,95 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: NBROColors.light,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [NBROColors.primary, NBROColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: NBROColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      appBar: AppBar(
+        toolbarHeight: 80,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [NBROColors.primary, NBROColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: AppBar(
-              toolbarHeight: 80,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leadingWidth: 48,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: NBROColors.white),
-                iconSize: 24,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  NavRailController.toggleVisibility();
+            boxShadow: [
+              BoxShadow(
+                color: NBROColors.primary.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+        ),
+        leadingWidth: 48,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: NBROColors.white),
+          iconSize: 24,
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            NavRailController.toggleVisibility();
+          },
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: NBROColors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Image.asset(
+                'assets/icons/pasted-image.png',
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.business,
+                    color: NBROColors.primary,
+                    size: 40,
+                  );
                 },
               ),
-              title: Row(
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: NBROColors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      'assets/icons/pasted-image.png',
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.business,
-                          color: NBROColors.primary,
-                          size: 40,
-                        );
-                      },
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isVerySmall = constraints.maxWidth < 250;
+                      return Text(
+                        isVerySmall ? 'NBRO' : 'National Building Research Organization',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: NBROColors.white,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isVerySmall = constraints.maxWidth < 250;
-                            return Text(
-                              isVerySmall ? 'NBRO' : 'National Building Research Organization',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: NBROColors.white,
-                                letterSpacing: 0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Admin Dashboard',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: NBROColors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Admin Dashboard',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: NBROColors.white,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
               ),
-              titleSpacing: 4,
             ),
-          ),
+          ],
         ),
+        titleSpacing: 4,
       ),
       body: _isLoading
           ? const Center(

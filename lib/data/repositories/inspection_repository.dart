@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:io';
 
 /// Repository for managing inspections in Supabase
@@ -79,51 +80,68 @@ class InspectionRepository {
   /// Get all inspections for the current user
   Future<List<Inspection>> getInspections() async {
     try {
-      final response = await _supabase
-          .from('site')
-          .select('''
-            site_id,
-            user_id,
-            owner_name,
-            owner_contact,
-            address,
-            building_ref,
-            distance_from_row,
-            location,
-            latitude,
-            longitude,
-            building_photo_url,
-            building_photo_path,
-            sync_status,
-            created_at,
-            updated_at,
-            general_observation(type, present_condition, approx_age),
-            external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(
-              no_floors,
-              specification(element_type, is_used)
-            ),
-            defects(
-              defect_id,
-              notation,
-              defect_category,
-              floor_level,
-              location_description,
-              length_mm,
-              width_mm,
-              photo_url,
-              photo_path,
-              remarks,
-              created_at
-            )
-          ''')
-          .order('created_at', ascending: false);
+      final profileMap = await _getProfileNamesMap();
+      dynamic response;
 
-      final inspections = (response as List)
-          .map((json) => _mapInspectionFromSiteRow(json as Map<String, dynamic>))
+      try {
+        response = await _supabase
+            .from('site')
+            .select('''
+              site_id,
+              user_id,
+              owner_name,
+              owner_contact,
+              address,
+              building_ref,
+              distance_from_row,
+              location,
+              latitude,
+              longitude,
+              building_photo_url,
+              building_photo_path,
+              sync_status,
+              created_at,
+              updated_at,
+              updated_by,
+              general_observation(type, present_condition, approx_age),
+              external_services(pipe_born_water_supply, sewage_waste, electricity_source),
+              main_building(
+                no_floors,
+                specification(element_type, is_used)
+              ),
+              defects(
+                defect_id,
+                notation,
+                defect_category,
+                floor_level,
+                location_description,
+                length_mm,
+                width_mm,
+                photo_url,
+                photo_path,
+                remarks,
+                created_at
+              )
+            ''')
+            .order('created_at', ascending: false);
+      } catch (e) {
+        debugPrint('[Repository] Query with sections failed ($e), falling back to non-join query...');
+        return _getInspectionsWithoutJoins();
+      }
+
+      final list = (response as List);
+      if (list.isEmpty) {
+        debugPrint('[Repository] Joined select returned 0 rows, checking fallback query...');
+        final fallback = await _getInspectionsWithoutJoins();
+        return fallback;
+      }
+
+      return list
+          .map((json) => _mapInspectionFromSiteRow(
+                json as Map<String, dynamic>,
+                profileMap: profileMap,
+              ))
           .toList();
-
-      return inspections;
     } catch (e) {
       throw Exception('Failed to get inspections: $e');
     }
@@ -132,94 +150,103 @@ class InspectionRepository {
   /// Get a single inspection with its defects
   Future<Inspection?> getInspection(String id) async {
     try {
-      var siteResponse = await _supabase
-          .from('site')
-          .select('''
-            site_id,
-            user_id,
-            owner_name,
-            owner_contact,
-            address,
-            building_ref,
-            distance_from_row,
-            location,
-            latitude,
-            longitude,
-            building_photo_url,
-            building_photo_path,
-            sync_status,
-            created_at,
-            updated_at,
-            general_observation(type, present_condition, approx_age),
-            external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(
-              no_floors,
-              specification(element_type, is_used)
-            ),
-            defects(
-              defect_id,
-              notation,
-              defect_category,
-              floor_level,
-              location_description,
-              length_mm,
-              width_mm,
-              photo_url,
-              photo_path,
-              remarks,
-              created_at
-            )
-          ''')
-          .eq('building_ref', id)
-          .maybeSingle();
+      final profileMap = await _getProfileNamesMap();
+      Map<String, dynamic>? siteResponse;
 
-      siteResponse ??= await _supabase
-          .from('site')
-          .select('''
-            site_id,
-            user_id,
-            owner_name,
-            owner_contact,
-            address,
-            building_ref,
-            distance_from_row,
-            location,
-            latitude,
-            longitude,
-            building_photo_url,
-            building_photo_path,
-            sync_status,
-            created_at,
-            updated_at,
-            general_observation(type, present_condition, approx_age),
-            external_services(pipe_born_water_supply, sewage_waste, electricity_source),
-            main_building(
-              no_floors,
-              specification(element_type, is_used)
-            ),
-            defects(
-              defect_id,
-              notation,
-              defect_category,
-              floor_level,
-              location_description,
-              length_mm,
-              width_mm,
-              photo_url,
-              photo_path,
-              remarks,
-              created_at
-            )
-          ''')
-          .eq('site_id', id)
-          .maybeSingle();
+      try {
+        siteResponse = await _supabase
+            .from('site')
+            .select('''
+              site_id,
+              user_id,
+              owner_name,
+              owner_contact,
+              address,
+              building_ref,
+              distance_from_row,
+              location,
+              latitude,
+              longitude,
+              building_photo_url,
+              building_photo_path,
+              sync_status,
+              created_at,
+              updated_at,
+              updated_by,
+              general_observation(type, present_condition, approx_age),
+              external_services(pipe_born_water_supply, sewage_waste, electricity_source),
+              main_building(
+                no_floors,
+                specification(element_type, is_used)
+              ),
+              defects(
+                defect_id,
+                notation,
+                defect_category,
+                floor_level,
+                location_description,
+                length_mm,
+                width_mm,
+                photo_url,
+                photo_path,
+                remarks,
+                created_at
+              )
+            ''')
+            .eq('building_ref', id)
+            .maybeSingle();
+
+        siteResponse ??= await _supabase
+            .from('site')
+            .select('''
+              site_id,
+              user_id,
+              owner_name,
+              owner_contact,
+              address,
+              building_ref,
+              distance_from_row,
+              location,
+              latitude,
+              longitude,
+              building_photo_url,
+              building_photo_path,
+              sync_status,
+              created_at,
+              updated_at,
+              updated_by,
+              general_observation(type, present_condition, approx_age),
+              external_services(pipe_born_water_supply, sewage_waste, electricity_source),
+              main_building(
+                no_floors,
+                specification(element_type, is_used)
+              ),
+              defects(
+                defect_id,
+                notation,
+                defect_category,
+                floor_level,
+                location_description,
+                length_mm,
+                width_mm,
+                photo_url,
+                photo_path,
+                remarks,
+                created_at
+              )
+            ''')
+            .eq('site_id', id)
+            .maybeSingle();
+      } catch (e) {
+        debugPrint('[Repository] Single query failed ($e), using fallback...');
+        siteResponse = await _getSingleInspectionWithoutJoins(id);
+      }
 
       if (siteResponse == null) {
         return null;
       }
 
-      final inspection = _mapInspectionFromSiteRow(siteResponse);
-      return inspection;
+      return _mapInspectionFromSiteRow(siteResponse, profileMap: profileMap);
     } catch (e) {
       throw Exception('Failed to get inspection: $e');
     }
@@ -641,12 +668,14 @@ class InspectionRepository {
     await _supabase.from('specification').delete().eq('building_id', buildingId);
 
     final rows = <Map<String, dynamic>>[];
+    const uuid = Uuid();
 
     void appendSelected(String scope, Map<String, bool>? materials) {
       if (materials == null || materials.isEmpty) return;
       materials.forEach((key, value) {
         if (value == true) {
           rows.add({
+            'spec_id': uuid.v4(),
             'building_id': buildingId,
             'is_used': true,
             'element_type': '$scope|$key',
@@ -659,6 +688,15 @@ class InspectionRepository {
     appendSelected('door', inspection.doorMaterials);
     appendSelected('floor', inspection.floorMaterials);
     appendSelected('roof', inspection.roofMaterials);
+
+    if (inspection.roofCovering != null && inspection.roofCovering!.trim().isNotEmpty) {
+      rows.add({
+        'spec_id': uuid.v4(),
+        'building_id': buildingId,
+        'is_used': true,
+        'element_type': 'roofcovering|${inspection.roofCovering!.trim()}',
+      });
+    }
 
     if (rows.isNotEmpty) {
       await _supabase.from('specification').insert(rows);
@@ -753,7 +791,89 @@ class InspectionRepository {
     return double.tryParse(match.group(0)!);
   }
 
-  Inspection _mapInspectionFromSiteRow(Map<String, dynamic> row) {
+
+
+  Future<List<Inspection>> _getInspectionsWithoutJoins() async {
+    final response = await _supabase
+        .from('site')
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
+        .order('created_at', ascending: false);
+
+    final rows = (response as List).cast<Map<String, dynamic>>();
+    final profileMap = await _getProfileNamesMap();
+    final inspections = <Inspection>[];
+
+    for (final row in rows) {
+      final withDefects = Map<String, dynamic>.from(row);
+      final siteId = row['site_id'] as String?;
+      final buildingRef = row['building_ref'] as String?;
+      withDefects['defects'] = await _fetchDefectsForSite(siteId, buildingRef);
+      inspections.add(_mapInspectionFromSiteRow(withDefects, profileMap: profileMap));
+    }
+
+    return inspections;
+  }
+
+  Future<Map<String, dynamic>?> _getSingleInspectionWithoutJoins(String id) async {
+    Map<String, dynamic>? row = await _supabase
+        .from('site')
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
+        .eq('building_ref', id)
+        .maybeSingle();
+
+    row ??= await _supabase
+        .from('site')
+        .select('*, general_observation(*), external_services(*), main_building(*, specification(*))')
+        .eq('site_id', id)
+        .maybeSingle();
+
+    if (row == null) return null;
+
+    final withDefects = Map<String, dynamic>.from(row);
+    withDefects['defects'] = await _fetchDefectsForSite(
+      row['site_id'] as String?,
+      row['building_ref'] as String?,
+    );
+    return withDefects;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchDefectsForSite(
+    String? siteId,
+    String? buildingRef,
+  ) async {
+    try {
+      if (siteId != null && siteId.isNotEmpty) {
+        final bySiteId = await _supabase
+            .from('defects')
+            .select('defect_id, notation, defect_category, floor_level, location_description, length_mm, width_mm, photo_url, photo_path, remarks, created_at')
+            .eq('site_id', siteId)
+            .order('created_at', ascending: true);
+        return (bySiteId as List).cast<Map<String, dynamic>>();
+      }
+    } on PostgrestException {
+      // Some schemas don't expose defects.site_id.
+    }
+
+    try {
+      if (buildingRef != null && buildingRef.isNotEmpty) {
+        final byBuildingRef = await _supabase
+            .from('defects')
+            .select('defect_id, notation, defect_category, floor_level, location_description, length_mm, width_mm, photo_url, photo_path, remarks, created_at')
+            .eq('building_reference_no', buildingRef)
+            .order('created_at', ascending: true);
+        return (byBuildingRef as List).cast<Map<String, dynamic>>();
+      }
+    } on PostgrestException {
+      // Some schemas don't expose building_reference_no.
+    }
+
+    return const [];
+  }
+
+  Inspection _mapInspectionFromSiteRow(
+    Map<String, dynamic> row, {
+    Map<String, String>? profileMap,
+  }) {
     final observationList = (row['general_observation'] as List?) ?? const [];
     final serviceList = (row['external_services'] as List?) ?? const [];
     final buildingList = (row['main_building'] as List?) ?? const [];
@@ -768,11 +888,25 @@ class InspectionRepository {
         ? buildingList.first as Map<String, dynamic>
         : const <String, dynamic>{};
 
+    final directWallMaterials = row['wall_materials'] is Map
+      ? Map<String, bool>.from(row['wall_materials'] as Map)
+      : <String, bool>{};
+    final directDoorMaterials = row['door_materials'] is Map
+      ? Map<String, bool>.from(row['door_materials'] as Map)
+      : <String, bool>{};
+    final directFloorMaterials = row['floor_materials'] is Map
+      ? Map<String, bool>.from(row['floor_materials'] as Map)
+      : <String, bool>{};
+    final directRoofMaterials = row['roof_materials'] is Map
+      ? Map<String, bool>.from(row['roof_materials'] as Map)
+      : <String, bool>{};
+
     final specs = (building['specification'] as List?) ?? const [];
     final wallMaterials = <String, bool>{};
     final doorMaterials = <String, bool>{};
     final floorMaterials = <String, bool>{};
     final roofMaterials = <String, bool>{};
+    String? roofCoveringSpec;
 
     for (final spec in specs) {
       final item = spec as Map<String, dynamic>;
@@ -798,6 +932,9 @@ class InspectionRepository {
         case 'roof':
           roofMaterials[key] = true;
           break;
+        case 'roofcovering':
+          roofCoveringSpec = key;
+          break;
       }
     }
 
@@ -819,29 +956,35 @@ class InspectionRepository {
       latitude: resolvedCoords.$1,
       longitude: resolvedCoords.$2,
       distanceFromRow: (row['distance_from_row'] as num?)?.toDouble(),
-      ageOfStructure: _parseDouble(observation['approx_age'])?.round(),
-      typeOfStructure: observation['type'] as String?,
-      presentCondition: observation['present_condition'] as String?,
-      hasPipeBorneWater: (services['pipe_born_water_supply'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          false,
-      waterSource: services['pipe_born_water_supply'] as String?,
-      hasElectricity: (services['electricity_source'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          false,
-      electricitySource: services['electricity_source'] as String?,
-      hasSewageWaste: (services['sewage_waste'] as String?)
-              ?.toLowerCase()
-              .contains('available') ??
-          false,
-      sewageType: services['sewage_waste'] as String?,
-      numberOfFloors: building['no_floors'] as String?,
-      wallMaterials: wallMaterials.isEmpty ? null : wallMaterials,
-      doorMaterials: doorMaterials.isEmpty ? null : doorMaterials,
-      floorMaterials: floorMaterials.isEmpty ? null : floorMaterials,
-      roofMaterials: roofMaterials.isEmpty ? null : roofMaterials,
+        ageOfStructure: _parseDouble(observation['approx_age'] ?? row['age_of_structure'])?.round(),
+        typeOfStructure: (observation['type'] ?? row['type_of_structure']) as String?,
+        presentCondition: (observation['present_condition'] ?? row['present_condition']) as String?,
+      hasPipeBorneWater: services['pipe_born_water_supply'] != null
+          ? !services['pipe_born_water_supply'].toString().toLowerCase().contains('not available')
+          : (row['has_pipe_borne_water'] as bool?) ?? false,
+      waterSource: (services['pipe_born_water_supply'] ?? row['water_source']) as String?,
+      hasElectricity: services['electricity_source'] != null
+          ? !services['electricity_source'].toString().toLowerCase().contains('not available')
+          : (row['has_electricity'] as bool?) ?? false,
+      electricitySource: (services['electricity_source'] ?? row['electricity_source']) as String?,
+      hasSewageWaste: services['sewage_waste'] != null
+          ? !services['sewage_waste'].toString().toLowerCase().contains('not available')
+          : (row['has_sewage_waste'] as bool?) ?? false,
+      sewageType: (services['sewage_waste'] ?? row['sewage_type']) as String?,
+        numberOfFloors: (building['no_floors'] ?? row['number_of_floors']) as String?,
+        wallMaterials: wallMaterials.isNotEmpty
+          ? wallMaterials
+          : (directWallMaterials.isEmpty ? null : directWallMaterials),
+        doorMaterials: doorMaterials.isNotEmpty
+          ? doorMaterials
+          : (directDoorMaterials.isEmpty ? null : directDoorMaterials),
+        floorMaterials: floorMaterials.isNotEmpty
+          ? floorMaterials
+          : (directFloorMaterials.isEmpty ? null : directFloorMaterials),
+        roofMaterials: roofMaterials.isNotEmpty
+          ? roofMaterials
+          : (directRoofMaterials.isEmpty ? null : directRoofMaterials),
+        roofCovering: roofCoveringSpec ?? (row['roof_covering'] as String?),
       defects: defects,
       syncStatus: SyncStatus.values.firstWhere(
         (e) => e.name == row['sync_status'],
@@ -853,10 +996,33 @@ class InspectionRepository {
       updatedAt: row['updated_at'] != null
           ? DateTime.parse(row['updated_at'] as String)
           : null,
-      createdBy: row['user_id'] as String?,
-      updatedBy: row['user_id'] as String?,
+      createdBy: (row['creator']?['full_name'] as String?) ??
+          profileMap?[row['user_id']] ??
+          (row['user_id'] as String?),
+      updatedBy: (row['updater']?['full_name'] as String?) ??
+          profileMap?[row['updated_by']] ??
+          profileMap?[row['user_id']] ??
+          (row['updated_by'] as String?) ??
+          (row['user_id'] as String?),
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
+  }
+
+  Future<Map<String, String>> _getProfileNamesMap() async {
+    try {
+      final response = await _supabase.from('profile').select('id, full_name');
+      final map = <String, String>{};
+      for (final item in (response as List)) {
+        final id = item['id'] as String?;
+        final name = item['full_name'] as String?;
+        if (id != null && name != null && name.isNotEmpty) {
+          map[id] = name;
+        }
+      }
+      return map;
+    } catch (e) {
+      return {};
+    }
   }
 
   Future<void> _persistSiteCoordinates(

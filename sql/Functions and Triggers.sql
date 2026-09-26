@@ -118,7 +118,9 @@ BEGIN
         distance_from_row,
         address,
         latitude,
-        longitude
+        longitude,
+        updated_by,
+        sections_status
     ) VALUES (
         p_user_id,
         p_owner_name,
@@ -127,16 +129,31 @@ BEGIN
         p_distance_from_row,
         p_address,
         p_latitude,
-        p_longitude
+        p_longitude,
+        p_user_id,
+        '{"general_observation": true, "external_services": true, "main_building": true, "ancillary_building": true, "defects": true}'::jsonb
     )
+    ON CONFLICT (building_ref) DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        owner_name = EXCLUDED.owner_name,
+        owner_contact = EXCLUDED.owner_contact,
+        distance_from_row = EXCLUDED.distance_from_row,
+        address = EXCLUDED.address,
+        latitude = EXCLUDED.latitude,
+        longitude = EXCLUDED.longitude,
+        updated_by = EXCLUDED.updated_by,
+        updated_at = NOW()
     RETURNING site_id INTO v_site_id;
 
+    DELETE FROM public.general_observation WHERE site_id = v_site_id;
     INSERT INTO public.general_observation (site_id, type, present_condition, approx_age)
     VALUES (v_site_id, p_type, p_present_condition, p_approx_age);
 
+    DELETE FROM public.external_services WHERE site_id = v_site_id;
     INSERT INTO public.external_services (site_id, pipe_born_water_supply, sewage_waste, electricity_source)
     VALUES (v_site_id, p_pipe_born_water, p_sewage_waste, p_electricity_source);
 
+    DELETE FROM public.main_building WHERE site_id = v_site_id;
     INSERT INTO public.main_building (site_id, no_floors)
     VALUES (v_site_id, p_no_floors);
 
@@ -168,7 +185,8 @@ BEGIN
     END IF;
 
     INSERT INTO public.defects (
-        site_id, 
+        defect_id,
+        site_id,
         notation, 
         defect_category, 
         floor_level, 
@@ -180,7 +198,8 @@ BEGIN
         photo_path
     )
     VALUES (
-        p_site_id, 
+        gen_random_uuid(),
+        p_site_id,
         p_notation, 
         p_defect_category, 
         p_floor_level, 
@@ -192,6 +211,17 @@ BEGIN
         p_image_path
     )
     RETURNING defect_id INTO v_defect_id;
+
+    -- Also insert into defect_info for compatibility
+    INSERT INTO public.defect_info (info_id, defect_id, remarks, length, width)
+    VALUES (gen_random_uuid(), v_defect_id, p_remarks, p_length_mm::text, p_width_mm::text)
+    RETURNING info_id INTO v_info_id;
+
+    -- Also insert into defect_image if URL/Path provided
+    IF p_image_url IS NOT NULL OR p_image_path IS NOT NULL THEN
+        INSERT INTO public.defect_image (image_id, info_id, image_url, image_path)
+        VALUES (gen_random_uuid(), v_info_id, p_image_url, p_image_path);
+    END IF;
 
     RETURN v_defect_id;
 EXCEPTION WHEN OTHERS THEN

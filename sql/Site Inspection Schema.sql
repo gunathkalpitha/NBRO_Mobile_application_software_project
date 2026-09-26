@@ -1,19 +1,25 @@
+-- NBRO schema (no FOREIGN KEY constraints)
+-- Run this in Supabase SQL Editor after taking a backup.
+
+-- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis;
 
-CREATE TABLE IF NOT EXISTS profile(
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+-- Profile table (no FK to auth.users here)
+CREATE TABLE IF NOT EXISTS profile (
+  id UUID PRIMARY KEY,
   full_name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'officer' CHECK (role IN ('admin', 'officer')),
   is_active BOOLEAN DEFAULT true,
   must_change_password BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS site(
-  site_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES profile(id) ON DELETE RESTRICT,
+-- Site table (no FK to profile)
+CREATE TABLE IF NOT EXISTS site (
+  site_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
   owner_name TEXT,
   owner_contact TEXT,
   location GEOGRAPHY(POINT, 4326),
@@ -27,108 +33,153 @@ CREATE TABLE IF NOT EXISTS site(
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   sections_status JSONB DEFAULT '{"general_observation": false, "external_services": false, "main_building": false, "ancillary_building": false, "defects": false}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID,
+  CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id),
+  CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id)
 );
 
-CREATE TABLE IF NOT EXISTS general_observation(
-  observation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE RESTRICT,
+-- General observation (no FK constraint)
+CREATE TABLE IF NOT EXISTS general_observation (
+  observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL,
   type TEXT,
   present_condition TEXT,
   approx_age TEXT,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS external_services(
-  service_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE RESTRICT,
+-- External services (no FK)
+CREATE TABLE IF NOT EXISTS external_services (
+  service_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL,
   pipe_born_water_supply TEXT,
   sewage_waste TEXT,
   electricity_source TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS ancillary_building(
-  structure_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE RESTRICT,
+-- Ancillary building (no FK)
+CREATE TABLE IF NOT EXISTS ancillary_building (
+  structure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL,
   building_type TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS detail_type(
-  detail_type_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  structure_id UUID NOT NULL REFERENCES ancillary_building(structure_id) ON DELETE CASCADE,
+-- Detail type (no FK)
+CREATE TABLE IF NOT EXISTS detail_type (
+  detail_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  structure_id UUID NOT NULL,
   name TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS building_detail(
-  building_detail_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  detail_type_id UUID NOT NULL REFERENCES detail_type(detail_type_id) ON DELETE CASCADE,
-  
+-- Building detail (no FK)
+CREATE TABLE IF NOT EXISTS building_detail (
+  building_detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  detail_type_id UUID NOT NULL,
   front BOOLEAN DEFAULT FALSE,
   left_side BOOLEAN DEFAULT FALSE,
   right_side BOOLEAN DEFAULT FALSE,
   rear BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE IF NOT EXISTS main_building(
-  building_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE RESTRICT,
+-- Main building (no FK)
+CREATE TABLE IF NOT EXISTS main_building (
+  building_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID NOT NULL,
   no_floors TEXT,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS specification(
-  spec_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  building_id UUID REFERENCES main_building(building_id) ON DELETE CASCADE,
+-- Specification (no FK)
+CREATE TABLE IF NOT EXISTS specification (
+  spec_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  building_id UUID,
   is_used BOOLEAN,
   element_type TEXT,
   element_properties JSONB,
   floor_details JSONB
 );
 
-CREATE TABLE IF NOT EXISTS defects(
-  defect_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  site_id UUID NOT NULL REFERENCES site(site_id) ON DELETE CASCADE,
-  notation TEXT NOT NULL CHECK (
-    notation IN (
-      'C', 'BC', 'CC', 'FC', 'SC', 'TC', 'SP', 
-      'D', 'WD', 'BD', 'CD', 'FD', 'DD', 'TD', 'GD', 'PD', 'RD', 'DP',
-      'BWC', 'BWS', 'BWD', 'BWDP'
-    )
-  ),
-  defect_category TEXT NOT NULL CHECK (
-    defect_category IN ('buildingFloor', 'boundaryWall')
-  ),
-  floor_level TEXT,
-  location_description TEXT,
-  length_mm DOUBLE PRECISION NOT NULL CHECK (length_mm > 0),
-  width_mm DOUBLE PRECISION CHECK (width_mm IS NULL OR width_mm > 0),
-  photo_path TEXT,
-  photo_url TEXT,
-  remarks TEXT,
+-- Defects (no FK)
+CREATE TABLE IF NOT EXISTS defects (
+  defect_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id UUID,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW() 
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS defect_info(
-  info_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  defect_id UUID REFERENCES defects(defect_id) ON DELETE CASCADE,
+-- Add missing columns to defects table
+ALTER TABLE IF EXISTS defects
+ADD COLUMN IF NOT EXISTS notation TEXT,
+ADD COLUMN IF NOT EXISTS defect_category TEXT,
+ADD COLUMN IF NOT EXISTS floor_level TEXT,
+ADD COLUMN IF NOT EXISTS location_description TEXT,
+ADD COLUMN IF NOT EXISTS length_mm NUMERIC,
+ADD COLUMN IF NOT EXISTS width_mm NUMERIC,
+ADD COLUMN IF NOT EXISTS photo_path TEXT,
+ADD COLUMN IF NOT EXISTS photo_url TEXT,
+ADD COLUMN IF NOT EXISTS remarks TEXT;
+
+-- Ensure missing columns exist in site table
+ALTER TABLE IF EXISTS site
+ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326),
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS building_photo_url TEXT,
+ADD COLUMN IF NOT EXISTS building_photo_path TEXT,
+ADD COLUMN IF NOT EXISTS sections_status JSONB DEFAULT '{"general_observation": false, "external_services": false, "main_building": false, "ancillary_building": false, "defects": false}'::jsonb,
+ADD COLUMN IF NOT EXISTS updated_by UUID;
+
+-- Ensure all tables have UUID defaults and Foreign Keys for Supabase joins
+ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
+ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
+ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
+ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
+ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
+ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+-- Defect info (no FK)
+CREATE TABLE IF NOT EXISTS defect_info (
+  info_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  defect_id UUID,
   remarks TEXT,
   length TEXT,
   width TEXT
 );
 
-CREATE TABLE IF NOT EXISTS defect_image(
-  image_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  info_id UUID REFERENCES defect_info(info_id) ON DELETE CASCADE,
+-- Defect image (no FK)
+CREATE TABLE IF NOT EXISTS defect_image (
+  image_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  info_id UUID,
   image_url TEXT,
   image_path TEXT,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'synced', 'error')),
@@ -136,33 +187,52 @@ CREATE TABLE IF NOT EXISTS defect_image(
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_site_id ON site(user_id);
-CREATE INDEX IF NOT EXISTS idx_general_observation_id ON general_observation(site_id);
-CREATE INDEX IF NOT EXISTS idx_external_services_id ON external_services(site_id);
-CREATE INDEX IF NOT EXISTS idx_ancillary_building_id ON ancillary_building(site_id);
-CREATE INDEX IF NOT EXISTS idx_details_type_id ON detail_type(structure_id);
-CREATE INDEX IF NOT EXISTS idx_building_details_details_id ON building_detail(detail_type_id);
-CREATE INDEX IF NOT EXISTS idx_main_building ON main_building(site_id);
-CREATE INDEX IF NOT EXISTS idx_specification ON specification(building_id);
-CREATE INDEX IF NOT EXISTS idx_defects ON defects(site_id);
-CREATE INDEX IF NOT EXISTS idx_defect_info ON defect_info(defect_id);
-CREATE INDEX IF NOT EXISTS idx_defect_image ON defect_image(info_id);
+-- Optional legacy tables (if you have defect_media)
+CREATE TABLE IF NOT EXISTS defect_media (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  defect_id UUID,
+  building_reference_no TEXT,
+  storage_path TEXT NOT NULL,
+  storage_url TEXT,
+  file_name TEXT NOT NULL,
+  file_size INTEGER,
+  mime_type TEXT DEFAULT 'image/jpeg',
+  width_px INTEGER,
+  height_px INTEGER,
+  has_annotations BOOLEAN DEFAULT FALSE,
+  annotation_data JSONB,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  uploaded_by UUID
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_site_user_id ON site(user_id);
+CREATE INDEX IF NOT EXISTS idx_general_observation_site_id ON general_observation(site_id);
+CREATE INDEX IF NOT EXISTS idx_external_services_site_id ON external_services(site_id);
+CREATE INDEX IF NOT EXISTS idx_ancillary_building_site_id ON ancillary_building(site_id);
+CREATE INDEX IF NOT EXISTS idx_detail_type_structure_id ON detail_type(structure_id);
+CREATE INDEX IF NOT EXISTS idx_building_detail_type_id ON building_detail(detail_type_id);
+CREATE INDEX IF NOT EXISTS idx_main_building_site_id ON main_building(site_id);
+CREATE INDEX IF NOT EXISTS idx_specification_building_id ON specification(building_id);
+CREATE INDEX IF NOT EXISTS idx_defects_site_id ON defects(site_id);
+CREATE INDEX IF NOT EXISTS idx_defect_info_defect_id ON defect_info(defect_id);
+CREATE INDEX IF NOT EXISTS idx_defect_image_info_id ON defect_image(info_id);
 CREATE INDEX IF NOT EXISTS idx_site_sync_status ON site(sync_status);
 CREATE INDEX IF NOT EXISTS idx_site_building_ref ON site(building_ref);
 CREATE INDEX IF NOT EXISTS idx_profile_role ON profile(role);
 CREATE INDEX IF NOT EXISTS idx_profile_is_active ON profile(is_active);
 CREATE INDEX IF NOT EXISTS idx_profile_must_change_password ON profile(must_change_password) WHERE must_change_password = true;
 
-
-
+-- Update timestamp trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-   NEW.updated_at = NOW();
-   RETURN NEW;
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
+-- Attach triggers to tables
 DROP TRIGGER IF EXISTS update_site_updated_at ON site;
 CREATE TRIGGER update_site_updated_at
 BEFORE UPDATE ON site
@@ -196,13 +266,13 @@ EXECUTE FUNCTION update_updated_at_column();
 DROP TRIGGER IF EXISTS update_main_building_at ON main_building;
 CREATE TRIGGER update_main_building_at
 BEFORE UPDATE ON main_building
-FOR EACH ROW 
+FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_defects_at ON defects;
 CREATE TRIGGER update_defects_at
 BEFORE UPDATE ON defects
-FOR EACH ROW 
+FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_defect_image_at ON defect_image;
@@ -212,36 +282,78 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- Fix Foreign Key Constraints for Cascade Delete
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- Allows authenticated users (Officers & Admins) to READ and MANAGE ALL inspections
 -- ============================================================================
--- Drop existing constraints that use ON DELETE RESTRICT
-ALTER TABLE general_observation DROP CONSTRAINT IF EXISTS general_observation_site_id_fkey;
-ALTER TABLE external_services DROP CONSTRAINT IF EXISTS external_services_site_id_fkey;
-ALTER TABLE ancillary_building DROP CONSTRAINT IF EXISTS ancillary_building_site_id_fkey;
-ALTER TABLE main_building DROP CONSTRAINT IF EXISTS main_building_site_id_fkey;
+ALTER TABLE public.site ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.general_observation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.external_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.main_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ancillary_building ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.detail_type ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.building_detail ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.specification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_info ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_image ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.defect_media ENABLE ROW LEVEL SECURITY;
 
--- Add new constraints with ON DELETE CASCADE
-ALTER TABLE general_observation 
-ADD CONSTRAINT general_observation_site_id_fkey 
-FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+-- Drop old policies to prevent conflicts
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow update for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow delete for authenticated users" ON public.site;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.site;
 
-ALTER TABLE external_services 
-ADD CONSTRAINT external_services_site_id_fkey 
-FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.profile;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.profile;
 
-ALTER TABLE ancillary_building 
-ADD CONSTRAINT ancillary_building_site_id_fkey 
-FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.general_observation;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.general_observation;
 
-ALTER TABLE main_building 
-ADD CONSTRAINT main_building_site_id_fkey 
-FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.external_services;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.external_services;
 
-ALTER TABLE defects DROP CONSTRAINT IF EXISTS defects_site_id_fkey;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.main_building;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.main_building;
 
-ALTER TABLE defects
-ADD CONSTRAINT defects_site_id_fkey
-FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.ancillary_building;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.ancillary_building;
 
-ALTER TABLE site
-ADD COLUMN IF NOT EXISTS location geography(POINT, 4326);
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.detail_type;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.detail_type;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.building_detail;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.building_detail;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.specification;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.specification;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defects;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defects;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_info;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_info;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_image;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_image;
+
+DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_media;
+DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_media;
+
+-- Create ALL-ACCESS FOR ALL policies (SELECT, INSERT, UPDATE, DELETE)
+CREATE POLICY "Allow all for authenticated users" ON public.site FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.profile FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.general_observation FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.external_services FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.main_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.ancillary_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.detail_type FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.building_detail FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.specification FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defect_info FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defect_image FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for authenticated users" ON public.defect_media FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+

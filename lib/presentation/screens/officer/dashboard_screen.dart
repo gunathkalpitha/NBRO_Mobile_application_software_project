@@ -67,150 +67,145 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: NBROColors.light,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [NBROColors.primary, NBROColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: NBROColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      appBar: AppBar(
+        toolbarHeight: 80,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [NBROColors.primary, NBROColors.primaryDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: AppBar(
-              toolbarHeight: 80,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leadingWidth: 48,
-              leading: IconButton(
-                icon: const Icon(Icons.menu, color: NBROColors.white),
-                iconSize: 24,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  NavRailController.toggleVisibility();
+            boxShadow: [
+              BoxShadow(
+                color: NBROColors.primary.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+        ),
+        leadingWidth: 48,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: NBROColors.white),
+          iconSize: 24,
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            NavRailController.toggleVisibility();
+          },
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: NBROColors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Image.asset(
+                'assets/icons/pasted-image.png',
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.business,
+                    color: NBROColors.primary,
+                    size: 40,
+                  );
                 },
               ),
-              title: Row(
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: NBROColors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      'assets/icons/pasted-image.png',
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.business,
-                          color: NBROColors.primary,
-                          size: 40,
-                        );
-                      },
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isVerySmall = constraints.maxWidth < 250;
+                      return Text(
+                        isVerySmall ? 'NBRO' : 'National Building Research Organization',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: NBROColors.white,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isVerySmall = constraints.maxWidth < 250;
-                            return Text(
-                              isVerySmall ? 'NBRO' : 'National Building Research Organization',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: NBROColors.white,
-                                letterSpacing: 0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Dashboard',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: NBROColors.white,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Dashboard',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: NBROColors.white,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
               ),
-              titleSpacing: 4,
-              actions: [
-                // Online/Offline indicator
-                Tooltip(
-                  message: 'Online',
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(
-                      Icons.cloud_done,
-                      color: NBROColors.success,
-                      size: 24,
+            ),
+          ],
+        ),
+        titleSpacing: 4,
+        actions: [
+          // Online/Offline indicator
+          Tooltip(
+            message: 'Online',
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: const Icon(
+                Icons.cloud_done,
+                color: NBROColors.success,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Notification Bell
+          Tooltip(
+            message: 'Notifications',
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
+                  iconSize: 24,
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const NoticeScreen(),
+                      ),
+                    );
+                    _loadNoticeSummary();
+                  },
+                ),
+                if (_unreadNoticeCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: NBROColors.error,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // Notification Bell
-                Tooltip(
-                  message: 'Notifications',
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
-                        iconSize: 24,
-                        onPressed: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const NoticeScreen(),
-                            ),
-                          );
-                          _loadNoticeSummary();
-                        },
-                      ),
-                      if (_unreadNoticeCount > 0)
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: NBROColors.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: 12),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -318,96 +313,104 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _ModernStatCard(
-                                label: 'Total Sites',
-                                value: state.inspections.length.toString(),
-                                icon: Icons.location_on,
-                                color: NBROColors.primary,
-                                gradient: const LinearGradient(
-                                  colors: [NBROColors.primary, NBROColors.primaryLight],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                description: 'Tap to view on map',
-                                onTap: () async {
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (context) => const Center(
-                                      child: Card(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(20),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              CircularProgressIndicator(
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  NBROColors.primary,
-                                                ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final cardWidth = (constraints.maxWidth - 24) / 3;
+                            return Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                SizedBox(
+                                  width: cardWidth,
+                                  child: _ModernStatCard(
+                                    label: 'Total Sites',
+                                    value: state.inspections.length.toString(),
+                                    icon: Icons.location_on,
+                                    color: NBROColors.primary,
+                                    gradient: const LinearGradient(
+                                      colors: [NBROColors.primary, NBROColors.primaryLight],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    description: 'Tap to view on map',
+                                    onTap: () async {
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => const Center(
+                                          child: Card(
+                                            child: Padding(
+                                              padding: EdgeInsets.all(20),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  CircularProgressIndicator(
+                                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                                      NBROColors.primary,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 12),
+                                                  Text('Loading sites...'),
+                                                ],
                                               ),
-                                              SizedBox(height: 12),
-                                              Text('Loading sites...'),
-                                            ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  );
+                                      );
 
-                                  if (!mounted) return;
-                                  Navigator.of(context).pop();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => InspectionMapScreen(
-                                        inspections: state.inspections,
-                                      ),
+                                      if (!mounted) return;
+                                      Navigator.of(context).pop();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => InspectionMapScreen(
+                                            inspections: state.inspections,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: cardWidth,
+                                  child: _ModernStatCard(
+                                    label: 'Pending',
+                                    value: state.pendingCount.toString(),
+                                    icon: Icons.pending_actions,
+                                    color: NBROColors.primary,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        NBROColors.primary.withValues(alpha: 0.9),
+                                        NBROColors.primaryLight.withValues(alpha: 0.8),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _ModernStatCard(
-                                label: 'Pending',
-                                value: state.pendingCount.toString(),
-                                icon: Icons.pending_actions,
-                                color: NBROColors.primary,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    NBROColors.primary.withValues(alpha: 0.9),
-                                    NBROColors.primaryLight.withValues(alpha: 0.8),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                                    description: 'Awaiting for action',
+                                  ),
                                 ),
-                                description: 'Awaiting action',
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _ModernStatCard(
-                                label: 'Synced',
-                                value: (state.inspections.length - state.pendingCount)
-                                    .toString(),
-                                icon: Icons.check_circle,
-                                color: NBROColors.primary,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    NBROColors.primary.withValues(alpha: 0.85),
-                                    NBROColors.primaryLight.withValues(alpha: 0.75),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                                SizedBox(
+                                  width: cardWidth,
+                                  child: _ModernStatCard(
+                                    label: 'Synced',
+                                    value: (state.inspections.length - state.pendingCount)
+                                        .toString(),
+                                    icon: Icons.check_circle,
+                                    color: NBROColors.primary,
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        NBROColors.primary.withValues(alpha: 0.85),
+                                        NBROColors.primaryLight.withValues(alpha: 0.75),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    description: 'Uploaded to cloud',
+                                  ),
                                 ),
-                                description: 'Uploaded to cloud',
-                              ),
-                            ),
-                          ],
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -515,57 +518,61 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     // Inspections List or Empty State
                     if (state.inspections.isEmpty)
                       SliverFillRemaining(
+                        hasScrollBody: false,
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: NBROColors.grey.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 80,
-                                  color: NBROColors.grey.withValues(alpha: 0.5),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                'No inspections yet',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: NBROColors.darkGrey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Start by creating your first inspection',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: NBROColors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const SiteInspectionWizard(),
-                                    ),
-                                  );
-                                  _loadDrafts(); // Refresh drafts after returning
-                                },
-                                icon: const Icon(Icons.add),
-                                label: const Text('New Inspection'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(32),
+                                  decoration: BoxDecoration(
+                                    color: NBROColors.grey.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 80,
+                                    color: NBROColors.grey.withValues(alpha: 0.5),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 24),
+                                Text(
+                                  'No inspections yet',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: NBROColors.darkGrey,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Start by creating your first inspection',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: NBROColors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                ElevatedButton.icon(
+                                  onPressed: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const SiteInspectionWizard(),
+                                      ),
+                                    );
+                                    _loadDrafts(); // Refresh drafts after returning
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('New Inspection'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 32,
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       )
