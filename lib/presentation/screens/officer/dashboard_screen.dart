@@ -12,6 +12,7 @@ import '../inspection/inspection_detail_screen.dart';
 import '../inspection/inspection_map_screen.dart';
 import 'notice_screen.dart';
 import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
+import 'package:nbro_mobile_application/presentation/widgets/sync_status_badge.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(NavItem)? onNavItemSelected;
@@ -157,19 +158,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ),
         titleSpacing: 4,
         actions: [
-          // Online/Offline indicator
-          Tooltip(
-            message: 'Online',
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: const Icon(
-                Icons.cloud_done,
-                color: NBROColors.success,
-                size: 24,
-              ),
+          // Compact Cloud Status Icon
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: SyncStatusBadge(),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           // Notification Bell
           Tooltip(
             message: 'Notifications',

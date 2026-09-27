@@ -9,6 +9,7 @@ import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart'
 import 'package:nbro_mobile_application/presentation/widgets/defect_capture_card.dart';
 import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
 import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/core/network/connectivity_service.dart';
 import 'package:uuid/uuid.dart';
 
 /// Professional Slide-by-Slide Pre-Crack Survey Wizard (Site Inspection)
@@ -349,6 +350,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
 
     final messenger = ScaffoldMessenger.of(context);
     final bloc = context.read<InspectionBloc>();
+    final isOnline = await ConnectivityService.instance.checkActualConnectivity();
+    if (!mounted) return;
 
     // Show professional uploading loading dialog
     BuildContext? loadingCtx;
@@ -369,19 +372,21 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   strokeWidth: 3,
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Uploading Inspection Data...',
-                  style: TextStyle(
+                Text(
+                  isOnline ? 'Uploading Inspection Data...' : 'Saving Inspection Offline...',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: NBROColors.black,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Saving site details, photos & specifications to database',
+                Text(
+                  isOnline
+                      ? 'Saving site details, photos & specifications to database'
+                      : 'Saving report to local storage. Will sync when online.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: NBROColors.grey),
+                  style: const TextStyle(fontSize: 12, color: NBROColors.grey),
                 ),
               ],
             ),
