@@ -110,40 +110,57 @@ RETURNS UUID AS $$
 DECLARE
     v_site_id UUID;
 BEGIN
-    INSERT INTO public.site (
-        user_id,
-        owner_name,
-        owner_contact,
-        building_ref,
-        distance_from_row,
-        address,
-        latitude,
-        longitude,
-        updated_by,
-        sections_status
-    ) VALUES (
-        p_user_id,
-        p_owner_name,
-        p_owner_contact,
-        p_building_ref,
-        p_distance_from_row,
-        p_address,
-        p_latitude,
-        p_longitude,
-        p_user_id,
-        '{"general_observation": true, "external_services": true, "main_building": true, "ancillary_building": true, "defects": true}'::jsonb
-    )
-    ON CONFLICT (building_ref) DO UPDATE SET
-        user_id = EXCLUDED.user_id,
-        owner_name = EXCLUDED.owner_name,
-        owner_contact = EXCLUDED.owner_contact,
-        distance_from_row = EXCLUDED.distance_from_row,
-        address = EXCLUDED.address,
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude,
-        updated_by = EXCLUDED.updated_by,
-        updated_at = NOW()
-    RETURNING site_id INTO v_site_id;
+    -- Ensure unique constraint exists if needed
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'site_building_ref_key') THEN
+        BEGIN
+            ALTER TABLE public.site ADD CONSTRAINT site_building_ref_key UNIQUE (building_ref);
+        EXCEPTION WHEN OTHERS THEN
+            -- Ignore if constraint exists under different name
+        END;
+    END IF;
+
+    -- Lookup existing site by building_ref or Insert
+    SELECT site_id INTO v_site_id FROM public.site WHERE building_ref = p_building_ref LIMIT 1;
+
+    IF v_site_id IS NOT NULL THEN
+        UPDATE public.site SET
+            user_id = p_user_id,
+            owner_name = p_owner_name,
+            owner_contact = p_owner_contact,
+            distance_from_row = p_distance_from_row,
+            address = p_address,
+            latitude = p_latitude,
+            longitude = p_longitude,
+            updated_by = p_user_id,
+            updated_at = NOW(),
+            sections_status = '{"general_observation": true, "external_services": true, "main_building": true, "ancillary_building": true, "defects": true}'::jsonb
+        WHERE site_id = v_site_id;
+    ELSE
+        INSERT INTO public.site (
+            user_id,
+            owner_name,
+            owner_contact,
+            building_ref,
+            distance_from_row,
+            address,
+            latitude,
+            longitude,
+            updated_by,
+            sections_status
+        ) VALUES (
+            p_user_id,
+            p_owner_name,
+            p_owner_contact,
+            p_building_ref,
+            p_distance_from_row,
+            p_address,
+            p_latitude,
+            p_longitude,
+            p_user_id,
+            '{"general_observation": true, "external_services": true, "main_building": true, "ancillary_building": true, "defects": true}'::jsonb
+        )
+        RETURNING site_id INTO v_site_id;
+    END IF;
 
     DELETE FROM public.general_observation WHERE site_id = v_site_id;
     INSERT INTO public.general_observation (site_id, type, present_condition, approx_age)

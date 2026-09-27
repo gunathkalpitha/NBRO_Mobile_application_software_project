@@ -141,6 +141,9 @@ ADD COLUMN IF NOT EXISTS updated_by UUID;
 
 -- Ensure all tables have UUID defaults and Foreign Keys for Supabase joins
 ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS site_building_ref_key;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT site_building_ref_key UNIQUE (building_ref);
+
 ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
 ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
 

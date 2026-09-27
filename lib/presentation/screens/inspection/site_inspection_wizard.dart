@@ -8,6 +8,8 @@ import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
 import 'package:nbro_mobile_application/presentation/widgets/defect_capture_card.dart';
 import 'package:nbro_mobile_application/data/services/draft_storage_service.dart';
+import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/core/network/connectivity_service.dart';
 import 'package:uuid/uuid.dart';
 
 /// Professional Slide-by-Slide Pre-Crack Survey Wizard (Site Inspection)
@@ -277,17 +279,26 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
   }
 
   Future<void> _completeInspection() async {
-    if (_ownerNameController.text.trim().isEmpty) {
+    final ownerName = _ownerNameController.text.trim();
+    final address = _addressController.text.trim();
+
+    if (ownerName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter owner name')),
+        const SnackBar(
+          content: Text('Please enter owner name'),
+          backgroundColor: NBROColors.warning,
+        ),
       );
       _goToStep(0);
       return;
     }
 
-    if (_addressController.text.trim().isEmpty) {
+    if (address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter site address')),
+        const SnackBar(
+          content: Text('Please enter site address'),
+          backgroundColor: NBROColors.warning,
+        ),
       );
       _goToStep(0);
       return;
@@ -311,8 +322,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
 
     final inspection = Inspection(
       id: inspectionId,
-      ownerName: _ownerNameController.text.trim(),
-      siteAddress: _addressController.text.trim(),
+      ownerName: ownerName,
+      siteAddress: address,
       contactNo: _contactController.text.trim().isEmpty ? null : _contactController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
@@ -337,25 +348,192 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       createdAt: DateTime.now(),
     );
 
-    context.read<InspectionBloc>().add(CreateInspectionEvent(
-          inspection: inspection,
-          buildingPhotoPath: _buildingPhotoPath,
-        ));
-
-    if (_currentDraftId != null) {
-      await _draftService.deleteDraft(_currentDraftId!);
-    }
-
+    final messenger = ScaffoldMessenger.of(context);
+    final bloc = context.read<InspectionBloc>();
+    final isOnline = await ConnectivityService.instance.checkActualConnectivity();
     if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✓ Inspection saved successfully'),
-        backgroundColor: NBROColors.success,
-      ),
+
+    // Show professional uploading loading dialog
+    BuildContext? loadingCtx;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        loadingCtx = ctx;
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(NBROColors.primary),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  isOnline ? 'Uploading Inspection Data...' : 'Saving Inspection Offline...',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: NBROColors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isOnline
+                      ? 'Saving site details, photos & specifications to database'
+                      : 'Saving report to local storage. Will sync when online.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: NBROColors.grey),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
 
-    Navigator.of(context).pop();
+    try {
+      final repository = InspectionRepository();
+      await repository.createInspection(
+        inspection,
+        buildingPhotoPath: _buildingPhotoPath,
+      );
+
+      // Clean up draft if exists
+      if (_currentDraftId != null) {
+        await _draftService.deleteDraft(_currentDraftId!);
+      }
+
+      // Refresh BLoC state
+      bloc.add(const LoadInspectionsEvent());
+
+      // Dismiss loading dialog
+      if (loadingCtx != null && loadingCtx!.mounted) {
+        Navigator.pop(loadingCtx!);
+      }
+
+      if (!mounted) return;
+
+      // Show success modal with green checkmark
+      await _showSuccessModal(context, inspectionId, ownerName);
+    } catch (e) {
+      // Dismiss loading dialog
+      if (loadingCtx != null && loadingCtx!.mounted) {
+        Navigator.pop(loadingCtx!);
+      }
+
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to complete inspection: $e'),
+          backgroundColor: NBROColors.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showSuccessModal(
+    BuildContext context,
+    String refNo,
+    String ownerName,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: NBROColors.success.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: NBROColors.success,
+                  size: 56,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Uploaded Successfully!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'The inspection survey report has been saved to the database.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: NBROColors.grey),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Building Ref:', style: TextStyle(fontSize: 12, color: NBROColors.grey)),
+                        Text(refNo, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.primary)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Owner:', style: TextStyle(fontSize: 12, color: NBROColors.grey)),
+                        Text(ownerName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.black)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop(); // Close modal
+                    Navigator.of(context).pop(); // Exit wizard back to Dashboard
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: NBROColors.primary,
+                    foregroundColor: NBROColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _saveDraft() async {

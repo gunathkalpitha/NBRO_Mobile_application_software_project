@@ -15,6 +15,7 @@ import '../admin/officers_screen.dart';
 import '../admin/inspections_management_screen.dart';
 import '../admin/admin_notices_screen.dart';
 import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
+import 'package:nbro_mobile_application/core/sync/sync_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,10 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     debugPrint('[HomeScreen] initState called');
     _checkUserRole();
-    // Dispatch load event immediately
+    // Dispatch load event immediately & trigger offline sync
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('[HomeScreen] PostFrameCallback - Dispatching LoadInspectionsEvent');
+      debugPrint('[HomeScreen] PostFrameCallback - Dispatching LoadInspectionsEvent & SyncService');
       context.read<InspectionBloc>().add(const LoadInspectionsEvent());
+      SyncService.instance.triggerSync();
     });
   }
 
