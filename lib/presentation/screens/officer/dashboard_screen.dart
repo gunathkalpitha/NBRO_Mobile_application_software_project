@@ -279,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'CREATE',
                                 icon: Icons.assignment_add,
                                 bgAsset: 'assets/images/bg_new_inspection.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () async {
                                   await Navigator.push(
                                     context,
@@ -297,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'RECENT (5)',
                                 icon: Icons.fact_check_outlined,
                                 bgAsset: 'assets/images/bg_inspections.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -316,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'GOOGLE MAP',
                                 icon: Icons.map_outlined,
                                 bgAsset: 'assets/images/bg_map.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   if (state is InspectionLoaded) {
                                     Navigator.push(
@@ -337,7 +337,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'CHARTS',
                                 icon: Icons.analytics_outlined,
                                 bgAsset: 'assets/images/bg_analytics.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -354,7 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'PDF EXPORT',
                                 icon: Icons.assessment_outlined,
                                 bgAsset: 'assets/images/bg_reports.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -371,7 +371,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'BULLETINS',
                                 icon: Icons.campaign_outlined,
                                 bgAsset: 'assets/images/bg_notice.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () async {
                                   await Navigator.push(
                                     context,
@@ -472,7 +472,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const Text(
                         'NBRO OFFICIAL PORTAL',
                         style: TextStyle(
-                          color: Color(0xFF00E5FF),
+                          color: Color(0xFFF4F6F9),
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                           letterSpacing: 1.2,

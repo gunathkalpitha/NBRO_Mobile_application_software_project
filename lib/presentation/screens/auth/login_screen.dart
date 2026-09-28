@@ -432,12 +432,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _authenticateWithBiometric,
                           icon: const Icon(Icons.fingerprint),
                           label: const Text('Use Biometric Login'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+
                         ),
                       ],
                     ),
