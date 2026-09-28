@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS site (
   CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id)
 );
 
--- General observation (no FK constraint)
+-- General observation 
 CREATE TABLE IF NOT EXISTS general_observation (
   observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS general_observation (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- External services (no FK)
+-- External services 
 CREATE TABLE IF NOT EXISTS external_services (
   service_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS external_services (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ancillary building (no FK)
+-- Ancillary building
 CREATE TABLE IF NOT EXISTS ancillary_building (
   structure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS ancillary_building (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Detail type (no FK)
+-- Detail type
 CREATE TABLE IF NOT EXISTS detail_type (
   detail_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   structure_id UUID NOT NULL,
   name TEXT NOT NULL
 );
 
--- Building detail (no FK)
+-- Building detail
 CREATE TABLE IF NOT EXISTS building_detail (
   building_detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   detail_type_id UUID NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS building_detail (
   rear BOOLEAN DEFAULT FALSE
 );
 
--- Main building (no FK)
+-- Main building
 CREATE TABLE IF NOT EXISTS main_building (
   building_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS main_building (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Specification (no FK)
+-- Specification 
 CREATE TABLE IF NOT EXISTS specification (
   spec_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   building_id UUID,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS specification (
   floor_details JSONB
 );
 
--- Defects (no FK)
+-- Defects 
 CREATE TABLE IF NOT EXISTS defects (
   defect_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID,
@@ -130,7 +130,7 @@ ADD COLUMN IF NOT EXISTS photo_url TEXT,
 ADD COLUMN IF NOT EXISTS remarks TEXT;
 
 -- Ensure missing columns exist in site table
-ALTER TABLE IF EXISTS site
+ALTER TABLE IF EXISTS site 
 ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326),
 ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
 ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
@@ -147,28 +147,6 @@ ALTER TABLE IF EXISTS site ADD CONSTRAINT site_building_ref_key UNIQUE (building
 ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
 ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
 
-ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
-ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
-
-ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
-ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
-ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
-ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
-ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
-ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
 
 -- Defect info (no FK)
 CREATE TABLE IF NOT EXISTS defect_info (
@@ -207,6 +185,65 @@ CREATE TABLE IF NOT EXISTS defect_media (
   uploaded_at TIMESTAMPTZ DEFAULT NOW(),
   uploaded_by UUID
 );
+
+
+ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
+ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
+ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
+ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
+ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
+ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE ancillary_building
+ADD CONSTRAINT fk_ancillary_building_site
+FOREIGN KEY (site_id)
+REFERENCES site(site_id)
+ON DELETE CASCADE;
+
+
+ALTER TABLE detail_type
+ADD CONSTRAINT fk_detail_type_structure
+FOREIGN KEY (structure_id)
+REFERENCES ancillary_building(structure_id)
+ON DELETE CASCADE;
+
+ALTER TABLE building_detail
+ADD CONSTRAINT fk_building_detail_type
+FOREIGN KEY (detail_type_id)
+REFERENCES detail_type(detail_type_id)
+ON DELETE CASCADE;
+
+ALTER TABLE defect_info
+ADD CONSTRAINT fk_defect_info_defect
+FOREIGN KEY (defect_id)
+REFERENCES defects(defect_id)
+ON DELETE CASCADE;
+
+ALTER TABLE defect_image
+ADD CONSTRAINT fk_defect_image_info
+FOREIGN KEY (info_id)
+REFERENCES defect_info(info_id)
+ON DELETE CASCADE;
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_site_user_id ON site(user_id);
