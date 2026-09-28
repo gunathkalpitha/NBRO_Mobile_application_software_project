@@ -567,7 +567,6 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             
 
             // Option 2: Direct Creation
-
             Card(
               elevation: 2,
               child: ListTile(
@@ -582,12 +581,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 title: const Text('Create Account Directly'),
                 subtitle: const Text('Set password without email (bypasses rate limit)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-
                 onTap: () {
                   Navigator.pop(ctx);
                   _showDirectCreationDialog();
                 },
-
               ),
             ),
           ],
