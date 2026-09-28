@@ -114,7 +114,10 @@ class LocalInspectionDataSource {
       ]);
       stmt.dispose();
 
-      // 2. Insert or Update Defects
+      // 2. Clear old defects for this inspection to prevent duplication
+      db.execute('DELETE FROM defects WHERE inspection_local_id = ?', [inspection.id]);
+
+      // Insert or Update Defects
       for (final defect in inspection.defects) {
         final defectStmt = db.prepare('''
           INSERT INTO defects (

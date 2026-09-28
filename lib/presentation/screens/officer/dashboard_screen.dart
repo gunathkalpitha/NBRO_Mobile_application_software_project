@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:nbro_mobile_application/core/services/notice_read_state_service.dart';
+import 'package:nbro_mobile_application/core/services/welcome_notification_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/notice.dart';
 import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
@@ -58,6 +60,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     _animationController.forward();
     _loadNoticeSummary();
     _loadDrafts();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerWelcomeNotification();
+    });
+  }
+
+  void _triggerWelcomeNotification() {
+    final user = Supabase.instance.client.auth.currentUser;
+    final userName = user?.userMetadata?['full_name'] ??
+        user?.userMetadata?['name'] ??
+        user?.email?.split('@').first ??
+        'Officer';
+
+    WelcomeNotificationService.triggerWelcomeNotification(
+      context: context,
+      userName: userName,
+      role: 'Officer',
+    );
   }
 
   @override
@@ -92,7 +112,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
-        leadingWidth: 48,
+        titleSpacing: 0,
+        leadingWidth: 44,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: NBROColors.white),
           iconSize: 24,
@@ -104,29 +125,31 @@ class _DashboardScreenState extends State<DashboardScreen>
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(5),
+              decoration: const BoxDecoration(
                 color: NBROColors.white,
-                borderRadius: BorderRadius.circular(8),
+                shape: BoxShape.circle,
               ),
-              child: Image.asset(
-                'assets/icons/pasted-image.png',
-                width: 32,
-                height: 32,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.business,
-                    color: NBROColors.primary,
-                    size: 32,
-                  );
-                },
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/icons/pasted-image.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.business,
+                      color: NBROColors.primary,
+                      size: 32,
+                    );
+                  },
+                ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 1),
             const Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
@@ -139,9 +162,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   Text(
-                    'National Building Research Org.',
+                    'National Building Research Organization',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       color: NBROColors.white,
                       letterSpacing: 0.2,
                     ),
@@ -155,11 +178,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           // Compact Cloud Status Icon Badge
           const Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
+              padding: EdgeInsets.symmetric(horizontal: 0),
               child: SyncStatusBadge(),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 1),
           // Notification Bell
           Tooltip(
             message: 'Notifications',
@@ -279,7 +302,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'CREATE',
                                 icon: Icons.assignment_add,
                                 bgAsset: 'assets/images/bg_new_inspection.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () async {
                                   await Navigator.push(
                                     context,
@@ -297,7 +320,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'RECENT (5)',
                                 icon: Icons.fact_check_outlined,
                                 bgAsset: 'assets/images/bg_inspections.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -316,7 +339,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'GOOGLE MAP',
                                 icon: Icons.map_outlined,
                                 bgAsset: 'assets/images/bg_map.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   if (state is InspectionLoaded) {
                                     Navigator.push(
@@ -337,7 +360,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'CHARTS',
                                 icon: Icons.analytics_outlined,
                                 bgAsset: 'assets/images/bg_analytics.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -354,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'PDF EXPORT',
                                 icon: Icons.assessment_outlined,
                                 bgAsset: 'assets/images/bg_reports.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -371,7 +394,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 tag: 'BULLETINS',
                                 icon: Icons.campaign_outlined,
                                 bgAsset: 'assets/images/bg_notice.jpg',
-                                accentColor: const Color(0xFF00E5FF),
+                                accentColor: const Color(0xFFF4F6F9),
                                 onTap: () async {
                                   await Navigator.push(
                                     context,
@@ -472,7 +495,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const Text(
                         'NBRO OFFICIAL PORTAL',
                         style: TextStyle(
-                          color: Color(0xFF00E5FF),
+                          color: Color(0xFFF4F6F9),
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                           letterSpacing: 1.2,
@@ -537,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           context,
           MaterialPageRoute(builder: (context) => const NoticeScreen()),
         );
-        _loadNoticeSummary();
+        await _loadNoticeSummary();
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -558,15 +581,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             const Icon(Icons.campaign, color: Colors.black, size: 20),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                '${notice.title} : ${notice.message}',
+              child: _MarqueeText(
+                text: ' ${notice.title} : ${notice.message}',
                 style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),
@@ -836,6 +857,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
       }
 
+      final localReadIds = await NoticeReadStateService.getLocalReadNoticeIds();
+
       final visibleNotices = <Notice>[];
       for (final row in (noticesResponse as List)) {
         final json = row as Map<String, dynamic>;
@@ -843,6 +866,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         final targetType = (json['target_type'] as String?) ?? 'all';
         final isVisible = targetType == 'all' || recipientMap.containsKey(noticeId);
         if (!isVisible) continue;
+
+        final isRead = (recipientMap[noticeId] == true) || localReadIds.contains(noticeId);
 
         visibleNotices.add(
           Notice(
@@ -855,7 +880,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
             ),
-            isRead: recipientMap[noticeId] ?? true,
+            isRead: isRead,
           ),
         );
       }
@@ -1053,6 +1078,73 @@ class _DashboardActionCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Continuous Right-to-Left Scrolling Marquee Ticker for Notice Panel
+class _MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _MarqueeText({
+    required this.text,
+    required this.style,
+  });
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
+  }
+
+  void _startScrolling() async {
+    while (mounted) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) break;
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll > 0) {
+          final durationSeconds = (maxScroll / 22).clamp(4.0, 25.0);
+          await _scrollController.animateTo(
+            maxScroll,
+            duration: Duration(seconds: durationSeconds.toInt()),
+            curve: Curves.linear,
+          );
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (!mounted) break;
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Text(
+        widget.text,
+        style: widget.style,
       ),
     );
   }
