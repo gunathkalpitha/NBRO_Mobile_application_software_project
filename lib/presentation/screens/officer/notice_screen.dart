@@ -80,7 +80,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
             ),
-            isRead: recipientMap[noticeId] ?? true,
+            isRead: recipientMap[noticeId] ?? false,
           ),
         );
       }
@@ -124,11 +124,14 @@ class _NoticeScreenState extends State<NoticeScreen> {
 
       await Supabase.instance.client
           .from('notice_recipients')
-          .update({'is_read': true, 'read_at': DateTime.now().toIso8601String()})
-          .eq('notice_id', notice.id)
-          .eq('officer_id', user.id);
-    } catch (_) {
-      // Keep optimistic UI state; ignore update errors for UX continuity.
+          .upsert({
+            'notice_id': notice.id,
+            'officer_id': user.id,
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'notice_id,officer_id');
+    } catch (e) {
+      debugPrint('[NoticeScreen] markAsRead error: $e');
     }
   }
 

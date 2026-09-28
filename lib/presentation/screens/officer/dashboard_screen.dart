@@ -855,7 +855,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
             ),
-            isRead: recipientMap[noticeId] ?? true,
+            isRead: recipientMap[noticeId] ?? false,
           ),
         );
       }
