@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:nbro_mobile_application/data/local/datasources/local_inspection_datasource.dart';
+import 'package:nbro_mobile_application/core/services/officer_name_resolver.dart';
 import 'package:nbro_mobile_application/core/storage/image_storage_service.dart';
 import 'package:nbro_mobile_application/core/sync/sync_service.dart';
 import 'package:nbro_mobile_application/core/network/connectivity_service.dart';
@@ -266,8 +267,15 @@ class InspectionRepository {
       final res = await _supabase.from('profile').select('id, full_name');
       final map = <String, String>{};
       for (final item in (res as List)) {
-        if (item['id'] != null && item['full_name'] != null) {
-          map[item['id'] as String] = item['full_name'] as String;
+        if (item['id'] != null && item['full_name'] != null && (item['full_name'] as String).trim().isNotEmpty) {
+          map[item['id'] as String] = (item['full_name'] as String).trim();
+        }
+      }
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser != null) {
+        final name = currentUser.userMetadata?['full_name'] ?? currentUser.userMetadata?['name'] ?? currentUser.email?.split('@').first;
+        if (name != null) {
+          map[currentUser.id] = name;
         }
       }
       return map;
@@ -348,6 +356,17 @@ class InspectionRepository {
             ))
         .toList();
 
+    // Deduplicate defects by content key to guarantee zero duplicate displays
+    final seenKeys = <String>{};
+    final uniqueDefects = <Defect>[];
+    for (final d in mappedDefects) {
+      final key = '${d.notation.code}_${d.category.name}_${d.floorLevel}_${d.lengthMm}_${d.widthMm}_${d.remarks}';
+      if (!seenKeys.contains(key)) {
+        seenKeys.add(key);
+        uniqueDefects.add(d);
+      }
+    }
+
     final userId = row['user_id'] as String?;
     final updatedBy = row['updated_by'] as String?;
 
@@ -380,12 +399,12 @@ class InspectionRepository {
       floorMaterials: floorMaterials.isNotEmpty ? floorMaterials : null,
       roofMaterials: roofMaterials.isNotEmpty ? roofMaterials : null,
       roofCovering: roofCovering,
-      defects: mappedDefects,
+      defects: uniqueDefects,
       syncStatus: SyncStatus.synced,
       createdAt: row['created_at'] != null ? DateTime.parse(row['created_at'] as String) : DateTime.now(),
       updatedAt: row['updated_at'] != null ? DateTime.parse(row['updated_at'] as String) : null,
-      createdBy: profileMap[userId] ?? userId,
-      updatedBy: profileMap[updatedBy] ?? updatedBy,
+      createdBy: OfficerNameResolver.resolve(profileMap[userId] ?? userId),
+      updatedBy: OfficerNameResolver.resolve(profileMap[updatedBy] ?? updatedBy),
       buildingPhotoUrl: row['building_photo_url'] as String?,
     );
   }

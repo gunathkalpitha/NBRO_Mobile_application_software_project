@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nbro_mobile_application/core/services/officer_name_resolver.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:nbro_mobile_application/data/services/pdf_report_service.dart';
 import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
+import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 import 'inspection_map_screen.dart';
 import 'edit_inspection_screen.dart';
 
@@ -394,6 +396,13 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.menu, color: NBROColors.white),
+            tooltip: 'App Drawer',
+            onPressed: () {
+              NavRailController.toggleVisibility();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf_outlined, color: NBROColors.white),
             tooltip: 'Export PDF',
@@ -852,7 +861,7 @@ class _TimestampsSection extends StatelessWidget {
             icon: Icons.add_circle_outline,
             label: 'Created On',
             date: dateFormatter.format(inspection.createdAt),
-            officer: inspection.createdBy ?? 'Unknown Officer',
+            officer: OfficerNameResolver.resolve(inspection.createdBy),
           ),
           if (inspection.updatedAt != null) ...[
             const Padding(
@@ -863,7 +872,7 @@ class _TimestampsSection extends StatelessWidget {
               icon: Icons.edit_calendar_outlined,
               label: 'Last Modified On',
               date: dateFormatter.format(inspection.updatedAt!),
-              officer: inspection.updatedBy ?? inspection.createdBy ?? 'Unknown Officer',
+              officer: OfficerNameResolver.resolve(inspection.updatedBy ?? inspection.createdBy),
             ),
           ],
         ],

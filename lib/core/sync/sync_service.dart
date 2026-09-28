@@ -185,7 +185,14 @@ class SyncService {
       await _syncBuildingSpecifications(buildingId, inspection);
     }
 
-    // 4. Sync Defects & Upload Defect Images
+    // 4. Clear stale remote defects for this site to prevent duplicate defect entries
+    try {
+      await _supabase.from('defects').delete().eq('site_id', siteId);
+    } catch (err) {
+      debugPrint('[SyncService] Stale defects cleanup note: $err');
+    }
+
+    // Sync Defects & Upload Defect Images
     for (final defect in inspection.defects) {
       String? defectRemoteUrl = defect.photoUrl;
 
