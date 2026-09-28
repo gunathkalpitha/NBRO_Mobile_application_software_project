@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:nbro_mobile_application/core/services/notice_read_state_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/notice.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
@@ -56,6 +57,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
         }
       }
 
+      final localReadIds = await NoticeReadStateService.getLocalReadNoticeIds();
       final List<Notice> parsed = [];
       final Map<String, String> targetTypeMap = {};
 
@@ -68,6 +70,8 @@ class _NoticeScreenState extends State<NoticeScreen> {
         if (!isVisible) continue;
 
         targetTypeMap[noticeId] = targetType;
+        final isRead = (recipientMap[noticeId] == true) || localReadIds.contains(noticeId);
+
         parsed.add(
           Notice(
             id: noticeId,
@@ -80,7 +84,7 @@ class _NoticeScreenState extends State<NoticeScreen> {
               (e) => e.name == (json['priority'] as String? ?? 'normal'),
               orElse: () => NoticePriority.normal,
             ),
-            isRead: recipientMap[noticeId] ?? false,
+            isRead: isRead,
           ),
         );
       }
@@ -118,20 +122,32 @@ class _NoticeScreenState extends State<NoticeScreen> {
           .toList();
     });
 
+    // Save locally to SharedPreferences first to guarantee instant persistence
+    await NoticeReadStateService.markNoticeAsReadLocally(notice.id);
+
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) return;
 
-      await Supabase.instance.client
+      final updateRes = await Supabase.instance.client
           .from('notice_recipients')
-          .upsert({
-            'notice_id': notice.id,
-            'officer_id': user.id,
-            'is_read': true,
-            'read_at': DateTime.now().toIso8601String(),
-          }, onConflict: 'notice_id,officer_id');
+          .update({'is_read': true, 'read_at': DateTime.now().toIso8601String()})
+          .eq('notice_id', notice.id)
+          .eq('officer_id', user.id)
+          .select();
+
+      if ((updateRes as List).isEmpty) {
+        await Supabase.instance.client
+            .from('notice_recipients')
+            .insert({
+              'notice_id': notice.id,
+              'officer_id': user.id,
+              'is_read': true,
+              'read_at': DateTime.now().toIso8601String(),
+            });
+      }
     } catch (e) {
-      debugPrint('[NoticeScreen] markAsRead error: $e');
+      debugPrint('[NoticeScreen] Supabase sync read error (saved locally): $e');
     }
   }
 
@@ -181,22 +197,19 @@ class _NoticeScreenState extends State<NoticeScreen> {
               titleSpacing: 4,
               actions: [
                 if (unreadCount > 0)
-                  Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: NBROColors.error,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$unreadCount New',
-                      style: const TextStyle(
-                        color: NBROColors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  TextButton.icon(
+                    onPressed: () {
+                      for (final notice in _notices.where((n) => !n.isRead)) {
+                        _markAsRead(notice);
+                      }
+                    },
+                    icon: const Icon(Icons.done_all, color: Colors.white, size: 16),
+                    label: Text(
+                      'Mark All Read ($unreadCount)',
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
+                const SizedBox(width: 8),
               ],
             ),
           ),
@@ -413,13 +426,39 @@ class _NoticeCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          notice.title,
-                          style: TextStyle(
-                            fontWeight: notice.isRead ? FontWeight.w600 : FontWeight.bold,
-                            fontSize: 15,
-                            color: NBROColors.black,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                notice.title,
+                                style: TextStyle(
+                                  fontWeight: notice.isRead ? FontWeight.w600 : FontWeight.bold,
+                                  fontSize: 15,
+                                  color: NBROColors.black,
+                                ),
+                              ),
+                            ),
+                            if (!notice.isRead) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade800,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text(
+                                  'UNREAD',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         _NoticeSenderChip(notice: notice),

@@ -11,8 +11,10 @@ import 'officers_screen.dart';
 import 'inspections_management_screen.dart';
 import 'admin_notices_screen.dart';
 import '../inspection/inspection_map_screen.dart';
-import '../officer/reports_screen.dart';
-import '../officer/analysis_screen.dart';
+import 'reports_screen_admin.dart';
+import 'analysis_screen_admin.dart';
+import 'auditlog.dart';
+import 'Task_manager.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   final void Function(AdminNavItem)? onNavItemSelected;
@@ -143,7 +145,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             ],
           ),
         ),
-        leadingWidth: 48,
+        titleSpacing: 0,
+        leadingWidth: 44,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: NBROColors.white),
           iconSize: 24,
@@ -155,26 +158,28 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(5),
+              decoration: const BoxDecoration(
                 color: NBROColors.white,
-                borderRadius: BorderRadius.circular(8),
+                shape: BoxShape.circle,
               ),
-              child: Image.asset(
-                'assets/icons/pasted-image.png',
-                width: 32,
-                height: 32,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.business,
-                    color: NBROColors.primary,
-                    size: 32,
-                  );
-                },
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/icons/pasted-image.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.business,
+                      color: NBROColors.primary,
+                      size: 32,
+                    );
+                  },
+                ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,7 +358,22 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                   );
                                 },
                               ),
-
+                              // Box 7: Audit log
+                              _AdminActionCard(
+                                title: 'Auditlog',
+                                tag: 'REVIEW',
+                                icon: Icons.audiotrack_outlined,
+                                bgAsset: 'assets/images/auditlog.jpg',
+                                accentColor: const Color(0xFFF4F6F9),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const AuditlogScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
                               // Box 6: Analytic
                               _AdminActionCard(
                                 title: 'Analytics',
@@ -366,6 +386,22 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => const AnalysisScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
+                             // Box 8: Task manager
+                              _AdminActionCard(
+                                title: 'Task Manager',
+                                tag: 'ASSIGN',
+                                icon: Icons.next_plan_outlined,
+                                bgAsset: 'assets/images/task_manager.jpg',
+                                accentColor: const Color(0xFFF4F6F9),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const Task_managerScreen(),
                                     ),
                                   );
                                 },
@@ -552,15 +588,13 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             const Icon(Icons.campaign, color: Colors.black, size: 20),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                '${notice.title} : ${notice.message}',
+              child: _MarqueeText(
+                text: '📢 ${notice.title} : ${notice.message}',
                 style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),
@@ -811,6 +845,73 @@ class _AdminActionCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Continuous Right-to-Left Scrolling Marquee Ticker for Notice Panel
+class _MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _MarqueeText({
+    required this.text,
+    required this.style,
+  });
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
+  }
+
+  void _startScrolling() async {
+    while (mounted) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) break;
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll > 0) {
+          final durationSeconds = (maxScroll / 22).clamp(4.0, 25.0);
+          await _scrollController.animateTo(
+            maxScroll,
+            duration: Duration(seconds: durationSeconds.toInt()),
+            curve: Curves.linear,
+          );
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (!mounted) break;
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(0);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Text(
+        widget.text,
+        style: widget.style,
       ),
     );
   }
