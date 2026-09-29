@@ -322,6 +322,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_inspections.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.inspection);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -362,6 +366,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_analytics.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.analysis);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -379,6 +387,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_reports.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.reports);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
