@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/core/services/officer_name_resolver.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
 import 'package:nbro_mobile_application/data/services/pdf_report_service.dart';
 import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
@@ -26,6 +28,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Inspection _currentInspection;
+  bool _isDeleting = false;
   final InspectionRepository _repository = InspectionRepository();
 
   @override
@@ -288,7 +291,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
           actions: [
             TextButton(
               onPressed: () {
-                confirmationController.dispose();
+                FocusScope.of(context).unfocus();
                 Navigator.pop(context);
               },
               child: const Text('Cancel'),
@@ -296,7 +299,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
             ElevatedButton(
               onPressed: canDelete
                   ? () async {
-                      confirmationController.dispose();
+                      FocusScope.of(context).unfocus();
                       Navigator.pop(context);
                       await _deleteInspection();
                     }
@@ -315,6 +318,13 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
 
   Future<void> _deleteInspection() async {
     if (!mounted) return;
+    setState(() {
+      _isDeleting = true;
+    });
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -338,19 +348,25 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     try {
       await _repository.deleteInspection(_currentInspection.id);
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        context.read<InspectionBloc>().add(const LoadInspectionsEvent());
+        navigator.pop(); // Pop deleting dialog
+        messenger.showSnackBar(
           const SnackBar(
-            content: Text('✓ Inspection deleted'),
+            content: Text('✓ Inspection deleted successfully'),
             backgroundColor: NBROColors.success,
           ),
         );
-        Navigator.of(context).pop(true);
+        if (navigator.canPop()) {
+          navigator.pop(true); // Pop screen back to previous list
+        }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        setState(() {
+          _isDeleting = false;
+        });
+        navigator.pop();
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Error deleting record: $e'),
             backgroundColor: NBROColors.error,
@@ -361,7 +377,18 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    //delete window
+    if (_isDeleting) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
