@@ -20,9 +20,6 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // ✅ FIX: Removed _screenContext entirely. It is an antipattern that causes
-  // stale context bugs. All dialogs and snackbars now use 'context' directly,
-  // which is always valid inside mounted widget methods.
 
   @override
   void initState() {
@@ -581,6 +578,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             
 
             // Option 2: Direct Creation
+        /*
             Card(
               elevation: 2,
               child: ListTile(
@@ -600,7 +598,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   _showDirectCreationDialog();
                 },
               ),
-            ),
+            ),*/
           ],
         ),
         actions: [
