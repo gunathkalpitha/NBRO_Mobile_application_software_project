@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/services/first_login_guide_service.dart';
+import 'package:nbro_mobile_application/core/services/welcome_notification_service.dart';
 import 'package:nbro_mobile_application/core/services/session_security_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/screens/auth/first_login_guide_screen.dart';
@@ -185,6 +186,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _navigateToPostLoginDestination() async {
+    // Trigger login success status bar notification ONLY when logging in from login screen
+    final user = Supabase.instance.client.auth.currentUser;
+    final userName = user?.userMetadata?['full_name'] ??
+        user?.userMetadata?['name'] ??
+        user?.email?.split('@').first ??
+        'Officer';
+    final role = (user?.userMetadata?['role'] as String?) ?? 'Officer';
+
+    WelcomeNotificationService.triggerWelcomeNotification(
+      context: context,
+      userName: userName,
+      role: role,
+    );
+
     final shouldShowGuide = await FirstLoginGuideService.shouldShowForCurrentUser();
 
     if (!mounted) {

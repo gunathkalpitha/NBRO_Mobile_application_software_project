@@ -160,9 +160,8 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     try {
       final response = await Supabase.instance.client
           .from('profile')
-          .select('id, full_name, role, created_at, phone_number, position_title, employee_id, work_role, avatar_url')
+          .select('id, full_name, role, created_at')
           .eq('role', 'officer')
-          .eq('is_active', true)
           .order('created_at', ascending: false);
 
       if (mounted) {
@@ -172,10 +171,25 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading officers: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showSnackBar('Error loading officers: $e', isError: true);
+      debugPrint('Error loading officers primary query ($e), executing fallback...');
+      try {
+        final fallbackRes = await Supabase.instance.client
+            .from('profile')
+            .select('id, full_name, role')
+            .eq('role', 'officer');
+
+        if (mounted) {
+          setState(() {
+            _officers = List<Map<String, dynamic>>.from(fallbackRes as List);
+            _isLoading = false;
+          });
+        }
+      } catch (fallbackErr) {
+        debugPrint('Error loading officers fallback query: $fallbackErr');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showSnackBar('Error loading officers: $fallbackErr', isError: true);
+        }
       }
     }
   }
