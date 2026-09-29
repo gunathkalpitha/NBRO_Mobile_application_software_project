@@ -73,13 +73,20 @@ class _InspectionsScreenState extends State<InspectionsScreen>
               ],
             ),
           ),
-          leadingWidth: 48,
+          leadingWidth: 44,
           leading: IconButton(
-            icon: const Icon(Icons.menu, color: NBROColors.white),
+            icon: Icon(
+              Navigator.canPop(context) ? Icons.arrow_back : Icons.menu,
+              color: NBROColors.white,
+            ),
             iconSize: 24,
             padding: EdgeInsets.zero,
             onPressed: () {
-              NavRailController.toggleVisibility();
+              if (Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              } else {
+                NavRailController.toggleVisibility();
+              }
             },
           ),
           title: const Column(

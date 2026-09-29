@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:nbro_mobile_application/core/services/welcome_notification_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 import 'package:nbro_mobile_application/presentation/widgets/sync_status_badge.dart';
@@ -50,24 +49,6 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     super.initState();
     _loadAdminStats();
     _loadNoticeSummary();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _triggerWelcomeNotification();
-    });
-  }
-
-  void _triggerWelcomeNotification() {
-    final user = Supabase.instance.client.auth.currentUser;
-    final adminName = user?.userMetadata?['full_name'] ??
-        user?.userMetadata?['name'] ??
-        user?.email?.split('@').first ??
-        'Admin';
-
-    WelcomeNotificationService.triggerWelcomeNotification(
-      context: context,
-      userName: adminName,
-      role: 'Administrator',
-    );
   }
 
   Future<void> _loadAdminStats() async {
@@ -214,7 +195,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                     ),
                   ),
                   Text(
-                    'National Building Research Org.',
+                    'National Building Research Organization',
                     style: TextStyle(
                       fontSize: 11,
                       color: NBROColors.white,
@@ -608,7 +589,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             const SizedBox(width: 8),
             Expanded(
               child: _MarqueeText(
-                text: '📢 ${notice.title} : ${notice.message}',
+                text: '${notice.title} : ${notice.message}',
                 style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,

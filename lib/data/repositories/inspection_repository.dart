@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:nbro_mobile_application/data/local/datasources/local_inspection_datasource.dart';
 import 'package:nbro_mobile_application/core/services/officer_name_resolver.dart';
+import 'package:nbro_mobile_application/core/services/profile_state_service.dart';
 import 'package:nbro_mobile_application/core/storage/image_storage_service.dart';
 import 'package:nbro_mobile_application/core/sync/sync_service.dart';
 import 'package:nbro_mobile_application/core/network/connectivity_service.dart';
@@ -88,11 +89,39 @@ class InspectionRepository {
     }
   }
 
-  /// Get all inspections (Source of Truth: Local Database, refreshed from Remote if online)
+  /// Check if the currently logged in user is an Administrator
+  Future<bool> _isUserAdmin() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    // 1. Check cached profile state
+    final profile = ProfileStateService.notifier.value;
+    if (profile != null && profile.role == 'admin') return true;
+
+    // 2. Check user metadata and email
+    if (user.userMetadata?['role'] == 'admin' || user.email?.toLowerCase() == 'admin@gmail.com') {
+      return true;
+    }
+
+    // 3. Query profile table
+    try {
+      final res = await _supabase.from('profile').select('role').eq('id', user.id).maybeSingle();
+      if (res != null && res['role'] == 'admin') {
+        return true;
+      }
+    } catch (_) {}
+
+    return false;
+  }
+
+  /// Get all inspections (Officers see only their own inspections; Admins see all officers' inspections)
   Future<List<Inspection>> getInspections() async {
     try {
+      final currentUser = _supabase.auth.currentUser;
+      final isAdmin = await _isUserAdmin();
+
       // 1. Fetch local inspections first
-      final localInspections = await _localDataSource.getAllInspections();
+      List<Inspection> localInspections = await _localDataSource.getAllInspections();
 
       // 2. If online, try syncing and fetching remote records
       final isOnline = await ConnectivityService.instance.checkActualConnectivity();
@@ -100,20 +129,42 @@ class InspectionRepository {
         _syncService.triggerSync().catchError((_) {});
 
         try {
-          final remoteInspections = await _fetchRemoteInspections();
+          final remoteInspections = await _fetchRemoteInspections(isAdmin: isAdmin, userId: currentUser?.id);
           for (final remote in remoteInspections) {
             await _localDataSource.saveInspection(remote);
           }
-          return await _localDataSource.getAllInspections();
+          localInspections = await _localDataSource.getAllInspections();
         } catch (e) {
           debugPrint('[InspectionRepository] Remote fetch failed ($e), serving local cache.');
         }
       }
 
+      // 3. Filter for non-admin officers so officers see only their own created inspections
+      if (!isAdmin && currentUser != null) {
+        final currentUserId = currentUser.id;
+        final currentEmail = currentUser.email;
+
+        return localInspections.where((inspection) {
+          final creator = inspection.createdBy;
+          if (creator == null || creator.isEmpty) return true;
+          return creator == currentUserId ||
+                 creator == currentEmail ||
+                 creator == 'local_user' ||
+                 creator == 'Officer' ||
+                 OfficerNameResolver.resolve(creator) == OfficerNameResolver.resolve(currentUserId);
+        }).toList();
+      }
+
       return localInspections;
     } catch (e) {
       debugPrint('[InspectionRepository] Failed to get inspections: $e');
-      return await _localDataSource.getAllInspections();
+      final local = await _localDataSource.getAllInspections();
+      final currentUser = _supabase.auth.currentUser;
+      final isAdmin = await _isUserAdmin();
+      if (!isAdmin && currentUser != null) {
+        return local.where((i) => i.createdBy == currentUser.id || i.createdBy == null || i.createdBy == 'local_user').toList();
+      }
+      return local;
     }
   }
 
@@ -159,11 +210,9 @@ class InspectionRepository {
 
   // --- Remote Supabase Helpers ---
 
-  Future<List<Inspection>> _fetchRemoteInspections() async {
+  Future<List<Inspection>> _fetchRemoteInspections({bool isAdmin = true, String? userId}) async {
     final profileMap = await _getProfileNamesMap();
-    final response = await _supabase
-        .from('site')
-        .select('''
+    dynamic query = _supabase.from('site').select('''
           site_id,
           user_id,
           owner_name,
@@ -199,8 +248,13 @@ class InspectionRepository {
             remarks,
             created_at
           )
-        ''')
-        .order('created_at', ascending: false);
+        ''');
+
+    if (!isAdmin && userId != null && userId.isNotEmpty) {
+      query = query.eq('user_id', userId);
+    }
+
+    final response = await query.order('created_at', ascending: false);
 
     final list = response as List<dynamic>;
     return list

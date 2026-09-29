@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/core/services/notice_read_state_service.dart';
-import 'package:nbro_mobile_application/core/services/welcome_notification_service.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/notice.dart';
 import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart';
@@ -60,24 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     _animationController.forward();
     _loadNoticeSummary();
     _loadDrafts();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _triggerWelcomeNotification();
-    });
-  }
-
-  void _triggerWelcomeNotification() {
-    final user = Supabase.instance.client.auth.currentUser;
-    final userName = user?.userMetadata?['full_name'] ??
-        user?.userMetadata?['name'] ??
-        user?.email?.split('@').first ??
-        'Officer';
-
-    WelcomeNotificationService.triggerWelcomeNotification(
-      context: context,
-      userName: userName,
-      role: 'Officer',
-    );
   }
 
   @override
@@ -322,6 +303,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_inspections.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.inspection);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -362,6 +347,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_analytics.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.analysis);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -379,6 +368,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 bgAsset: 'assets/images/bg_reports.jpg',
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
+                                  if (widget.onNavItemSelected != null) {
+                                    widget.onNavItemSelected!(NavItem.reports);
+                                    return;
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
