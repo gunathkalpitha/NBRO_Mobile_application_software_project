@@ -3,14 +3,14 @@ import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
-class AnalysisScreen extends StatefulWidget {
-  const AnalysisScreen({super.key});
+class AuditlogScreen extends StatefulWidget {
+  const AuditlogScreen({super.key});
 
   @override
-  State<AnalysisScreen> createState() => _AnalysisScreenState();
+  State<AuditlogScreen> createState() => _AuditlogScreenState();
 }
 
-class _AnalysisScreenState extends State<AnalysisScreen> {
+class _AuditlogScreenState extends State<AuditlogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,24 +37,17 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               toolbarHeight: 80,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leadingWidth: 44,
+              leadingWidth: 48,
               leading: IconButton(
-                icon: Icon(
-                  Navigator.canPop(context) ? Icons.arrow_back : Icons.menu,
-                  color: NBROColors.white,
-                ),
+                icon: const Icon(Icons.menu, color: NBROColors.white),
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.of(context).pop();
-                  } else {
-                    NavRailController.toggleVisibility();
-                  }
+                  NavRailController.toggleVisibility();
                 },
               ),
               title: const NBROBrand(
-                title: 'Analytics',
+                title: 'Auditlog',
                 showFullName: true,
                 logoSize: 60,
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -77,14 +70,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.analytics_rounded,
+                  Icons.folder_rounded,
                   size: 80,
                   color: NBROColors.primary.withValues(alpha: 0.5),
                 ),
               ),
               const SizedBox(height: 32),
               Text(
-                'Analytics Coming Soon',
+                'Auditlog Coming Soon',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: NBROColors.darkGrey,
@@ -93,7 +86,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'We\'re working on bringing you detailed insights and analytics for your inspection data. Stay tuned!',
+                'We\'re working on comprehensive reporting features to help you analyze and monitor your inspection data. Stay tuned!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NBROColors.grey,
                 ),
@@ -120,7 +113,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Future features will include inspection trends, defect analytics, and performance metrics.',
+                        'Future features will include customizable audit reports, PDF exports, and monitor officer activities.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: NBROColors.info,
                         ),

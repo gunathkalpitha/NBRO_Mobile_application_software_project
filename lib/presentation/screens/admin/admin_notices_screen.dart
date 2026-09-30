@@ -216,16 +216,25 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
             : _selectedOfficerIds.toList();
 
         if (recipients.isNotEmpty) {
-        final rows = recipients
-            .map((officerId) => {
-                  'notice_id': noticeId,
-                  'officer_id': officerId,
-              'is_read': false,
-                })
-            .toList();
+          final rows = recipients
+              .where((officerId) => officerId.isNotEmpty)
+              .map((officerId) => {
+                    'notice_id': noticeId,
+                    'officer_id': officerId,
+                    'is_read': false,
+                  })
+              .toList();
 
-        await Supabase.instance.client.from('notice_recipients').insert(rows);
-      }
+          if (rows.isNotEmpty) {
+            try {
+              await Supabase.instance.client
+                  .from('notice_recipients')
+                  .upsert(rows, onConflict: 'notice_id,officer_id');
+            } catch (recErr) {
+              debugPrint('[AdminNotices] notice_recipients insert warning: $recErr');
+            }
+          }
+        }
 
       _titleController.clear();
       _messageController.clear();

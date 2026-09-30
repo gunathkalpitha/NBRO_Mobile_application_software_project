@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/services/profile_completion_service.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   AdminNavItem _currentAdminItem = AdminNavItem.dashboard;
   bool _isAdmin = false;
   bool _isCheckingRole = true;
+  DateTime? _lastBackPressTime;
 
   @override
   void initState() {
@@ -116,8 +118,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Show admin dashboard if user is admin
     if (_isAdmin) {
-      return WillPopScope(
-        onWillPop: _handleBackNavigation,
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _handleBackNavigation();
+        },
         child: AdminAppShell(
           currentItem: _currentAdminItem,
           onNavItemSelected: (item) {
@@ -131,8 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Show regular officer dashboard
-    return WillPopScope(
-      onWillPop: _handleBackNavigation,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackNavigation();
+      },
       child: AppShell(
         currentItem: _currentItem,
         onNavItemSelected: (item) {
@@ -145,30 +155,57 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<bool> _handleBackNavigation() async {
+  void _handleBackNavigation() {
+    // 1. If side navigation menu is open, close it first
     if (NavRailController.isVisible.value) {
       NavRailController.hide();
-      return false;
+      return;
     }
 
+    // 2. If on secondary tab for Admin, switch back to Admin Dashboard tab
     if (_isAdmin) {
       if (_currentAdminItem != AdminNavItem.dashboard) {
         setState(() {
           _currentAdminItem = AdminNavItem.dashboard;
         });
-        return false;
+        return;
       }
-      return true;
+    } else {
+      // If on secondary tab for Officer (Inspections, Analytics, Reports, Help, Settings), switch back to Officer Dashboard tab
+      if (_currentItem != NavItem.dashboard) {
+        setState(() {
+          _currentItem = NavItem.dashboard;
+        });
+        return;
+      }
     }
 
-    if (_currentItem != NavItem.dashboard) {
-      setState(() {
-        _currentItem = NavItem.dashboard;
-      });
-      return false;
+    // 3. Already on Main Dashboard: Double Press Back to Exit App
+    final now = DateTime.now();
+    if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.exit_to_app, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text('Press back again to exit app', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ],
+          ),
+          backgroundColor: const Color(0xFF263238),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
     }
 
-    return true;
+    // Exit app cleanly on second back press within 2 seconds
+    SystemNavigator.pop();
   }
 
   Widget _buildScreen(NavItem item) {

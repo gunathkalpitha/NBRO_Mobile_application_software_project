@@ -20,9 +20,6 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // ✅ FIX: Removed _screenContext entirely. It is an antipattern that causes
-  // stale context bugs. All dialogs and snackbars now use 'context' directly,
-  // which is always valid inside mounted widget methods.
 
   @override
   void initState() {
@@ -160,9 +157,8 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     try {
       final response = await Supabase.instance.client
           .from('profile')
-          .select('id, full_name, role, created_at, phone_number, position_title, employee_id, work_role, avatar_url')
+          .select('id, full_name, role, created_at')
           .eq('role', 'officer')
-          .eq('is_active', true)
           .order('created_at', ascending: false);
 
       if (mounted) {
@@ -172,10 +168,25 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading officers: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showSnackBar('Error loading officers: $e', isError: true);
+      debugPrint('Error loading officers primary query ($e), executing fallback...');
+      try {
+        final fallbackRes = await Supabase.instance.client
+            .from('profile')
+            .select('id, full_name, role')
+            .eq('role', 'officer');
+
+        if (mounted) {
+          setState(() {
+            _officers = List<Map<String, dynamic>>.from(fallbackRes as List);
+            _isLoading = false;
+          });
+        }
+      } catch (fallbackErr) {
+        debugPrint('Error loading officers fallback query: $fallbackErr');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showSnackBar('Error loading officers: $fallbackErr', isError: true);
+        }
       }
     }
   }
@@ -567,7 +578,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             
 
             // Option 2: Direct Creation
-
+        /*
             Card(
               elevation: 2,
               child: ListTile(
@@ -582,14 +593,12 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 title: const Text('Create Account Directly'),
                 subtitle: const Text('Set password without email (bypasses rate limit)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-
                 onTap: () {
                   Navigator.pop(ctx);
                   _showDirectCreationDialog();
                 },
-
               ),
-            ),
+            ),*/
           ],
         ),
         actions: [

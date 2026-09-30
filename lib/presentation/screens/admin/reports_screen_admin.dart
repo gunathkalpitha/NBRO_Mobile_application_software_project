@@ -3,14 +3,14 @@ import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
-class HelpSupportScreen extends StatefulWidget {
-  const HelpSupportScreen({super.key});
+class ReportsScreen extends StatefulWidget {
+  const ReportsScreen({super.key});
 
   @override
-  State<HelpSupportScreen> createState() => _HelpSupportScreenState();
+  State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _HelpSupportScreenState extends State<HelpSupportScreen> {
+class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,24 +37,17 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 toolbarHeight: 80,
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                leadingWidth: 44,
+                leadingWidth: 48,
                 leading: IconButton(
-                  icon: Icon(
-                    Navigator.canPop(context) ? Icons.arrow_back : Icons.menu,
-                    color: NBROColors.white,
-                  ),
+                  icon: const Icon(Icons.menu, color: NBROColors.white),
                   iconSize: 24,
                   padding: EdgeInsets.zero,
                   onPressed: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.of(context).pop();
-                    } else {
-                      NavRailController.toggleVisibility();
-                    }
+                    NavRailController.toggleVisibility();
                   },
                 ),
                 title: const NBROBrand(
-                  title: 'Help & Support',
+                  title: 'Reports',
                   showFullName: true,
                   logoSize: 60,
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
@@ -77,14 +70,14 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.help_rounded,
+                    Icons.folder_rounded,
                     size: 80,
                     color: NBROColors.primary.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'Help & Support Coming Soon',
+                  'Reports Coming Soon',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: NBROColors.darkGrey,
@@ -93,7 +86,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'We\'re building a comprehensive help center with guides, FAQs, and direct support channels to assist you better.',
+                  'We\'re working on comprehensive reporting features to help you analyze and export your inspection data. Stay tuned!',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: NBROColors.grey,
                   ),
@@ -120,7 +113,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Future features will include user guides, video tutorials, live chat support, and a knowledge base.',
+                          'Future features will include customizable reports, PDF exports, and data visualization.',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: NBROColors.info,
                           ),

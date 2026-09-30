@@ -37,13 +37,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 toolbarHeight: 80,
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                leadingWidth: 48,
+                leadingWidth: 44,
                 leading: IconButton(
-                  icon: const Icon(Icons.menu, color: NBROColors.white),
+                  icon: Icon(
+                    Navigator.canPop(context) ? Icons.arrow_back : Icons.menu,
+                    color: NBROColors.white,
+                  ),
                   iconSize: 24,
                   padding: EdgeInsets.zero,
                   onPressed: () {
-                    NavRailController.toggleVisibility();
+                    if (Navigator.canPop(context)) {
+                      Navigator.of(context).pop();
+                    } else {
+                      NavRailController.toggleVisibility();
+                    }
                   },
                 ),
                 title: const NBROBrand(

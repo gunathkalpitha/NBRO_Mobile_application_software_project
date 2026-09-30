@@ -37,20 +37,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               toolbarHeight: 80,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              leadingWidth: 44,
+              leadingWidth: 48,
               leading: IconButton(
-                icon: Icon(
-                  Navigator.canPop(context) ? Icons.arrow_back : Icons.menu,
-                  color: NBROColors.white,
-                ),
+                icon: const Icon(Icons.menu, color: NBROColors.white),
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.of(context).pop();
-                  } else {
-                    NavRailController.toggleVisibility();
-                  }
+                  NavRailController.toggleVisibility();
                 },
               ),
               title: const NBROBrand(
