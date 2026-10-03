@@ -337,6 +337,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             const SizedBox(height: 12),
 
             // Method 2: Direct Creation
+            /*
             Card(
               elevation: 2,
               child: ListTile(
@@ -356,7 +357,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   _showDirectCreationDialog(targetRole: targetRole);
                 },
               ),
-            ),
+            ),*/
           ],
         ),
         actions: [
