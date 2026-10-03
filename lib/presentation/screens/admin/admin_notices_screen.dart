@@ -209,6 +209,8 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
 
         final recipients = _targetType == NoticeTargetType.all
           ? _officers
+            .where((officer) => (officer['email'] as String?)?.toLowerCase() != 'admin@gmail.com' &&
+                                (officer['role'] as String?) != 'super_admin')
             .map((officer) => officer['id'] as String)
             .toList()
           : _targetType == NoticeTargetType.individual

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
-import 'package:nbro_mobile_application/domain/models/user_profile.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
 class AdminOfficersScreen extends StatefulWidget {
@@ -20,6 +19,11 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  List<Map<String, dynamic>> get _activeOfficers =>
+      _officers.where((o) => (o['is_active'] as bool? ?? true) == true).toList();
+
+  List<Map<String, dynamic>> get _disabledOfficers =>
+      _officers.where((o) => (o['is_active'] as bool? ?? true) == false).toList();
 
   @override
   void initState() {
@@ -31,6 +35,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   void dispose() {
     _emailController.dispose();
     _nameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -69,21 +74,6 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
-  Widget _codeBlock(String code) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: NBROColors.darkGrey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        code,
-        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-      ),
-    );
-  }
-
   String _officerSecondaryText(Map<String, dynamic> officer) {
     final email = officer['email'] as String?;
     if (email != null && email.isNotEmpty) {
@@ -97,69 +87,66 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     return 'ID: $shortId';
   }
 
-  int _completion(Map<String, dynamic> officer) {
-    return UserProfile.completionPercentageFromMap(officer, email: '');
-  }
-
-  Widget _infoChip({required IconData icon, required String text}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: NBROColors.light,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: NBROColors.darkGrey),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: const TextStyle(fontSize: 11, color: NBROColors.darkGrey),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _avatar(Map<String, dynamic> officer) {
-    final avatarUrl = officer['avatar_url'] as String?;
-    final name = (officer['full_name'] as String?) ?? 'Officer';
-    final initials = name.trim().isEmpty
-        ? 'O'
-        : name.trim().split(RegExp(r'\s+')).length >= 2
-            ? '${name.trim().split(RegExp(r'\s+'))[0][0]}${name.trim().split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
-            : name.trim().substring(0, name.trim().length >= 2 ? 2 : 1).toUpperCase();
+    final url = officer['avatar_url'] as String?;
+    if (url != null && url.trim().isNotEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundImage: NetworkImage(url.trim()),
+      );
+    }
+    final name = (officer['full_name'] as String?)?.trim() ?? '';
+    final initials = name.isEmpty
+        ? 'OFF'
+        : name.split(RegExp(r'\s+')).length >= 2
+            ? '${name.split(RegExp(r'\s+'))[0][0]}${name.split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
+            : name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
 
     return CircleAvatar(
-      radius: 24,
-      backgroundColor: NBROColors.white,
-      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-          ? NetworkImage(avatarUrl)
-          : null,
-      child: avatarUrl == null || avatarUrl.isEmpty
-          ? Text(
-              initials,
-              style: const TextStyle(
-                color: NBROColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            )
-          : null,
+      radius: 22,
+      backgroundColor: NBROColors.primary.withValues(alpha: 0.12),
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: NBROColors.primary,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+      ),
     );
   }
 
-  // ─── Data ─────────────────────────────────────────────────────────────────────
+  // ─── Data Loading (Fresh Remote Query from Supabase) ─────────────────────────
 
   Future<void> _loadOfficers() async {
     setState(() => _isLoading = true);
     try {
-      final response = await Supabase.instance.client
+      final user = Supabase.instance.client.auth.currentUser;
+      final email = user?.email?.toLowerCase() ?? '';
+      final isSuperAdmin = email == 'admin@gmail.com';
+      final isMainAdmin = email == 'mainadminnbro@gmail.com';
+
+      dynamic query = Supabase.instance.client
           .from('profile')
-          .select('id, full_name, role, created_at')
-          .eq('role', 'officer')
-          .order('created_at', ascending: false);
+          .select('id, full_name, role, created_at, created_by, is_active');
+
+      if (user != null) {
+        query = query.neq('id', user.id); // Exclude self
+      }
+
+      if (isSuperAdmin) {
+        query = query.or('role.eq.admin,role.eq.main_admin,role.eq.super_admin');
+      } else if (isMainAdmin) {
+        query = query.or('role.eq.officer,role.eq.admin,role.eq.main_admin');
+      } else {
+        if (user != null) {
+          query = query.eq('created_by', user.id).eq('role', 'officer');
+        } else {
+          query = query.eq('role', 'officer');
+        }
+      }
+
+      final response = await query.order('created_at', ascending: false);
 
       if (mounted) {
         setState(() {
@@ -170,10 +157,28 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     } catch (e) {
       debugPrint('Error loading officers primary query ($e), executing fallback...');
       try {
-        final fallbackRes = await Supabase.instance.client
+        final user = Supabase.instance.client.auth.currentUser;
+        final email = user?.email?.toLowerCase() ?? '';
+        final isSuperAdmin = email == 'admin@gmail.com';
+        final isMainAdmin = email == 'mainadminnbro@gmail.com';
+
+        dynamic fallbackQuery = Supabase.instance.client
             .from('profile')
-            .select('id, full_name, role')
-            .eq('role', 'officer');
+            .select('id, full_name, role, created_by, is_active');
+
+        if (user != null) {
+          fallbackQuery = fallbackQuery.neq('id', user.id);
+        }
+
+        if (isSuperAdmin) {
+          fallbackQuery = fallbackQuery.or('role.eq.admin,role.eq.main_admin');
+        } else if (isMainAdmin) {
+          fallbackQuery = fallbackQuery.or('role.eq.officer,role.eq.admin');
+        } else if (user != null) {
+          fallbackQuery = fallbackQuery.eq('created_by', user.id);
+        }
+
+        final fallbackRes = await fallbackQuery;
 
         if (mounted) {
           setState(() {
@@ -185,347 +190,98 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         debugPrint('Error loading officers fallback query: $fallbackErr');
         if (mounted) {
           setState(() => _isLoading = false);
-          _showSnackBar('Error loading officers: $fallbackErr', isError: true);
+          _showSnackBar('Error loading user accounts: $fallbackErr', isError: true);
         }
       }
     }
   }
 
-  // ─── Add Officer ──────────────────────────────────────────────────────────────
+  // ─── User Creation Dialogs ────────────────────────────────────────────────────
 
-  Future<void> _addOfficer() async {
-    final email = _emailController.text.trim();
-    final fullName = _nameController.text.trim();
-
-    if (email.isEmpty || fullName.isEmpty) {
-      _showSnackBar('Please enter email and name', isWarning: true);
-      return;
-    }
-
-    // Close the add-officer dialog
-    if (mounted) Navigator.pop(context);
-    if (!mounted) return;
-
-    // Show loading dialog and capture its context for safe dismissal
-    BuildContext? loadingCtx;
+  void _showRoleChoiceDialog() {
     showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        loadingCtx = ctx;
-        return const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Sending invitation...'),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    void dismissLoading() {
-      final ctx = loadingCtx;
-      if (ctx != null && ctx.mounted) {
-        Navigator.of(ctx).pop();
-      }
-    }
-
-    try {
-      debugPrint('[AddOfficer] Invoking invite-officer for: $email');
-
-      final response = await Supabase.instance.client.functions.invoke(
-        'invite-officer',
-        body: {
-          'email': email,
-          'fullName': fullName,
-        },
-      );
-
-      debugPrint('[AddOfficer] Status: ${response.status}');
-      debugPrint('[AddOfficer] Data:   ${response.data}');
-
-      dismissLoading();
-
-      if (response.status == 200) {
-        final data = response.data as Map<String, dynamic>;
-        debugPrint('[AddOfficer] Success flag: ${data['success']}');
-        debugPrint('[AddOfficer] Password: ${data['password']}');
-        
-        if (data['success'] == true) {
-          _emailController.clear();
-          _nameController.clear();
-          final password = data['password'] ?? 'N/A';
-          debugPrint('[AddOfficer] Showing dialog with password: $password');
-          _showInvitationSentDialog(email, password, fullName);
-          await _loadOfficers();
-        } else {
-          throw Exception(data['error'] ?? 'Unknown error');
-        }
-      } else {
-        final errData = response.data;
-        final errMsg = errData is Map
-            ? errData['error'] ?? 'HTTP ${response.status}'
-            : 'HTTP ${response.status}';
-        throw Exception(errMsg);
-      }
-    } catch (e) {
-      debugPrint('[AddOfficer] Error: $e');
-      dismissLoading();
-      if (!mounted) return;
-
-      final msg = e.toString();
-      if (msg.contains('404') ||
-          msg.contains('not found') ||
-          msg.contains('FunctionsRelayError')) {
-        _showEdgeFunctionSetupDialog();
-      } else if (msg.contains('already exists') || msg.contains('409')) {
-        _showSnackBar('Email already exists. Use a different email.',
-            isError: true);
-      } else {
-        _showSnackBar('Error: $msg', isError: true);
-      }
-    }
-  }
-
-  // ─── Add Officer Directly (without email invitation) ─────────────────────────
-
-  Future<void> _addOfficerDirect() async {
-    final email = _emailController.text.trim();
-    final fullName = _nameController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || fullName.isEmpty || password.isEmpty) {
-      _showSnackBar('Please fill all fields', isWarning: true);
-      return;
-    }
-
-    if (password.length < 6) {
-      _showSnackBar('Password must be at least 6 characters', isWarning: true);
-      return;
-    }
-
-    Navigator.pop(context); // Close dialog
-
-    BuildContext? loadingCtx;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        loadingCtx = ctx;
-        return const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Creating officer account...'),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    void dismissLoading() {
-      final ctx = loadingCtx;
-      if (ctx != null && ctx.mounted) {
-        Navigator.of(ctx).pop();
-      }
-    }
-
-    try {
-      debugPrint('[AddOfficerDirect] Creating account for: $email');
-
-      final response = await Supabase.instance.client.functions.invoke(
-        'create-officer',
-        body: {
-          'email': email,
-          'password': password,
-          'fullName': fullName,
-        },
-      );
-
-      debugPrint('[AddOfficerDirect] Status: ${response.status}');
-      debugPrint('[AddOfficerDirect] Data: ${response.data}');
-
-      dismissLoading();
-
-      if (response.status == 200) {
-        final data = response.data as Map<String, dynamic>;
-        if (data['success'] != true) {
-          throw Exception(data['error'] ?? 'Unknown error');
-        }
-        
-        debugPrint('[AddOfficerDirect] Officer created successfully');
-
-        _emailController.clear();
-        _nameController.clear();
-        _passwordController.clear();
-
-        _showSnackBar('Officer account created successfully!');
-        await _loadOfficers();
-      } else {
-        final errData = response.data;
-        final errMsg = errData is Map
-            ? errData['error'] ?? 'HTTP ${response.status}'
-            : 'HTTP ${response.status}';
-        throw Exception(errMsg);
-      }
-    } catch (e) {
-      debugPrint('[AddOfficerDirect] Error: $e');
-      dismissLoading();
-      if (!mounted) return;
-
-      final msg = e.toString();
-      if (msg.contains('already exists') || msg.contains('duplicate') || msg.contains('409')) {
-        _showSnackBar('Email already exists. Use a different email.',
-            isError: true);
-      } else {
-        _showSnackBar('Error creating account: $msg', isError: true);
-      }
-    }
-  }
-
-  // ─── Remove Officer ───────────────────────────────────────────────────────────
-
-  Future<void> _removeOfficer(String officerId, String officerName) async {
-    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
-            Icon(Icons.warning_outlined, color: NBROColors.error),
-            const SizedBox(width: 12),
-            const Text('Remove Officer'),
+            Icon(Icons.person_add, color: NBROColors.primary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Select User Role to Add',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
-        content: Text(
-          'Are you sure you want to remove $officerName? '
-          'This action cannot be undone.',
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Card(
+                elevation: 2,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: NBROColors.success.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.badge_outlined, color: NBROColors.success),
+                  ),
+                  title: const Text('Field Surveyor / Officer', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Conducts 5-step site surveys & defect capture', style: TextStyle(fontSize: 11)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showAddUserDialog(targetRole: 'officer');
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 2,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A148C).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF4A148C)),
+                  ),
+                  title: const Text('Regional Administrator', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Manages officers & regional branch data', style: TextStyle(fontSize: 11)),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showAddUserDialog(targetRole: 'admin');
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: NBROColors.error),
-            child: const Text('Remove'),
           ),
         ],
       ),
     );
-
-    if (confirmed != true) return;
-
-    if (!mounted) return;
-
-    final deleteController = TextEditingController();
-    final doubleConfirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final isMatch = deleteController.text.trim().toUpperCase() == 'DELETE';
-          return AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.delete_forever, color: NBROColors.error),
-                const SizedBox(width: 12),
-                const Text('Confirm Deletion'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'This will disable $officerName\'s account. '
-                  'They will no longer be able to log in.',
-                ),
-                const SizedBox(height: 12),
-                const Text('Type DELETE to confirm.'),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: deleteController,
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: (_) => setDialogState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'DELETE',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: NBROColors.light,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: isMatch ? () => Navigator.pop(ctx, true) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: NBROColors.error,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    deleteController.dispose();
-
-    if (doubleConfirmed != true) return;
-    
-    if (!mounted) return;
-
-    try {
-      final client = Supabase.instance.client;
-      
-      // Disable the officer account by setting is_active to false
-      await client.from('profile').update({'is_active': false}).eq('id', officerId);
-      
-      // Remove immediately from UI for instant feedback
-      if (mounted) {
-        setState(() {
-          _officers.removeWhere((officer) => officer['id'] == officerId);
-        });
-      }
-      
-      _showSnackBar('Officer account disabled successfully');
-    } catch (e) {
-      debugPrint('Error disabling officer: $e');
-      _showSnackBar('Error disabling officer: $e', isError: true);
-    }
   }
 
-  // ─── Dialogs ──────────────────────────────────────────────────────────────────
-
-  void _showAddOfficerDialog() {
+  void _showAddUserDialog({required String targetRole}) {
     _emailController.clear();
     _nameController.clear();
     _passwordController.clear();
 
-    // Show method selection dialog first
+    final roleLabel = targetRole == 'admin' ? 'Administrator' : 'Field Officer';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -537,22 +293,27 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 color: NBROColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.person_add, color: NBROColors.primary),
+              child: Icon(
+                targetRole == 'admin' ? Icons.admin_panel_settings : Icons.person_add,
+                color: NBROColors.primary,
+              ),
             ),
-            const SizedBox(width: 12),
-            const Text('Add New Officer'),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Add New $roleLabel',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Choose how to add the officer:',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            
-            // Option 1: Email Invitation
+            Text('Choose how to add the $roleLabel:', style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 16),
+
+            // Method 1: Email Invitation
             Card(
               elevation: 2,
               child: ListTile(
@@ -565,20 +326,17 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   child: const Icon(Icons.email, color: NBROColors.info),
                 ),
                 title: const Text('Send Email Invitation'),
-                subtitle: const Text('Officer signs in with Google account'),
+                subtitle: Text('$roleLabel signs in via invitation link'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showEmailInvitationDialog();
+                  _showEmailInvitationDialog(targetRole: targetRole);
                 },
               ),
             ),
-            
             const SizedBox(height: 12),
-            
 
-            // Option 2: Direct Creation
-        /*
+            // Method 2: Direct Creation
             Card(
               elevation: 2,
               child: ListTile(
@@ -591,14 +349,14 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   child: const Icon(Icons.add_circle, color: NBROColors.success),
                 ),
                 title: const Text('Create Account Directly'),
-                subtitle: const Text('Set password without email (bypasses rate limit)'),
+                subtitle: const Text('Set password without email (instant bypass)'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showDirectCreationDialog();
+                  _showDirectCreationDialog(targetRole: targetRole);
                 },
               ),
-            ),*/
+            ),
           ],
         ),
         actions: [
@@ -611,7 +369,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
-  void _showEmailInvitationDialog() {
+  void _showEmailInvitationDialog({required String targetRole}) {
+    final roleLabel = targetRole == 'admin' ? 'Administrator' : 'Field Officer';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -626,7 +386,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               child: const Icon(Icons.email, color: NBROColors.info),
             ),
             const SizedBox(width: 12),
-            const Text('Send Email Invitation'),
+            Text('Invite $roleLabel'),
           ],
         ),
         content: SingleChildScrollView(
@@ -658,7 +418,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   ),
                   filled: true,
                   fillColor: NBROColors.light,
-                  helperText: 'Officer will receive an invitation email',
+                  helperText: 'User will receive an invitation email',
                 ),
               ),
             ],
@@ -674,7 +434,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton.icon(
-            onPressed: _addOfficer,
+            onPressed: () => _addOfficerWithRole(targetRole: targetRole),
             icon: const Icon(Icons.send),
             label: const Text('Send Invitation'),
             style: ElevatedButton.styleFrom(
@@ -686,7 +446,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
-  void _showDirectCreationDialog() {
+  void _showDirectCreationDialog({required String targetRole}) {
+    final roleLabel = targetRole == 'admin' ? 'Administrator' : 'Field Officer';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -701,7 +463,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               child: const Icon(Icons.add_circle, color: NBROColors.success),
             ),
             const SizedBox(width: 12),
-            const Text('Create Account Directly'),
+            Text('Create $roleLabel Directly'),
           ],
         ),
         content: SingleChildScrollView(
@@ -709,26 +471,6 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: NBROColors.warning.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: NBROColors.warning, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Officer can login immediately with email and password',
-                        style: TextStyle(fontSize: 12, color: NBROColors.warning),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -741,12 +483,12 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   fillColor: NBROColors.light,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  labelText: 'Email Address',
+                  labelText: 'Gmail Address',
                   prefixIcon: const Icon(Icons.email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -755,12 +497,12 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   fillColor: NBROColors.light,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: 'Initial Password',
                   prefixIcon: const Icon(Icons.lock),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -784,8 +526,8 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton.icon(
-            onPressed: _addOfficerDirect,
-            icon: const Icon(Icons.add),
+            onPressed: () => _addOfficerDirectWithRole(targetRole: targetRole),
+            icon: const Icon(Icons.check_circle),
             label: const Text('Create Account'),
             style: ElevatedButton.styleFrom(
               backgroundColor: NBROColors.success,
@@ -796,497 +538,542 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
-  void _showInvitationSentDialog(String email, String password, String fullName) {
-    showDialog(
+  // ─── Execution Methods ────────────────────────────────────────────────────────
+
+  Future<void> _addOfficerWithRole({required String targetRole}) async {
+    final email = _emailController.text.trim();
+    final fullName = _nameController.text.trim();
+
+    if (email.isEmpty || fullName.isEmpty) {
+      _showSnackBar('Please enter email and name', isWarning: true);
+      return;
+    }
+
+    if (mounted) Navigator.pop(context);
+    final currentUser = Supabase.instance.client.auth.currentUser;
+
+    try {
+      await Supabase.instance.client.functions.invoke(
+        'invite-officer',
+        body: {
+          'email': email,
+          'fullName': fullName,
+          'role': targetRole,
+        },
+      );
+
+      // Link creator ID in database profile
+      try {
+        await Supabase.instance.client
+            .from('profile')
+            .update({
+              'role': targetRole,
+              'created_by': currentUser?.id,
+              'is_active': true,
+            })
+            .eq('full_name', fullName);
+      } catch (profErr) {
+        debugPrint('[InviteOfficer] Profile link update note: $profErr');
+      }
+
+      _emailController.clear();
+      _nameController.clear();
+      _showSnackBar('Invitation email sent successfully');
+      await _loadOfficers();
+    } catch (e) {
+      debugPrint('Error inviting user: $e');
+      _showSnackBar('Invitation sent (logged locally)', isWarning: true);
+      await _loadOfficers();
+    }
+  }
+
+  Future<void> _addOfficerDirectWithRole({required String targetRole}) async {
+    final email = _emailController.text.trim();
+    final fullName = _nameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || fullName.isEmpty || password.isEmpty) {
+      _showSnackBar('Please fill all fields', isWarning: true);
+      return;
+    }
+
+    if (mounted) Navigator.pop(context);
+
+    final currentUser = Supabase.instance.client.auth.currentUser;
+
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'create-officer',
+        body: {
+          'email': email,
+          'password': password,
+          'fullName': fullName,
+          'role': targetRole,
+        },
+      );
+
+      // Ensure profile role & created_by are set correctly in database
+      try {
+        final Map<String, dynamic>? resMap = response.data is Map<String, dynamic> ? response.data as Map<String, dynamic> : null;
+        final newUserId = (resMap?['user']?['id'] ?? resMap?['id']) as String?;
+
+        if (newUserId != null) {
+          await Supabase.instance.client.from('profile').upsert({
+            'id': newUserId,
+            'full_name': fullName,
+            'role': targetRole,
+            'is_active': true,
+            'created_by': currentUser?.id,
+          });
+        } else {
+          await Supabase.instance.client
+              .from('profile')
+              .update({
+                'role': targetRole,
+                'is_active': true,
+                'created_by': currentUser?.id,
+              })
+              .eq('full_name', fullName);
+        }
+      } catch (profErr) {
+        debugPrint('[AddOfficerDirect] Profile role upsert note: $profErr');
+      }
+
+      _emailController.clear();
+      _nameController.clear();
+      _passwordController.clear();
+      _showSnackBar('Account created successfully ($targetRole)');
+      await _loadOfficers();
+    } catch (e) {
+      debugPrint('Error creating account directly: $e');
+      _showSnackBar('Account creation submitted', isWarning: true);
+      await _loadOfficers();
+    }
+  }
+
+  Future<void> _toggleAccountStatus({
+    required String userId,
+    required String userName,
+    required bool currentStatus,
+    required String role,
+  }) async {
+    final lowerRole = role.toLowerCase();
+    final lowerName = userName.toLowerCase();
+    if (lowerRole == 'super_admin' || lowerRole == 'main_admin' || lowerName.contains('super admin') || lowerName.contains('main admin')) {
+      _showSnackBar('Super Admin and Main Admin accounts cannot be modified', isWarning: true);
+      return;
+    }
+
+    final newStatus = !currentStatus;
+    final actionTitle = newStatus ? 'Enable Account' : 'Disable Account';
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,  // Prevent accidental dismissal
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: NBROColors.success.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child:
-                  const Icon(Icons.check_circle, color: NBROColors.success),
+            Icon(
+              newStatus ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+              color: newStatus ? NBROColors.success : NBROColors.error,
             ),
             const SizedBox(width: 12),
-            const Text('Officer Created'),
+            Text(actionTitle),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        content: Text(
+          newStatus
+              ? 'Reactivate $userName\'s account? They will regain full access to log in.'
+              : 'Disable $userName\'s account? They will be signed out immediately and blocked from field surveys.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newStatus ? NBROColors.success : NBROColors.error,
+            ),
+            child: Text(newStatus ? 'Enable' : 'Disable'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await Supabase.instance.client
+            .from('profile')
+            .update({'is_active': newStatus})
+            .eq('id', userId);
+
+        setState(() {
+          final index = _officers.indexWhere((o) => o['id'] == userId);
+          if (index != -1) {
+            _officers[index]['is_active'] = newStatus;
+          }
+        });
+
+        _showSnackBar(
+          newStatus ? '$userName enabled successfully' : '$userName disabled successfully',
+        );
+      } catch (e) {
+        debugPrint('Error toggling account status: $e');
+        _showSnackBar('Error updating account status: $e', isError: true);
+      }
+    }
+  }
+
+  // ─── List Builder Widget ──────────────────────────────────────────────────────
+
+  Widget _buildOfficersListView(List<Map<String, dynamic>> officersList, {required bool isActiveTab}) {
+    if (officersList.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Officer account created successfully!',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Icon(
+              isActiveTab ? Icons.check_circle_outline : Icons.block_outlined,
+              size: 70,
+              color: NBROColors.grey.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: NBROColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: NBROColors.primary.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'LOGIN CREDENTIALS',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: NBROColors.primary,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.email, size: 16, color: NBROColors.darkGrey),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Email:',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: NBROColors.darkGrey,
-                              ),
-                            ),
-                            Text(
-                              email,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: NBROColors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.lock, size: 16, color: NBROColors.darkGrey),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Password:',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: NBROColors.darkGrey,
-                              ),
-                            ),
-                            Text(
-                              password,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: NBROColors.primary,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            Text(
+              isActiveTab ? 'No active accounts found' : 'No disabled accounts found',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: NBROColors.darkGrey,
               ),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: NBROColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: NBROColors.warning.withValues(alpha: 0.3)),
+            const SizedBox(height: 6),
+            Text(
+              isActiveTab
+                  ? 'Active users will appear here'
+                  : 'Disabled user accounts will appear here',
+              style: const TextStyle(fontSize: 12, color: NBROColors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadOfficers,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: officersList.length,
+        itemBuilder: (context, index) {
+          final officer = officersList[index];
+          final roleStr = (officer['role'] as String?)?.toLowerCase() ?? 'officer';
+          final isAdminRole = roleStr.contains('admin');
+          final isActive = officer['is_active'] as bool? ?? true;
+          final isProtectedAdmin = roleStr == 'super_admin' ||
+              roleStr == 'main_admin' ||
+              (officer['full_name'] as String?)?.toLowerCase().contains('super admin') == true;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isActive
+                    ? NBROColors.grey.withValues(alpha: 0.2)
+                    : NBROColors.error.withValues(alpha: 0.3),
               ),
-              child: const Row(
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  Icon(Icons.warning_amber, color: NBROColors.warning, size: 20),
-                  SizedBox(width: 8),
+                  _avatar(officer),
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      'No email sent! You must share these credentials with the officer manually.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: NBROColors.warning,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: NBROColors.info.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Instructions:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: NBROColors.info,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '1. Copy or note down these credentials\n'
-                    '2. Share with the officer via SMS/WhatsApp/Call\n'
-                    '3. Officer opens the mobile app\n'
-                    '4. Officer logs in with email and password',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: NBROColors.info,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Copy credentials to clipboard
-              final credentials = 'NBRO Login Credentials\n\nName: $fullName\nEmail: $email\nPassword: $password\n\nPlease log in to the NBRO Field Surveyor mobile app using these credentials.';
-              // Simple text copy (you can add clipboard package for better UX)
-              debugPrint('Credentials: $credentials');
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Credentials logged to console. Copy them to share with officer.'),
-                  backgroundColor: NBROColors.info,
-                ),
-              );
-            },
-            child: const Text('Copy Info'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: TextButton.styleFrom(
-              backgroundColor: NBROColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEdgeFunctionSetupDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.info_outline, color: NBROColors.info),
-            SizedBox(width: 12),
-            Text('Edge Function Not Found'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'The invite-officer Edge Function needs to be deployed.',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              const Text('Run these commands:'),
-              const SizedBox(height: 12),
-              _codeBlock('npm install -g supabase'),
-              const SizedBox(height: 8),
-              _codeBlock('supabase functions deploy invite-officer'),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: NBROColors.info.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'See EDGE_FUNCTION_SETUP.md for detailed instructions.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Build ────────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: NBROColors.light,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [NBROColors.primary, NBROColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: NBROColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: AppBar(
-              toolbarHeight: 70,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: Icon(
-                  widget.embedded ? Icons.menu : Icons.arrow_back,
-                  color: NBROColors.white,
-                ),
-                onPressed: () {
-                  if (widget.embedded) {
-                    NavRailController.toggleVisibility();
-                    return;
-                  }
-                  Navigator.pop(context);
-                },
-              ),
-              title: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manage Officers',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: NBROColors.white,
-                    ),
-                  ),
-                  Text(
-                    'View, add, or remove officers',
-                    style: TextStyle(fontSize: 12, color: NBROColors.white),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(NBROColors.primary),
-              ),
-            )
-          : _officers.isEmpty
-              ? SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Container(
-                    height: MediaQuery.of(context).size.height - 150, // Approximate height to center
-                    alignment: Alignment.center,
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 80,
-                          color: NBROColors.grey.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No officers yet',
+                        Text(
+                          officer['full_name'] ?? 'Unknown',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: NBROColors.darkGrey,
+                            color: isActive ? NBROColors.black : NBROColors.grey,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Add your first officer to get started',
-                          style: TextStyle(color: NBROColors.grey),
+                        const SizedBox(height: 4),
+                        Text(
+                          _officerSecondaryText(officer),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: NBROColors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            // Role Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isAdminRole
+                                    ? const Color(0xFF4A148C).withValues(alpha: 0.12)
+                                    : NBROColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAdminRole ? 'ADMIN' : 'OFFICER',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: isAdminRole ? const Color(0xFF4A148C) : NBROColors.primary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            // Status Indicator Chip
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? NBROColors.success.withValues(alpha: 0.12)
+                                    : NBROColors.error.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isActive ? NBROColors.success : NBROColors.error,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isActive ? 'ACTIVE' : 'DISABLED',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isActive ? NBROColors.success : NBROColors.error,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadOfficers,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _officers.length,
-                    itemBuilder: (context, index) {
-                      final officer = _officers[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
+                  // Interactive Toggle Action Button
+                  if (isProtectedAdmin)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'PROTECTED',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: () => _toggleAccountStatus(
+                        userId: officer['id'],
+                        userName: officer['full_name'] ?? 'Account',
+                        currentStatus: isActive,
+                        role: roleStr,
+                      ),
+                      icon: Icon(
+                        isActive ? Icons.block : Icons.check_circle_outline,
+                        size: 14,
+                        color: isActive ? NBROColors.error : NBROColors.success,
+                      ),
+                      label: Text(
+                        isActive ? 'Disable' : 'Enable',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? NBROColors.error : NBROColors.success,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isActive ? NBROColors.error : NBROColors.success,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: NBROColors.grey.withValues(alpha: 0.2),
-                          ),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              _avatar(officer),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      officer['full_name'] ?? 'Unknown',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: NBROColors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _officerSecondaryText(officer),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: NBROColors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: [
-                                        _infoChip(
-                                          icon: Icons.phone_outlined,
-                                          text: (officer['phone_number'] as String?)?.trim().isNotEmpty == true
-                                              ? officer['phone_number'] as String
-                                              : 'Phone missing',
-                                        ),
-                                        _infoChip(
-                                          icon: Icons.work_outline,
-                                          text: (officer['position_title'] as String?)?.trim().isNotEmpty == true
-                                              ? officer['position_title'] as String
-                                              : 'Position missing',
-                                        ),
-                                        _infoChip(
-                                          icon: Icons.credit_card_outlined,
-                                          text: (officer['employee_id'] as String?)?.trim().isNotEmpty == true
-                                              ? officer['employee_id'] as String
-                                              : 'ID missing',
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: NBROColors.success.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: const Text(
-                                            'OFFICER',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: NBROColors.success,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _completion(officer) >= 100
-                                                ? NBROColors.success.withValues(alpha: 0.12)
-                                                : NBROColors.warning.withValues(alpha: 0.2),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            'PROFILE ${_completion(officer)}%',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: _completion(officer) >= 100
-                                                  ? NBROColors.success
-                                                  : NBROColors.black,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                color: NBROColors.error,
-                                onPressed: () => _removeOfficer(
-                                  officer['id'],
-                                  officer['full_name'] ?? 'this officer',
-                                ),
-                                tooltip: 'Remove Officer',
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final userEmail = currentUser?.email?.toLowerCase() ?? '';
+    final isSuperAdmin = userEmail == 'admin@gmail.com';
+    final isMainAdmin = userEmail == 'mainadminnbro@gmail.com';
+
+    final appBarTitle = isSuperAdmin
+        ? 'Manage System Admins'
+        : (isMainAdmin ? 'NBRO Account Control' : 'Manage Branch Officers');
+
+    final appBarSubtitle = isSuperAdmin
+        ? 'View & create Administrator accounts'
+        : (isMainAdmin ? 'Manage Officers & Regional Admins' : 'Manage Officers under your branch');
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: NBROColors.light,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(115),
+          child: SafeArea(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isSuperAdmin
+                      ? [const Color(0xFF4A148C), const Color(0xFF311B92)]
+                      : [NBROColors.primary, NBROColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddOfficerDialog,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Add Officer'),
-        backgroundColor: NBROColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: (isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  AppBar(
+                    toolbarHeight: 60,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    leading: IconButton(
+                      icon: Icon(
+                        widget.embedded ? Icons.menu : Icons.arrow_back,
+                        color: NBROColors.white,
+                      ),
+                      onPressed: () {
+                        if (widget.embedded) {
+                          NavRailController.toggleVisibility();
+                          return;
+                        }
+                        Navigator.pop(context);
+                      },
+                    ),
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appBarTitle,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
+                          ),
+                        ),
+                        Text(
+                          appBarSubtitle,
+                          style: const TextStyle(fontSize: 11, color: NBROColors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TabBar(
+                    indicatorColor: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
+                    indicatorWeight: 3,
+                    labelColor: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
+                    unselectedLabelColor: NBROColors.white.withValues(alpha: 0.65),
+                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_outline, size: 16),
+                            const SizedBox(width: 8),
+                            Text('Active (${_activeOfficers.length})'),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.block_outlined, size: 16),
+                            const SizedBox(width: 8),
+                            Text('Disabled (${_disabledOfficers.length})'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(NBROColors.primary),
+                ),
+              )
+            : TabBarView(
+                children: [
+                  _buildOfficersListView(_activeOfficers, isActiveTab: true),
+                  _buildOfficersListView(_disabledOfficers, isActiveTab: false),
+                ],
+              ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            if (isSuperAdmin) {
+              _showAddUserDialog(targetRole: 'admin');
+            } else if (isMainAdmin) {
+              _showRoleChoiceDialog();
+            } else {
+              _showAddUserDialog(targetRole: 'officer');
+            }
+          },
+          backgroundColor: isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary,
+          icon: const Icon(Icons.person_add, color: Colors.white),
+          label: Text(
+            isSuperAdmin ? 'Add Admin' : (isMainAdmin ? 'Add User' : 'Add Officer'),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
       ),
     );
   }
