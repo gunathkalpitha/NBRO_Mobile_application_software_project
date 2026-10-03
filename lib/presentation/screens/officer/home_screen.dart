@@ -51,33 +51,34 @@ class _HomeScreenState extends State<HomeScreen> {
       if (user != null) {
         final client = Supabase.instance.client;
 
-        // Prefer explicit role from profile table in DB.
-        String role = (user.userMetadata?['role'] as String?) ?? '';
+        String role = '';
+        // 1. Query profile table in DB first for exact role
+        try {
+          final profile = await client
+              .from('profile')
+              .select('role, is_active')
+              .eq('id', user.id)
+              .maybeSingle();
 
-        if (role.isEmpty) {
-          try {
-            final profile = await client
-                .from('profile')
-                .select('role, is_active')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (profile != null && (profile['is_active'] as bool? ?? true)) {
-              role = (profile['role'] as String?) ?? '';
-            }
-          } catch (e) {
-            debugPrint('[HomeScreen] Failed profile role lookup: $e');
+          if (profile != null && (profile['is_active'] as bool? ?? true)) {
+            role = (profile['role'] as String?)?.toLowerCase() ?? '';
           }
+        } catch (e) {
+          debugPrint('[HomeScreen] DB profile role lookup: $e');
         }
 
-        bool isAdmin = role == 'admin';
-
-        // Safety fallback for known default admin account.
-        if (!isAdmin && (user.email?.toLowerCase() == 'admin@gmail.com')) {
-          isAdmin = true;
+        // 2. Fallback to user metadata
+        if (role.isEmpty) {
+          role = (user.userMetadata?['role'] as String?)?.toLowerCase() ?? '';
         }
 
-        // Last fallback: ask DB helper if current user is admin.
+        final userEmail = user.email?.toLowerCase() ?? '';
+        bool isAdmin = role.contains('admin') ||
+            userEmail == 'mainadminnbro@gmail.com' ||
+            userEmail == 'admin@gmail.com' ||
+            userEmail.startsWith('admin.');
+
+        // 3. Fallback: ask DB helper if current user is admin.
         if (!isAdmin) {
           try {
             final rpcResult = await client.rpc('is_admin');

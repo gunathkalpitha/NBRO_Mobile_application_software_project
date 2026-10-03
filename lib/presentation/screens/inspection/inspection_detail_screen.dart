@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/core/services/officer_name_resolver.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
@@ -379,6 +380,12 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
   @override
   @override
   Widget build(BuildContext context) {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final userEmail = currentUser?.email?.toLowerCase() ?? '';
+    final isOfficer = userEmail != 'admin@gmail.com' &&
+        userEmail != 'mainadminnbro@gmail.com' &&
+        !userEmail.startsWith('admin.');
+
     //delete window
     if (_isDeleting) {
       return const Scaffold(
@@ -435,30 +442,31 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
             tooltip: 'Export PDF',
             onPressed: () => _generatePDFReport(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: NBROColors.white),
-            tooltip: 'Edit Inspection',
-            onPressed: () async {
-              final result = await Navigator.push<Inspection>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditInspectionScreen(
-                    inspection: _currentInspection,
-                    onInspectionUpdated: (updatedInspection) {
-                      setState(() {
-                        _currentInspection = updatedInspection;
-                      });
-                    },
+          if (isOfficer)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: NBROColors.white),
+              tooltip: 'Edit Inspection',
+              onPressed: () async {
+                final result = await Navigator.push<Inspection>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditInspectionScreen(
+                      inspection: _currentInspection,
+                      onInspectionUpdated: (updatedInspection) {
+                        setState(() {
+                          _currentInspection = updatedInspection;
+                        });
+                      },
+                    ),
                   ),
-                ),
-              );
-              if (result != null) {
-                setState(() {
-                  _currentInspection = result;
-                });
-              }
-            },
-          ),
+                );
+                if (result != null) {
+                  setState(() {
+                    _currentInspection = result;
+                  });
+                }
+              },
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: NBROColors.white),
             onSelected: (value) {
@@ -817,6 +825,12 @@ class _KeyInformationSection extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _MetricTile(
+            label: 'Survey Date & Time',
+            value: DateFormat('dd MMM yyyy • hh:mm a').format(inspection.createdAt),
+            icon: Icons.event_note_rounded,
+          ),
           if (inspection.latitude != null && inspection.longitude != null) ...[
             const SizedBox(height: 12),
             GestureDetector(
@@ -994,15 +1008,18 @@ class _BuildingProfileSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasWall = inspection.wallMaterials != null && inspection.wallMaterials!.isNotEmpty;
-    final hasDoor = inspection.doorMaterials != null && inspection.doorMaterials!.isNotEmpty;
-    final hasFloor = inspection.floorMaterials != null && inspection.floorMaterials!.isNotEmpty;
-    final hasRoof = inspection.roofMaterials != null && inspection.roofMaterials!.isNotEmpty;
-    final hasRoofCovering = inspection.roofCovering != null && inspection.roofCovering!.isNotEmpty;
-
-    if (!hasWall && !hasDoor && !hasFloor && !hasRoof && !hasRoofCovering) {
-      return const SizedBox.shrink();
-    }
+    final wallMap = (inspection.wallMaterials != null && inspection.wallMaterials!.isNotEmpty)
+        ? inspection.wallMaterials!
+        : {'Brickwork / Plastered': true};
+    final doorMap = (inspection.doorMaterials != null && inspection.doorMaterials!.isNotEmpty)
+        ? inspection.doorMaterials!
+        : {'Timber Frames & Glass': true};
+    final floorMap = (inspection.floorMaterials != null && inspection.floorMaterials!.isNotEmpty)
+        ? inspection.floorMaterials!
+        : {'Cement Rendered / Tiles': true};
+    final roofMap = (inspection.roofMaterials != null && inspection.roofMaterials!.isNotEmpty)
+        ? inspection.roofMaterials!
+        : {'Timber Frame': true};
 
     return _SectionContainer(
       title: 'Building Material Specifications',
@@ -1010,21 +1027,15 @@ class _BuildingProfileSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (hasWall) _MaterialChipGroup(label: 'Wall Materials', materials: inspection.wallMaterials!),
-          if (hasDoor) ...[
-            if (hasWall) const SizedBox(height: 14),
-            _MaterialChipGroup(label: 'Door Materials', materials: inspection.doorMaterials!),
-          ],
-          if (hasFloor) ...[
-            if (hasWall || hasDoor) const SizedBox(height: 14),
-            _MaterialChipGroup(label: 'Floor Materials', materials: inspection.floorMaterials!),
-          ],
-          if (hasRoof) ...[
-            if (hasWall || hasDoor || hasFloor) const SizedBox(height: 14),
-            _MaterialChipGroup(label: 'Roof Materials', materials: inspection.roofMaterials!),
-          ],
-          if (hasRoofCovering) ...[
-            if (hasWall || hasDoor || hasFloor || hasRoof) const SizedBox(height: 14),
+          _MaterialChipGroup(label: 'Wall Materials', materials: wallMap),
+          const SizedBox(height: 12),
+          _MaterialChipGroup(label: 'Door & Window Materials', materials: doorMap),
+          const SizedBox(height: 12),
+          _MaterialChipGroup(label: 'Floor Finish Materials', materials: floorMap),
+          const SizedBox(height: 12),
+          _MaterialChipGroup(label: 'Roof Frame & Cover', materials: roofMap),
+          if (inspection.roofCovering != null && inspection.roofCovering!.isNotEmpty) ...[
+            const SizedBox(height: 12),
             _MaterialChipGroup(label: 'Roof Covering', materials: {inspection.roofCovering!: true}),
           ],
         ],

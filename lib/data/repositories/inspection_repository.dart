@@ -89,47 +89,108 @@ class InspectionRepository {
     }
   }
 
-  /// Check if the currently logged in user is an Administrator
-  Future<bool> _isUserAdmin() async {
+  /// Check if the currently logged in user is an Administrator (Main, Super, or Regional Admin)
+  Future<bool> isUserAdmin() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return false;
+    final role = await _getUserRole(user.id, user.email ?? '');
+    return role.contains('admin');
+  }
 
-    // 1. Check cached profile state
+  Future<String> _getUserRole(String userId, String email) async {
+    final lowerEmail = email.toLowerCase();
+    if (lowerEmail == 'admin@gmail.com') return 'super_admin';
+    if (lowerEmail == 'mainadminnbro@gmail.com') return 'main_admin';
+
+    // 1. Check cached profile
     final profile = ProfileStateService.notifier.value;
-    if (profile != null && profile.role == 'admin') return true;
-
-    // 2. Check user metadata and email
-    if (user.userMetadata?['role'] == 'admin' || user.email?.toLowerCase() == 'admin@gmail.com') {
-      return true;
+    if (profile != null && profile.role.isNotEmpty) {
+      return profile.role.toLowerCase();
     }
 
-    // 3. Query profile table
+    // 2. Query DB profile
     try {
-      final res = await _supabase.from('profile').select('role').eq('id', user.id).maybeSingle();
-      if (res != null && res['role'] == 'admin') {
-        return true;
+      final res = await _supabase
+          .from('profile')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle();
+      if (res != null && res['role'] != null) {
+        return (res['role'] as String).toLowerCase();
       }
     } catch (_) {}
 
-    return false;
+    if (lowerEmail.startsWith('admin.') || lowerEmail.contains('admin')) {
+      return 'admin';
+    }
+
+    return 'officer';
   }
 
-  /// Get all inspections (Officers see only their own inspections; Admins see all officers' inspections)
+  Future<Set<String>> _getOfficersCreatedBy(String adminId) async {
+    try {
+      final res = await _supabase
+          .from('profile')
+          .select('id, full_name')
+          .eq('created_by', adminId);
+
+      final ids = <String>{};
+      for (final row in (res as List)) {
+        if (row['id'] != null) ids.add(row['id'] as String);
+        if (row['full_name'] != null && (row['full_name'] as String).trim().isNotEmpty) {
+          ids.add((row['full_name'] as String).trim());
+        }
+      }
+      return ids;
+    } catch (e) {
+      debugPrint('[InspectionRepository] _getOfficersCreatedBy error: $e');
+      return {};
+    }
+  }
+
+  /// Get inspections based on role boundaries:
+  /// - Super Admin (admin@gmail.com): Returns empty list (Data Privacy for Dev Team).
+  /// - Main Admin (mainadminnbro@gmail.com): Sees ALL inspections across Sri Lanka.
+  /// - Regional Admin (sub-admin): Sees ONLY inspections created by officers HE created/manages.
+  /// - Field Officer: Sees ONLY inspections created by himself.
   Future<List<Inspection>> getInspections() async {
     try {
       final currentUser = _supabase.auth.currentUser;
-      final isAdmin = await _isUserAdmin();
+      if (currentUser == null) return await _localDataSource.getAllInspections();
 
-      // 1. Fetch local inspections first
+      final email = currentUser.email?.toLowerCase() ?? '';
+      final role = await _getUserRole(currentUser.id, email);
+
+      final isSuperAdmin = role == 'super_admin' || email == 'admin@gmail.com';
+      final isMainAdmin = role == 'main_admin' || email == 'mainadminnbro@gmail.com';
+      final isRegionalAdmin = !isSuperAdmin && !isMainAdmin && (role.contains('admin') || email.startsWith('admin.'));
+
+      // 1. Super Admin (admin@gmail.com): Dev/System Admin has no access to sensitive field surveys
+      if (isSuperAdmin) {
+        return [];
+      }
+
+      // 2. Determine officers created by this admin if Regional Admin
+      Set<String> managedOfficerIds = {};
+      if (isRegionalAdmin) {
+        managedOfficerIds = await _getOfficersCreatedBy(currentUser.id);
+      }
+
+      // 3. Fetch local inspections first
       List<Inspection> localInspections = await _localDataSource.getAllInspections();
 
-      // 2. If online, try syncing and fetching remote records
+      // 4. If online, try syncing and fetching remote records
       final isOnline = await ConnectivityService.instance.checkActualConnectivity();
       if (isOnline) {
         _syncService.triggerSync().catchError((_) {});
 
         try {
-          final remoteInspections = await _fetchRemoteInspections(isAdmin: isAdmin, userId: currentUser?.id);
+          final remoteInspections = await _fetchRemoteInspections(
+            isMainAdmin: isMainAdmin,
+            isRegionalAdmin: isRegionalAdmin,
+            managedOfficerIds: managedOfficerIds,
+            userId: currentUser.id,
+          );
           for (final remote in remoteInspections) {
             await _localDataSource.saveInspection(remote);
           }
@@ -139,32 +200,48 @@ class InspectionRepository {
         }
       }
 
-      // 3. Filter for non-admin officers so officers see only their own created inspections
-      if (!isAdmin && currentUser != null) {
+      // 5. Apply local list filtering based on role
+      if (isMainAdmin) {
+        return localInspections; // Main Admin sees all
+      } else if (isRegionalAdmin) {
+        // Regional Admin sees ONLY inspections from officers HE created
+        if (managedOfficerIds.isEmpty) {
+          return [];
+        }
+
+        return localInspections.where((inspection) {
+          final creator = (inspection.createdBy ?? '').trim();
+          if (creator.isEmpty) return false;
+
+          // Direct ID or Name match
+          if (managedOfficerIds.contains(creator)) return true;
+
+          // Case-insensitive match (excluding generic fallback strings)
+          final lowerCreator = creator.toLowerCase();
+          for (final id in managedOfficerIds) {
+            final lowerId = id.toLowerCase();
+            if (lowerId == lowerCreator && lowerId != 'government officer' && lowerId != 'officer') {
+              return true;
+            }
+          }
+          return false;
+        }).toList();
+      } else {
+        // Field Officer sees only his own created inspections
         final currentUserId = currentUser.id;
         final currentEmail = currentUser.email;
 
         return localInspections.where((inspection) {
           final creator = inspection.createdBy;
-          if (creator == null || creator.isEmpty) return true;
+          if (creator == null || creator.isEmpty) return false;
           return creator == currentUserId ||
                  creator == currentEmail ||
-                 creator == 'local_user' ||
-                 creator == 'Officer' ||
                  OfficerNameResolver.resolve(creator) == OfficerNameResolver.resolve(currentUserId);
         }).toList();
       }
-
-      return localInspections;
     } catch (e) {
       debugPrint('[InspectionRepository] Failed to get inspections: $e');
-      final local = await _localDataSource.getAllInspections();
-      final currentUser = _supabase.auth.currentUser;
-      final isAdmin = await _isUserAdmin();
-      if (!isAdmin && currentUser != null) {
-        return local.where((i) => i.createdBy == currentUser.id || i.createdBy == null || i.createdBy == 'local_user').toList();
-      }
-      return local;
+      return await _localDataSource.getAllInspections();
     }
   }
 
@@ -210,7 +287,12 @@ class InspectionRepository {
 
   // --- Remote Supabase Helpers ---
 
-  Future<List<Inspection>> _fetchRemoteInspections({bool isAdmin = true, String? userId}) async {
+  Future<List<Inspection>> _fetchRemoteInspections({
+    bool isMainAdmin = false,
+    bool isRegionalAdmin = false,
+    Set<String> managedOfficerIds = const {},
+    String? userId,
+  }) async {
     final profileMap = await _getProfileNamesMap();
     dynamic query = _supabase.from('site').select('''
           site_id,
@@ -250,8 +332,17 @@ class InspectionRepository {
           )
         ''');
 
-    if (!isAdmin && userId != null && userId.isNotEmpty) {
-      query = query.eq('user_id', userId);
+    if (!isMainAdmin) {
+      if (isRegionalAdmin) {
+        final uuidList = managedOfficerIds.where((id) => RegExp(r'^[0-9a-fA-F]{8}-').hasMatch(id)).toList();
+        if (uuidList.isNotEmpty) {
+          query = query.inFilter('user_id', uuidList);
+        } else {
+          return [];
+        }
+      } else if (userId != null && userId.isNotEmpty) {
+        query = query.eq('user_id', userId);
+      }
     }
 
     final response = await query.order('created_at', ascending: false);
@@ -380,6 +471,8 @@ class InspectionRepository {
             if (scope == 'floor') floorMaterials[value] = true;
             if (scope == 'roof') roofMaterials[value] = true;
             if (scope == 'roofcovering') roofCovering = value;
+          } else if (parts.length == 1 && elementType.trim().isNotEmpty) {
+            wallMaterials[elementType.trim()] = true;
           }
         }
       }
