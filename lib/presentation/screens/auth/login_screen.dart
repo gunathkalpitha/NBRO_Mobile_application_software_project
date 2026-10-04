@@ -125,13 +125,16 @@ class _LoginScreenState extends State<LoginScreen> {
         
         // Check if the account is active
         try {
+          final userEmail = response.user?.email?.toLowerCase() ?? '';
+          final isProtectedAdmin = userEmail == 'admin@gmail.com' || userEmail == 'mainadminnbro@gmail.com';
+
           final profileResponse = await Supabase.instance.client
               .from('profile')
               .select('is_active')
               .eq('id', response.user!.id)
-              .single();
+              .maybeSingle();
           
-          final isActive = profileResponse['is_active'] as bool? ?? true;
+          final isActive = isProtectedAdmin || (profileResponse?['is_active'] as bool? ?? true);
           
           if (!isActive) {
             // Account is disabled, sign out immediately

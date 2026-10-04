@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
+import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/sync_status_badge.dart';
 import 'package:nbro_mobile_application/data/repositories/inspection_repository.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
@@ -121,6 +122,9 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final isSuperAdmin = user?.email?.toLowerCase() == 'admin@gmail.com';
+
     return Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF121212)
@@ -131,14 +135,16 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [NBROColors.primary, NBROColors.primaryDark],
+            gradient: LinearGradient(
+              colors: isSuperAdmin
+                  ? [const Color(0xFF4A148C), const Color(0xFF311B92)]
+                  : [NBROColors.primary, NBROColors.primaryDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: NBROColors.primary.withValues(alpha: 0.3),
+                color: (isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary).withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -155,57 +161,12 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             NavRailController.toggleVisibility();
           },
         ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: const BoxDecoration(
-                color: NBROColors.white,
-                shape: BoxShape.circle,
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/icons/pasted-image.png',
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.business,
-                      color: NBROColors.primary,
-                      size: 32,
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'NBRO Admin Portal',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: NBROColors.white,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  Text(
-                    'National Building Research Organization',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: NBROColors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        title: NBROBrand(
+          title: isSuperAdmin ? 'System Operations' : 'Admin Portal',
+          showFullName: true,
+          isSuperAdmin: isSuperAdmin,
+          logoSize: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         ),
         actions: [
           // Compact Cloud Status Icon Badge
@@ -268,145 +229,226 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                             childAspectRatio: 1.25,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            children: [
-                              // Box 1: Inspections (View All)
-                              _AdminActionCard(
-                                title: 'Inspections\n(View All)',
-                                tag: 'ALL SITES',
-                                icon: Icons.fact_check_outlined,
-                                bgAsset: 'assets/images/bg_inspections.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  if (widget.onNavItemSelected != null) {
-                                    widget.onNavItemSelected!(AdminNavItem.inspections);
-                                    return;
-                                  }
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AdminInspectionsManagementScreen(),
+                            children: isSuperAdmin
+                                ? [
+                                    // Super Admin Card 1: Manage Admins
+                                    _AdminActionCard(
+                                      title: 'Manage Admins',
+                                      tag: 'ADMIN CONTROL',
+                                      icon: Icons.admin_panel_settings_outlined,
+                                      bgAsset: 'assets/images/bg_officers.jpg',
+                                      accentColor: const Color(0xFFFFD700),
+                                      onTap: () {
+                                        if (widget.onNavItemSelected != null) {
+                                          widget.onNavItemSelected!(AdminNavItem.officers);
+                                          return;
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AdminOfficersScreen(),
+                                          ),
+                                        ).then((_) => _loadAdminStats());
+                                      },
                                     ),
-                                  );
-                                },
-                              ),
 
-                              // Box 2: Manage Officers
-                              _AdminActionCard(
-                                title: 'Manage Officers',
-                                tag: 'OFFICERS',
-                                icon: Icons.people_alt_outlined,
-                                bgAsset: 'assets/images/bg_officers.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  if (widget.onNavItemSelected != null) {
-                                    widget.onNavItemSelected!(AdminNavItem.officers);
-                                    return;
-                                  }
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AdminOfficersScreen(),
+                                    // Super Admin Card 2: Publish Notices
+                                    _AdminActionCard(
+                                      title: 'Notices & Bulletins',
+                                      tag: 'PUBLISH',
+                                      icon: Icons.campaign_outlined,
+                                      bgAsset: 'assets/images/bg_notice.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        if (widget.onNavItemSelected != null) {
+                                          widget.onNavItemSelected!(AdminNavItem.notices);
+                                          return;
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AdminNoticesScreen(),
+                                          ),
+                                        ).then((_) => _loadNoticeSummary());
+                                      },
                                     ),
-                                  ).then((_) => _loadAdminStats());
-                                },
-                              ),
 
-                              // Box 3: Site on Map
-                              _AdminActionCard(
-                                title: 'Sites on Map',
-                                tag: 'GOOGLE MAP',
-                                icon: Icons.map_outlined,
-                                bgAsset: 'assets/images/bg_map.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: _openSitesMap,
-                              ),
+                                    // Super Admin Card 3: Audit Log
+                                    _AdminActionCard(
+                                      title: 'Auditlog',
+                                      tag: 'REVIEW',
+                                      icon: Icons.audiotrack_outlined,
+                                      bgAsset: 'assets/images/auditlog.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AuditlogScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
 
-                              // Box 4: Notice
-                              _AdminActionCard(
-                                title: 'Notices',
-                                tag: 'PUBLISH',
-                                icon: Icons.campaign_outlined,
-                                bgAsset: 'assets/images/bg_notice.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  if (widget.onNavItemSelected != null) {
-                                    widget.onNavItemSelected!(AdminNavItem.notices);
-                                    return;
-                                  }
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AdminNoticesScreen(),
+                                    // Super Admin Card 4: Task Manager
+                                    _AdminActionCard(
+                                      title: 'Task Manager',
+                                      tag: 'ASSIGN',
+                                      icon: Icons.next_plan_outlined,
+                                      bgAsset: 'assets/images/task_manager.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const Task_managerScreen(),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ).then((_) => _loadNoticeSummary());
-                                },
-                              ),
+                                  ]
+                                : [
+                                    // Main / Regional Admin Card 1: Inspections (View All)
+                                    _AdminActionCard(
+                                      title: 'Inspections\n(View All)',
+                                      tag: 'ALL SITES',
+                                      icon: Icons.fact_check_outlined,
+                                      bgAsset: 'assets/images/bg_inspections.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        if (widget.onNavItemSelected != null) {
+                                          widget.onNavItemSelected!(AdminNavItem.inspections);
+                                          return;
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AdminInspectionsManagementScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
 
-                              // Box 5: Report
-                              _AdminActionCard(
-                                title: 'Reports',
-                                tag: 'PDF EXPORT',
-                                icon: Icons.assessment_outlined,
-                                bgAsset: 'assets/images/bg_reports.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ReportsScreen(),
+                                    // Card 2: Manage Officers
+                                    _AdminActionCard(
+                                      title: 'Manage Officers',
+                                      tag: 'OFFICERS',
+                                      icon: Icons.people_alt_outlined,
+                                      bgAsset: 'assets/images/bg_officers.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        if (widget.onNavItemSelected != null) {
+                                          widget.onNavItemSelected!(AdminNavItem.officers);
+                                          return;
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AdminOfficersScreen(),
+                                          ),
+                                        ).then((_) => _loadAdminStats());
+                                      },
                                     ),
-                                  );
-                                },
-                              ),
-                              // Box 7: Audit log
-                              _AdminActionCard(
-                                title: 'Auditlog',
-                                tag: 'REVIEW',
-                                icon: Icons.audiotrack_outlined,
-                                bgAsset: 'assets/images/auditlog.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AuditlogScreen(),
+
+                                    // Card 3: Sites on Map
+                                    _AdminActionCard(
+                                      title: 'Sites on Map',
+                                      tag: 'GOOGLE MAP',
+                                      icon: Icons.map_outlined,
+                                      bgAsset: 'assets/images/bg_map.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: _openSitesMap,
                                     ),
-                                  );
-                                },
-                              ),
-                              // Box 6: Analytic
-                              _AdminActionCard(
-                                title: 'Analytics',
-                                tag: 'CHARTS',
-                                icon: Icons.analytics_outlined,
-                                bgAsset: 'assets/images/bg_analytics.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const AnalysisScreen(),
+
+                                    // Card 4: Notice
+                                    _AdminActionCard(
+                                      title: 'Notices',
+                                      tag: 'PUBLISH',
+                                      icon: Icons.campaign_outlined,
+                                      bgAsset: 'assets/images/bg_notice.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        if (widget.onNavItemSelected != null) {
+                                          widget.onNavItemSelected!(AdminNavItem.notices);
+                                          return;
+                                        }
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AdminNoticesScreen(),
+                                          ),
+                                        ).then((_) => _loadNoticeSummary());
+                                      },
                                     ),
-                                  );
-                                },
-                              ),
-                             // Box 8: Task manager
-                              _AdminActionCard(
-                                title: 'Task Manager',
-                                tag: 'ASSIGN',
-                                icon: Icons.next_plan_outlined,
-                                bgAsset: 'assets/images/task_manager.jpg',
-                                accentColor: const Color(0xFFF4F6F9),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const Task_managerScreen(),
+
+                                    // Card 5: Report
+                                    _AdminActionCard(
+                                      title: 'Reports',
+                                      tag: 'PDF EXPORT',
+                                      icon: Icons.assessment_outlined,
+                                      bgAsset: 'assets/images/bg_reports.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ReportsScreen(),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  );
-                                },
-                              ),
-                            ],
+
+                                    // Card 6: Audit log
+                                    _AdminActionCard(
+                                      title: 'Auditlog',
+                                      tag: 'REVIEW',
+                                      icon: Icons.audiotrack_outlined,
+                                      bgAsset: 'assets/images/auditlog.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AuditlogScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+
+                                    // Card 7: Analytics
+                                    _AdminActionCard(
+                                      title: 'Analytics',
+                                      tag: 'CHARTS',
+                                      icon: Icons.analytics_outlined,
+                                      bgAsset: 'assets/images/bg_analytics.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const AnalysisScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+
+                                    // Card 8: Task Manager
+                                    _AdminActionCard(
+                                      title: 'Task Manager',
+                                      tag: 'ASSIGN',
+                                      icon: Icons.next_plan_outlined,
+                                      bgAsset: 'assets/images/task_manager.jpg',
+                                      accentColor: const Color(0xFFF4F6F9),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const Task_managerScreen(),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
                           ),
                         ],
                       ),

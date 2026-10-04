@@ -3,20 +3,59 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 
+/// Gold Shield Logo Badge for Super Admin / Dev Control Portal
+class SuperAdminBrandLogo extends StatelessWidget {
+  final double size;
+  const SuperAdminBrandLogo({super.key, this.size = 32});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFD700), // Royal Gold
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF4A148C), // Deep Purple
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.shield,
+          color: Color(0xFFFFD700),
+          size: 18,
+        ),
+      ),
+    );
+  }
+}
+
 class NBROBrand extends StatelessWidget {
   final String title;
   final double logoSize;
   final EdgeInsetsGeometry padding;
   final Color color;
   final bool showFullName;
+  final bool isSuperAdmin;
 
   const NBROBrand({
     super.key,
     required this.title,
-    this.logoSize = 28,
+    this.logoSize = 32,
     this.padding = const EdgeInsets.symmetric(horizontal: 8),
     this.color = NBROColors.white,
     this.showFullName = false,
+    this.isSuperAdmin = false,
   });
 
   @override
@@ -25,10 +64,12 @@ class NBROBrand extends StatelessWidget {
     
     return Row(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Try load asset logo if present; otherwise show monogram
-        _LogoDynamic(size: logoSize),
+        if (isSuperAdmin)
+          SuperAdminBrandLogo(size: logoSize)
+        else
+          _LogoDynamic(size: logoSize),
         Flexible(
           child: Padding(
             padding: padding,
@@ -38,23 +79,26 @@ class NBROBrand extends StatelessWidget {
               children: [
                 if (showFullName)
                   Text(
-                    isSmallScreen 
-                        ? 'NBRO' 
-                        : 'National Building Research Organization',
+                    isSuperAdmin
+                        ? 'SUPER ADMIN PORTAL'
+                        : (isSmallScreen 
+                            ? 'NBRO'
+                            : 'National Building Research Organization'),
                     style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                          fontSize: isSmallScreen ? 15 : 14,
-                        ),
+                      color: isSuperAdmin ? const Color(0xFFFFD700) : color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isSmallScreen ? 15 : 14,
+                      letterSpacing: 0.3,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   )
                 else
                   Text(
-                    'NBRO $title',
+                    isSuperAdmin ? 'SUPER ADMIN' : 'NBRO $title',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w700,
+                          color: isSuperAdmin ? const Color(0xFFFFD700) : color,
+                          fontWeight: FontWeight.bold,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -63,10 +107,10 @@ class NBROBrand extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                          color: color.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
+                      color: color.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -104,24 +148,16 @@ class _LogoDynamic extends StatelessWidget {
           return Container(
             width: size,
             height: size,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(size * 0.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              shape: BoxShape.circle,
             ),
-            padding: EdgeInsets.all(size * 0.1),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(size * 0.15),
+            padding: const EdgeInsets.all(4),
+            child: ClipOval(
               child: Image.asset(
                 logoPath,
-                width: size * 0.8,
-                height: size * 0.8,
+                width: size * 0.85,
+                height: size * 0.85,
                 fit: BoxFit.contain,
               ),
             ),
@@ -144,7 +180,7 @@ class _LogoDynamic extends StatelessWidget {
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 14,
+              fontSize: 13,
               height: 1.0,
             ),
           ),

@@ -18,7 +18,7 @@ BEGIN
     SET sync_status = 'pending'
     WHERE sync_status IS NULL;
 
-    SELECT id INTO admin_user_id FROM auth.users WHERE email = 'admin@gmail.com';
+    SELECT id INTO admin_user_id FROM auth.users WHERE email = 'mainadminnbro@gmail.com';
     IF admin_user_id IS NOT NULL THEN
         INSERT INTO public.profile (id, full_name, role, is_active)
         VALUES (admin_user_id, 'Administrator', 'admin', true)
@@ -26,9 +26,9 @@ BEGIN
         SET role = 'admin', 
             full_name = 'Administrator', 
             is_active = true;
-        RAISE NOTICE '✓ Admin profile created for admin@gmail.com (ID: %)', admin_user_id;
+        RAISE NOTICE '✓ Admin profile created for mainadminnbro@gmail.com (ID: %)', admin_user_id;
     ELSE
-        RAISE NOTICE '⚠ admin@gmail.com not found - create user first in Supabase Auth';
+        RAISE NOTICE '⚠ mainadminnbro@gmail.com not found - create user first in Supabase Auth';
     END IF;
 END $$;
 
