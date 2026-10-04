@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS site (
   CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id)
 );
 
--- General observation (no FK constraint)
+-- General observation 
 CREATE TABLE IF NOT EXISTS general_observation (
   observation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS general_observation (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- External services (no FK)
+-- External services 
 CREATE TABLE IF NOT EXISTS external_services (
   service_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS external_services (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ancillary building (no FK)
+-- Ancillary building
 CREATE TABLE IF NOT EXISTS ancillary_building (
   structure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS ancillary_building (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Detail type (no FK)
+-- Detail type
 CREATE TABLE IF NOT EXISTS detail_type (
   detail_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   structure_id UUID NOT NULL,
   name TEXT NOT NULL
 );
 
--- Building detail (no FK)
+-- Building detail
 CREATE TABLE IF NOT EXISTS building_detail (
   building_detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   detail_type_id UUID NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS building_detail (
   rear BOOLEAN DEFAULT FALSE
 );
 
--- Main building (no FK)
+-- Main building
 CREATE TABLE IF NOT EXISTS main_building (
   building_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS main_building (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Specification (no FK)
+-- Specification 
 CREATE TABLE IF NOT EXISTS specification (
   spec_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   building_id UUID,
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS specification (
   floor_details JSONB
 );
 
--- Defects (no FK)
+-- Defects 
 CREATE TABLE IF NOT EXISTS defects (
   defect_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID,
@@ -130,7 +130,7 @@ ADD COLUMN IF NOT EXISTS photo_url TEXT,
 ADD COLUMN IF NOT EXISTS remarks TEXT;
 
 -- Ensure missing columns exist in site table
-ALTER TABLE IF EXISTS site
+ALTER TABLE IF EXISTS site 
 ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326),
 ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
 ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
@@ -147,28 +147,6 @@ ALTER TABLE IF EXISTS site ADD CONSTRAINT site_building_ref_key UNIQUE (building
 ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
 ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
 
-ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
-ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
-
-ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
-ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
-ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
-ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
-ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
-
-ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
-ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
 
 -- Defect info (no FK)
 CREATE TABLE IF NOT EXISTS defect_info (
@@ -208,6 +186,65 @@ CREATE TABLE IF NOT EXISTS defect_media (
   uploaded_by UUID
 );
 
+
+ALTER TABLE IF EXISTS site ALTER COLUMN site_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_user;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_user FOREIGN KEY (user_id) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS site DROP CONSTRAINT IF EXISTS fk_site_updated_by;
+ALTER TABLE IF EXISTS site ADD CONSTRAINT fk_site_updated_by FOREIGN KEY (updated_by) REFERENCES profile(id);
+
+ALTER TABLE IF EXISTS general_observation ALTER COLUMN observation_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS general_observation DROP CONSTRAINT IF EXISTS fk_go_site;
+ALTER TABLE IF EXISTS general_observation ADD CONSTRAINT fk_go_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS external_services ALTER COLUMN service_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS external_services DROP CONSTRAINT IF EXISTS fk_es_site;
+ALTER TABLE IF EXISTS external_services ADD CONSTRAINT fk_es_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS main_building ALTER COLUMN building_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS main_building DROP CONSTRAINT IF EXISTS fk_mb_site;
+ALTER TABLE IF EXISTS main_building ADD CONSTRAINT fk_mb_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS specification ALTER COLUMN spec_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS specification DROP CONSTRAINT IF EXISTS fk_spec_building;
+ALTER TABLE IF EXISTS specification ADD CONSTRAINT fk_spec_building FOREIGN KEY (building_id) REFERENCES main_building(building_id) ON DELETE CASCADE;
+
+ALTER TABLE IF EXISTS defects ALTER COLUMN defect_id SET DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS defects DROP CONSTRAINT IF EXISTS fk_defects_site;
+ALTER TABLE IF EXISTS defects ADD CONSTRAINT fk_defects_site FOREIGN KEY (site_id) REFERENCES site(site_id) ON DELETE CASCADE;
+
+ALTER TABLE ancillary_building
+ADD CONSTRAINT fk_ancillary_building_site
+FOREIGN KEY (site_id)
+REFERENCES site(site_id)
+ON DELETE CASCADE;
+
+
+ALTER TABLE detail_type
+ADD CONSTRAINT fk_detail_type_structure
+FOREIGN KEY (structure_id)
+REFERENCES ancillary_building(structure_id)
+ON DELETE CASCADE;
+
+ALTER TABLE building_detail
+ADD CONSTRAINT fk_building_detail_type
+FOREIGN KEY (detail_type_id)
+REFERENCES detail_type(detail_type_id)
+ON DELETE CASCADE;
+
+ALTER TABLE defect_info
+ADD CONSTRAINT fk_defect_info_defect
+FOREIGN KEY (defect_id)
+REFERENCES defects(defect_id)
+ON DELETE CASCADE;
+
+ALTER TABLE defect_image
+ADD CONSTRAINT fk_defect_image_info
+FOREIGN KEY (info_id)
+REFERENCES defect_info(info_id)
+ON DELETE CASCADE;
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_site_user_id ON site(user_id);
 CREATE INDEX IF NOT EXISTS idx_general_observation_site_id ON general_observation(site_id);
@@ -226,137 +263,8 @@ CREATE INDEX IF NOT EXISTS idx_profile_role ON profile(role);
 CREATE INDEX IF NOT EXISTS idx_profile_is_active ON profile(is_active);
 CREATE INDEX IF NOT EXISTS idx_profile_must_change_password ON profile(must_change_password) WHERE must_change_password = true;
 
--- Update timestamp trigger function
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE 'plpgsql';
 
--- Attach triggers to tables
-DROP TRIGGER IF EXISTS update_site_updated_at ON site;
-CREATE TRIGGER update_site_updated_at
-BEFORE UPDATE ON site
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_general_observation_at ON general_observation;
-CREATE TRIGGER update_general_observation_at
-BEFORE UPDATE ON general_observation
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_profile_updated_at ON profile;
-CREATE TRIGGER update_profile_updated_at
-BEFORE UPDATE ON profile
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_ancillary_building_at ON ancillary_building;
-CREATE TRIGGER update_ancillary_building_at
-BEFORE UPDATE ON ancillary_building
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_external_services_at ON external_services;
-CREATE TRIGGER update_external_services_at
-BEFORE UPDATE ON external_services
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_main_building_at ON main_building;
-CREATE TRIGGER update_main_building_at
-BEFORE UPDATE ON main_building
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_defects_at ON defects;
-CREATE TRIGGER update_defects_at
-BEFORE UPDATE ON defects
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_defect_image_at ON defect_image;
-CREATE TRIGGER update_defect_image_at
-BEFORE UPDATE ON defect_image
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- Allows authenticated users (Officers & Admins) to READ and MANAGE ALL inspections
--- ============================================================================
-ALTER TABLE public.site ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.general_observation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.external_services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.main_building ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ancillary_building ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.detail_type ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.building_detail ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.specification ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.defects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.defect_info ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.defect_image ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.defect_media ENABLE ROW LEVEL SECURITY;
-
--- Drop old policies to prevent conflicts
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.site;
-DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.site;
-DROP POLICY IF EXISTS "Allow update for authenticated users" ON public.site;
-DROP POLICY IF EXISTS "Allow delete for authenticated users" ON public.site;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.site;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.profile;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.profile;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.general_observation;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.general_observation;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.external_services;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.external_services;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.main_building;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.main_building;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.ancillary_building;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.ancillary_building;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.detail_type;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.detail_type;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.building_detail;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.building_detail;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.specification;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.specification;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defects;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defects;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_info;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_info;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_image;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_image;
-
-DROP POLICY IF EXISTS "Allow select for authenticated users" ON public.defect_media;
-DROP POLICY IF EXISTS "Allow all for authenticated users" ON public.defect_media;
-
--- Create ALL-ACCESS FOR ALL policies (SELECT, INSERT, UPDATE, DELETE)
-CREATE POLICY "Allow all for authenticated users" ON public.site FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.profile FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.general_observation FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.external_services FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.main_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.ancillary_building FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.detail_type FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.building_detail FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.specification FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.defects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.defect_info FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.defect_image FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON public.defect_media FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 

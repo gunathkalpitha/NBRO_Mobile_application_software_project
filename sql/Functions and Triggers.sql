@@ -282,5 +282,62 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 
 
+-- Update timestamp trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- Attach triggers to tables
+DROP TRIGGER IF EXISTS update_site_updated_at ON site;
+CREATE TRIGGER update_site_updated_at
+BEFORE UPDATE ON site
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_general_observation_at ON general_observation;
+CREATE TRIGGER update_general_observation_at
+BEFORE UPDATE ON general_observation
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_profile_updated_at ON profile;
+CREATE TRIGGER update_profile_updated_at
+BEFORE UPDATE ON profile
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ancillary_building_at ON ancillary_building;
+CREATE TRIGGER update_ancillary_building_at
+BEFORE UPDATE ON ancillary_building
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_external_services_at ON external_services;
+CREATE TRIGGER update_external_services_at
+BEFORE UPDATE ON external_services
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_main_building_at ON main_building;
+CREATE TRIGGER update_main_building_at
+BEFORE UPDATE ON main_building
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_defects_at ON defects;
+CREATE TRIGGER update_defects_at
+BEFORE UPDATE ON defects
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_defect_image_at ON defect_image;
+CREATE TRIGGER update_defect_image_at
+BEFORE UPDATE ON defect_image
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
 
 
