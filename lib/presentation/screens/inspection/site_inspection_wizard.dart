@@ -1039,12 +1039,13 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 value: _typeOfStructure,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Type of Existing Structure',
                   prefixIcon: Icon(Icons.apartment),
                   border: OutlineInputBorder(),
                 ),
-                items: _structureTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
+                items: _structureTypes.map((type) => DropdownMenuItem(value: type, child: Text(type, overflow: TextOverflow.ellipsis))).toList(),
                 onChanged: (val) => setState(() => _typeOfStructure = val),
               ),
               const SizedBox(height: 14),
@@ -1052,13 +1053,14 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _presentCondition,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Select Condition',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Permanent', child: Text('Permanent')),
-                  DropdownMenuItem(value: 'Semi-permanent / Temporary', child: Text('Semi-permanent / Temporary')),
+                  DropdownMenuItem(value: 'Permanent', child: Text('Permanent', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'Semi-permanent / Temporary', child: Text('Semi-permanent / Temporary', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _presentCondition = val),
               ),
@@ -1081,10 +1083,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
                   child: DropdownButtonFormField<String>(
                     value: _waterSource,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Water Source', border: OutlineInputBorder()),
                     items: const [
-                      DropdownMenuItem(value: 'From Well', child: Text('From Well')),
-                      DropdownMenuItem(value: 'From main supply', child: Text('From main supply')),
+                      DropdownMenuItem(value: 'From Well', child: Text('From Well', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'From main supply', child: Text('From main supply', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) => setState(() => _waterSource = val),
                   ),
@@ -1100,10 +1103,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
                   child: DropdownButtonFormField<String>(
                     value: _electricitySource,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Electricity Source', border: OutlineInputBorder()),
                     items: const [
-                      DropdownMenuItem(value: 'From Private Solar supply', child: Text('From Private Solar supply')),
-                      DropdownMenuItem(value: 'From Main supply', child: Text('From Main supply')),
+                      DropdownMenuItem(value: 'From Private Solar supply', child: Text('From Private Solar supply', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'From Main supply', child: Text('From Main supply', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) => setState(() => _electricitySource = val),
                   ),
@@ -1119,10 +1123,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
                   child: DropdownButtonFormField<String>(
                     value: _sewageType,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Sewage Disposal Type', border: OutlineInputBorder()),
                     items: const [
-                      DropdownMenuItem(value: 'Private Septic tank & Soakage pits', child: Text('Private Septic tank & Soakage pits')),
-                      DropdownMenuItem(value: 'Connected to Sewer Main', child: Text('Connected to Sewer Main')),
+                      DropdownMenuItem(value: 'Private Septic tank & Soakage pits', child: Text('Private Septic tank & Soakage pits', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'Connected to Sewer Main', child: Text('Connected to Sewer Main', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) => setState(() => _sewageType = val),
                   ),
@@ -1156,16 +1161,17 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
                 value: _roofCovering,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Roof Covering Type',
                   prefixIcon: Icon(Icons.roofing),
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Clay Tiles', child: Text('Clay Tiles')),
-                  DropdownMenuItem(value: 'Asbestos', child: Text('Asbestos')),
-                  DropdownMenuItem(value: 'Covering Metal', child: Text('Covering Metal')),
-                  DropdownMenuItem(value: 'Zinc/Al', child: Text('Zinc/Al')),
+                  DropdownMenuItem(value: 'Clay Tiles', child: Text('Clay Tiles', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'Asbestos', child: Text('Asbestos', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'Covering Metal', child: Text('Covering Metal', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'Zinc/Al', child: Text('Zinc/Al', overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (val) => setState(() => _roofCovering = val),
               ),
