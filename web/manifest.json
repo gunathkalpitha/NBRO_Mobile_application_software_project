@@ -1,11 +1,11 @@
 {
-    "name": "nbro_mobile_application",
-    "short_name": "nbro_mobile_application",
+    "name": "National Building Research Organisation - Field Survey",
+    "short_name": "NBRO Survey",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#005F73",
+    "theme_color": "#005F73",
+    "description": "NBRO Pre-Crack Building Condition Survey Application",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
