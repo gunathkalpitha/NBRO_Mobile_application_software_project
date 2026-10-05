@@ -287,6 +287,7 @@ class _EditDefectModalState extends State<EditDefectModal> {
               // Defect Notation
               DropdownButtonFormField<String>(
                 value: _selectedNotation,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Defect Notation *',
                   prefixIcon: Icon(Icons.code),
@@ -295,7 +296,7 @@ class _EditDefectModalState extends State<EditDefectModal> {
                 items: DefectNotation.values
                     .map((n) => DropdownMenuItem(
                       value: n.code,
-                      child: Text(n.code),
+                      child: Text(n.code, overflow: TextOverflow.ellipsis),
                     ))
                     .toList(),
                 onChanged: (value) {
@@ -307,6 +308,7 @@ class _EditDefectModalState extends State<EditDefectModal> {
               // Defect Category
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Category *',
                   prefixIcon: Icon(Icons.category),
@@ -315,7 +317,7 @@ class _EditDefectModalState extends State<EditDefectModal> {
                 items: DefectCategory.values
                     .map((c) => DropdownMenuItem(
                       value: c.name,
-                      child: Text(c.displayName),
+                      child: Text(c.displayName, overflow: TextOverflow.ellipsis),
                     ))
                     .toList(),
                 onChanged: (value) {

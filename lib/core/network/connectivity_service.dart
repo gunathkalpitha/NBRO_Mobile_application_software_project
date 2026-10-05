@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -28,14 +29,27 @@ class ConnectivityService {
     checkActualConnectivity();
   }
 
-  /// Verifies actual network connectivity with a short timeout
+  /// Verifies actual network connectivity with dual OS socket lookup & HTTP fallback
   Future<bool> checkActualConnectivity() async {
+    // 1. Try instant OS socket DNS lookup (Works reliably on Mobile Data & Wi-Fi)
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        _updateOnlineStatus(true);
+        return true;
+      }
+    } catch (_) {
+      // Socket lookup failed or timed out, try secondary fallback
+    }
+
+    // 2. Secondary HTTP ping fallback
     try {
       final response = await http
           .get(Uri.parse('https://www.google.com'))
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 6));
 
-      final online = response.statusCode >= 200 && response.statusCode < 400;
+      final online = response.statusCode >= 200 && response.statusCode < 500;
       _updateOnlineStatus(online);
       return online;
     } catch (_) {

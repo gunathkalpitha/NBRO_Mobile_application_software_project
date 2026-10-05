@@ -283,6 +283,7 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
               const SizedBox(height: 8),
               DropdownButtonFormField<DefectNotation>(
                 initialValue: _selectedDefectNotation,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   hintText: 'Select defect notation',
                   prefixIcon: Icon(Icons.error_outline),
@@ -291,7 +292,10 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
                     .map(
                       (notation) => DropdownMenuItem(
                         value: notation,
-                        child: Text(notation.displayName),
+                        child: Text(
+                          notation.displayName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),
@@ -309,6 +313,7 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
               const SizedBox(height: 8),
               DropdownButtonFormField<DefectCategory>(
                 initialValue: _selectedDefectCategory,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   hintText: 'Select category',
                   prefixIcon: Icon(Icons.category),
@@ -317,7 +322,10 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
                     .map(
                       (category) => DropdownMenuItem(
                         value: category,
-                        child: Text(category.displayName),
+                        child: Text(
+                          category.displayName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     )
                     .toList(),
@@ -335,6 +343,7 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _selectedFloorLevel,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   hintText: 'Select floor level',
                   prefixIcon: Icon(Icons.layers),
