@@ -30,32 +30,38 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
     _GuideStep(
       icon: Icons.map_outlined,
       title: 'Smart Site Navigation',
-      description: 'Use maps and location tools to quickly reach sites and review inspection areas.',
+      description:
+          'Use maps and location tools to quickly reach sites and review inspection areas.',
     ),
     _GuideStep(
       icon: Icons.draw_outlined,
       title: 'Mark Defects Visually',
-      description: 'Capture photos and highlight cracks with freehand, rectangle, or circle annotations.',
+      description:
+          'Capture photos and highlight cracks with freehand, rectangle, or circle annotations.',
     ),
     _GuideStep(
       icon: Icons.cloud_upload_outlined,
       title: 'Save and Sync',
-      description: 'Your inspection data is stored securely and can be synced for reporting anytime.',
+      description:
+          'Your inspection data is stored securely and can be synced for reporting anytime.',
     ),
     _GuideStep(
       icon: Icons.assessment_outlined,
       title: 'Generate Reports',
-      description: 'Create detailed PDF reports with photos, measurements, and findings for stakeholders.',
+      description:
+          'Create detailed PDF reports with photos, measurements, and findings for stakeholders.',
     ),
     _GuideStep(
       icon: Icons.people_alt_outlined,
       title: 'Collaborate with Teams',
-      description: 'Share inspections with team members and track changes in real-time securely.',
+      description:
+          'Share inspections with team members and track changes in real-time securely.',
     ),
     _GuideStep(
       icon: Icons.cloud_done_outlined,
       title: 'Work Offline',
-      description: 'Inspections are saved locally and automatically synced when internet is available.',
+      description:
+          'Inspections are saved locally and automatically synced when internet is available.',
     ),
   ];
 
@@ -100,10 +106,7 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              NBROColors.primary,
-              NBROColors.primaryDark,
-            ],
+            colors: [NBROColors.primary, NBROColors.primaryDark],
           ),
         ),
         child: SafeArea(
@@ -149,11 +152,7 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    step.icon,
-                    size: 62,
-                    color: NBROColors.white,
-                  ),
+                  child: Icon(step.icon, size: 62, color: NBROColors.white),
                 ),
               ),
               const SizedBox(height: 18),
@@ -169,7 +168,10 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
                   itemBuilder: (context, index) {
                     final item = _steps[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 12,
+                      ),
                       child: AnimatedOpacity(
                         duration: const Duration(milliseconds: 280),
                         opacity: _currentIndex == index ? 1 : 0.55,
@@ -267,7 +269,9 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(NBROColors.black),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    NBROColors.black,
+                                  ),
                                 ),
                               )
                             : Row(
@@ -275,7 +279,11 @@ class _FirstLoginGuideScreenState extends State<FirstLoginGuideScreen> {
                                 children: [
                                   Text(isLast ? 'Get Started' : 'Next'),
                                   const SizedBox(width: 8),
-                                  Icon(isLast ? Icons.check_circle_outline : Icons.arrow_forward_rounded),
+                                  Icon(
+                                    isLast
+                                        ? Icons.check_circle_outline
+                                        : Icons.arrow_forward_rounded,
+                                  ),
                                 ],
                               ),
                       ),

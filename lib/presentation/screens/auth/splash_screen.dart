@@ -37,12 +37,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // Listen for auth state changes (including password recovery)
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final event = data.event;
-      
+
       debugPrint('[SplashScreen] Auth state change: $event');
-      
+
       if (event == AuthChangeEvent.passwordRecovery) {
         // User clicked the password reset link from email
-        debugPrint('[SplashScreen] Password recovery detected, navigating to reset screen');
+        debugPrint(
+          '[SplashScreen] Password recovery detected, navigating to reset screen',
+        );
         if (mounted) {
           Navigator.of(context).pushReplacementNamed('/reset-password');
         }
@@ -60,7 +62,8 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    final withinPeriod = await SessionSecurityService.isSessionWithinAllowedPeriod();
+    final withinPeriod =
+        await SessionSecurityService.isSessionWithinAllowedPeriod();
     if (!withinPeriod) {
       await Supabase.instance.client.auth.signOut();
       if (mounted) {
@@ -69,7 +72,8 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    final needsAppLock = await SessionSecurityService.shouldRequireAppLockOnLaunch();
+    final needsAppLock =
+        await SessionSecurityService.shouldRequireAppLockOnLaunch();
     if (needsAppLock) {
       final unlocked = await SessionSecurityService.authenticateForUnlock();
       if (!unlocked) {
@@ -86,7 +90,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Uri? _getIncomingAuthUri() {
-    final routeName = WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+    final routeName =
+        WidgetsBinding.instance.platformDispatcher.defaultRouteName;
 
     if (routeName.isNotEmpty && routeName != '/') {
       final routeUri = Uri.tryParse(routeName);
@@ -144,10 +149,7 @@ class _SplashScreenState extends State<SplashScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              NBROColors.primary,
-              NBROColors.primaryDark,
-            ],
+            colors: [NBROColors.primary, NBROColors.primaryDark],
           ),
         ),
         child: Center(
@@ -169,7 +171,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // App Title
               const Text(
                 'NBRO Field Surveyor',
@@ -181,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              
+
               // Subtitle
               const Text(
                 'Structural Defect Assessment Tool',
@@ -193,15 +195,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 80),
-              
+
               // Loading Indicator
               const SizedBox(
                 width: 50,
                 height: 50,
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    NBROColors.accent,
-                  ),
+                  valueColor: AlwaysStoppedAnimation<Color>(NBROColors.accent),
                   strokeWidth: 3,
                 ),
               ),

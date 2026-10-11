@@ -26,22 +26,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       final email = _emailController.text.trim();
-      
-      debugPrint('[ForgotPasswordScreen] Requesting password reset for: $email');
-      
+
+      debugPrint(
+        '[ForgotPasswordScreen] Requesting password reset for: $email',
+      );
+
       // Request password reset from Supabase
-     
+
       await Supabase.instance.client.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'https://gunathkalpitha.github.io/nbro-auth-redirect/?type=recovery',
+        redirectTo:
+            'https://gunathkalpitha.github.io/nbro-auth-redirect/?type=recovery',
       );
-      
+
       debugPrint('[ForgotPasswordScreen] Password reset email sent');
-      
+
       setState(() {
         _emailSent = true;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -92,15 +95,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  NBROColors.primary,
-                  NBROColors.primaryDark,
-                ],
+                colors: [NBROColors.primary, NBROColors.primaryDark],
               ),
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height -
+                minHeight:
+                    MediaQuery.of(context).size.height -
                     MediaQuery.of(context).padding.top -
                     MediaQuery.of(context).padding.bottom,
               ),
@@ -201,10 +202,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 4),
         const Text(
           'We\'ll send you reset instructions',
-          style: TextStyle(
-            fontSize: 14,
-            color: NBROColors.grey,
-          ),
+          style: TextStyle(fontSize: 14, color: NBROColors.grey),
         ),
         const SizedBox(height: 32),
 
@@ -230,9 +228,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      NBROColors.white,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(NBROColors.white),
                   ),
                 )
               : const Text('Send Reset Link'),
@@ -245,9 +241,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.arrow_back, size: 18),
             label: const Text('Back to Login'),
-            style: TextButton.styleFrom(
-              foregroundColor: NBROColors.primary,
-            ),
+            style: TextButton.styleFrom(foregroundColor: NBROColors.primary),
           ),
         ),
       ],
@@ -276,10 +270,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 16),
         Text(
           'We\'ve sent a password reset link to:\n${_emailController.text}',
-          style: const TextStyle(
-            fontSize: 14,
-            color: NBROColors.grey,
-          ),
+          style: const TextStyle(fontSize: 14, color: NBROColors.grey),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
@@ -291,18 +282,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           child: const Column(
             children: [
-              Icon(
-                Icons.info_outline,
-                color: NBROColors.primary,
-                size: 24,
-              ),
+              Icon(Icons.info_outline, color: NBROColors.primary, size: 24),
               SizedBox(height: 8),
               Text(
                 'Click the link in the email to reset your password. The link will expire in 1 hour.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: NBROColors.grey,
-                ),
+                style: TextStyle(fontSize: 13, color: NBROColors.grey),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -325,9 +309,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.arrow_back, size: 18),
             label: const Text('Back to Login'),
-            style: TextButton.styleFrom(
-              foregroundColor: NBROColors.primary,
-            ),
+            style: TextButton.styleFrom(foregroundColor: NBROColors.primary),
           ),
         ),
       ],

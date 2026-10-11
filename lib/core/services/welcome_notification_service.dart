@@ -20,7 +20,9 @@ class WelcomeNotificationService {
         'message': message,
       });
     } catch (e) {
-      debugPrint('[WelcomeNotificationService] System tray notification note: $e');
+      debugPrint(
+        '[WelcomeNotificationService] System tray notification note: $e',
+      );
     }
   }
 }

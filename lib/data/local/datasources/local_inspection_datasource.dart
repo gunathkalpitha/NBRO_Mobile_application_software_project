@@ -100,10 +100,18 @@ class LocalInspectionDataSource {
         inspection.hasSewageWaste == true ? 1 : 0,
         inspection.sewageType,
         inspection.numberOfFloors,
-        inspection.wallMaterials != null ? jsonEncode(inspection.wallMaterials) : null,
-        inspection.doorMaterials != null ? jsonEncode(inspection.doorMaterials) : null,
-        inspection.floorMaterials != null ? jsonEncode(inspection.floorMaterials) : null,
-        inspection.roofMaterials != null ? jsonEncode(inspection.roofMaterials) : null,
+        inspection.wallMaterials != null
+            ? jsonEncode(inspection.wallMaterials)
+            : null,
+        inspection.doorMaterials != null
+            ? jsonEncode(inspection.doorMaterials)
+            : null,
+        inspection.floorMaterials != null
+            ? jsonEncode(inspection.floorMaterials)
+            : null,
+        inspection.roofMaterials != null
+            ? jsonEncode(inspection.roofMaterials)
+            : null,
         inspection.roofCovering,
         buildingPhotoLocalPath,
         buildingPhotoRemoteUrl ?? inspection.buildingPhotoUrl,
@@ -115,7 +123,9 @@ class LocalInspectionDataSource {
       stmt.dispose();
 
       // 2. Clear old defects for this inspection to prevent duplication
-      db.execute('DELETE FROM defects WHERE inspection_local_id = ?', [inspection.id]);
+      db.execute('DELETE FROM defects WHERE inspection_local_id = ?', [
+        inspection.id,
+      ]);
 
       // Insert or Update Defects
       for (final defect in inspection.defects) {
@@ -163,15 +173,21 @@ class LocalInspectionDataSource {
       }
 
       // 3. Add to Sync Queue if PENDING or FAILED
-      if (inspection.syncStatus == SyncStatus.pending || inspection.syncStatus == SyncStatus.error) {
-        db.execute('''
+      if (inspection.syncStatus == SyncStatus.pending ||
+          inspection.syncStatus == SyncStatus.error) {
+        db.execute(
+          '''
           INSERT INTO sync_queue (entity_type, entity_id, operation, status, created_at)
           VALUES ('inspection', ?, 'CREATE', 'PENDING', ?)
-        ''', [inspection.id, DateTime.now().toIso8601String()]);
+        ''',
+          [inspection.id, DateTime.now().toIso8601String()],
+        );
       }
     });
 
-    debugPrint('[LocalInspectionDataSource] ✓ Saved inspection ${inspection.id} to SQLite');
+    debugPrint(
+      '[LocalInspectionDataSource] ✓ Saved inspection ${inspection.id} to SQLite',
+    );
   }
 
   /// Get all local inspections with their defects
@@ -193,9 +209,12 @@ class LocalInspectionDataSource {
   /// Get single inspection by local_id or building_ref
   Future<Inspection?> getInspection(String id) async {
     final db = await _localDb.db;
-    final ResultSet rows = db.select('''
+    final ResultSet rows = db.select(
+      '''
       SELECT * FROM inspections WHERE local_id = ? OR building_ref = ? LIMIT 1;
-    ''', [id, id]);
+    ''',
+      [id, id],
+    );
 
     if (rows.isEmpty) return null;
     final row = rows.first;
@@ -206,9 +225,12 @@ class LocalInspectionDataSource {
   /// Get defects for an inspection
   Future<List<Defect>> getDefectsForInspection(String inspectionLocalId) async {
     final db = await _localDb.db;
-    final ResultSet rows = db.select('''
+    final ResultSet rows = db.select(
+      '''
       SELECT * FROM defects WHERE inspection_local_id = ? ORDER BY created_at ASC;
-    ''', [inspectionLocalId]);
+    ''',
+      [inspectionLocalId],
+    );
 
     return rows.map((row) {
       return Defect(
@@ -224,7 +246,9 @@ class LocalInspectionDataSource {
         ),
         floorLevel: row['floor_level'] as String?,
         lengthMm: (row['length_mm'] as num).toDouble(),
-        widthMm: row['width_mm'] != null ? (row['width_mm'] as num).toDouble() : null,
+        widthMm: row['width_mm'] != null
+            ? (row['width_mm'] as num).toDouble()
+            : null,
         photoPath: row['photo_local_path'] as String?,
         photoUrl: row['photo_remote_url'] as String?,
         remarks: row['remarks'] as String?,
@@ -242,7 +266,8 @@ class LocalInspectionDataSource {
     String? buildingPhotoRemoteUrl,
   }) async {
     final db = await _localDb.db;
-    db.execute('''
+    db.execute(
+      '''
       UPDATE inspections SET
         sync_status = ?,
         server_id = COALESCE(?, server_id),
@@ -251,16 +276,18 @@ class LocalInspectionDataSource {
         synced_at = CASE WHEN ? = 'SYNCED' THEN ? ELSE synced_at END,
         updated_at = ?
       WHERE local_id = ?;
-    ''', [
-      status.name.toUpperCase(),
-      serverId,
-      syncError,
-      buildingPhotoRemoteUrl,
-      status.name.toUpperCase(),
-      DateTime.now().toIso8601String(),
-      DateTime.now().toIso8601String(),
-      localId,
-    ]);
+    ''',
+      [
+        status.name.toUpperCase(),
+        serverId,
+        syncError,
+        buildingPhotoRemoteUrl,
+        status.name.toUpperCase(),
+        DateTime.now().toIso8601String(),
+        DateTime.now().toIso8601String(),
+        localId,
+      ],
+    );
   }
 
   /// Update defect photo remote URL and status
@@ -269,34 +296,46 @@ class LocalInspectionDataSource {
     String remoteUrl,
   ) async {
     final db = await _localDb.db;
-    db.execute('''
+    db.execute(
+      '''
       UPDATE defects SET
         photo_remote_url = ?,
         upload_status = 'SYNCED'
       WHERE local_id = ?;
-    ''', [remoteUrl, defectLocalId]);
+    ''',
+      [remoteUrl, defectLocalId],
+    );
   }
 
   /// Find photo paths for SYNCED inspections older than 30 days
   Future<List<Map<String, String>>> getOldSyncedPhotoItems() async {
     final db = await _localDb.db;
-    final cutoffDate = DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
-    
-    final ResultSet siteRows = db.select('''
+    final cutoffDate = DateTime.now()
+        .subtract(const Duration(days: 30))
+        .toIso8601String();
+
+    final ResultSet siteRows = db.select(
+      '''
       SELECT building_photo_local_path, building_photo_remote_url 
       FROM inspections 
       WHERE sync_status = 'SYNCED' AND created_at < ? AND building_photo_local_path IS NOT NULL;
-    ''', [cutoffDate]);
+    ''',
+      [cutoffDate],
+    );
 
-    final ResultSet defectRows = db.select('''
+    final ResultSet defectRows = db.select(
+      '''
       SELECT photo_local_path, photo_remote_url 
       FROM defects 
       WHERE upload_status = 'SYNCED' AND created_at < ? AND photo_local_path IS NOT NULL;
-    ''', [cutoffDate]);
+    ''',
+      [cutoffDate],
+    );
 
     final items = <Map<String, String>>[];
     for (final row in siteRows) {
-      if (row['building_photo_local_path'] != null && row['building_photo_remote_url'] != null) {
+      if (row['building_photo_local_path'] != null &&
+          row['building_photo_remote_url'] != null) {
         items.add({
           'local_path': row['building_photo_local_path'] as String,
           'remote_url': row['building_photo_remote_url'] as String,
@@ -333,14 +372,17 @@ class LocalInspectionDataSource {
     String? error,
   }) async {
     final db = await _localDb.db;
-    db.execute('''
+    db.execute(
+      '''
       UPDATE sync_queue SET
         status = ?,
         attempt_count = attempt_count + 1,
         last_error = ?,
         last_attempt_at = ?
       WHERE id = ?;
-    ''', [status, error, DateTime.now().toIso8601String(), queueId]);
+    ''',
+      [status, error, DateTime.now().toIso8601String(), queueId],
+    );
   }
 
   /// Clear synced queue entries
@@ -369,20 +411,28 @@ class LocalInspectionDataSource {
       }
     }
 
-    final statusStr = (row['sync_status'] as String?)?.toLowerCase() ?? 'pending';
+    final statusStr =
+        (row['sync_status'] as String?)?.toLowerCase() ?? 'pending';
     SyncStatus status = SyncStatus.pending;
     if (statusStr == 'synced') status = SyncStatus.synced;
     if (statusStr == 'syncing') status = SyncStatus.syncing;
-    if (statusStr == 'error' || statusStr == 'failed') status = SyncStatus.error;
+    if (statusStr == 'error' || statusStr == 'failed')
+      status = SyncStatus.error;
 
     return Inspection(
       id: (row['building_ref'] as String?) ?? (row['local_id'] as String),
       ownerName: row['owner_name'] as String,
       siteAddress: row['site_address'] as String,
       contactNo: row['contact_no'] as String?,
-      latitude: row['latitude'] != null ? (row['latitude'] as num).toDouble() : null,
-      longitude: row['longitude'] != null ? (row['longitude'] as num).toDouble() : null,
-      distanceFromRow: row['distance_from_row'] != null ? (row['distance_from_row'] as num).toDouble() : null,
+      latitude: row['latitude'] != null
+          ? (row['latitude'] as num).toDouble()
+          : null,
+      longitude: row['longitude'] != null
+          ? (row['longitude'] as num).toDouble()
+          : null,
+      distanceFromRow: row['distance_from_row'] != null
+          ? (row['distance_from_row'] as num).toDouble()
+          : null,
       ageOfStructure: row['age_of_structure'] as int?,
       typeOfStructure: row['type_of_structure'] as String?,
       presentCondition: row['present_condition'] as String?,
@@ -401,10 +451,14 @@ class LocalInspectionDataSource {
       defects: defects,
       syncStatus: status,
       createdAt: DateTime.parse(row['created_at'] as String),
-      updatedAt: row['updated_at'] != null ? DateTime.parse(row['updated_at'] as String) : null,
+      updatedAt: row['updated_at'] != null
+          ? DateTime.parse(row['updated_at'] as String)
+          : null,
       remarks: row['remarks'] as String?,
       createdBy: row['user_id'] as String?,
-      buildingPhotoUrl: (row['building_photo_remote_url'] as String?) ?? (row['building_photo_local_path'] as String?),
+      buildingPhotoUrl:
+          (row['building_photo_remote_url'] as String?) ??
+          (row['building_photo_local_path'] as String?),
     );
   }
 }

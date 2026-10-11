@@ -25,7 +25,8 @@ class OfficerNameResolver {
 
       // Match current logged in user
       if (currentUser != null && currentUser.id == trimmed) {
-        final name = (profile?.fullName.isNotEmpty == true ? profile?.fullName : null) ??
+        final name =
+            (profile?.fullName.isNotEmpty == true ? profile?.fullName : null) ??
             currentUser.userMetadata?['full_name'] ??
             currentUser.userMetadata?['name'] ??
             currentUser.email?.split('@').first ??
@@ -34,7 +35,9 @@ class OfficerNameResolver {
         return name;
       }
 
-      if (profile != null && profile.id == trimmed && profile.fullName.isNotEmpty) {
+      if (profile != null &&
+          profile.id == trimmed &&
+          profile.fullName.isNotEmpty) {
         _cache[trimmed] = profile.fullName;
         return profile.fullName;
       }
@@ -70,7 +73,9 @@ class OfficerNameResolver {
   /// Bulk preload profile names into cache
   static Future<void> preloadProfiles() async {
     try {
-      final res = await Supabase.instance.client.from('profile').select('id, full_name');
+      final res = await Supabase.instance.client
+          .from('profile')
+          .select('id, full_name');
       for (final item in (res as List)) {
         final id = item['id'] as String?;
         final name = item['full_name'] as String?;

@@ -68,7 +68,9 @@ class _AdminAppShellState extends State<AdminAppShell> {
               ? Positioned.fill(
                   child: GestureDetector(
                     onTap: NavRailController.hide,
-                    child: Container(color: Colors.black.withValues(alpha: 0.3)),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                    ),
                   ),
                 )
               : const SizedBox.shrink(),
@@ -90,10 +92,7 @@ class _AdminAppShellState extends State<AdminAppShell> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      NBROColors.primary,
-                      NBROColors.primaryDark,
-                    ],
+                    colors: [NBROColors.primary, NBROColors.primaryDark],
                   ),
                 ),
                 child: SafeArea(
@@ -101,7 +100,10 @@ class _AdminAppShellState extends State<AdminAppShell> {
                     children: [
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.1),
                           border: Border(
@@ -166,16 +168,20 @@ class _AdminAppShellState extends State<AdminAppShell> {
                             _NavItem(
                               icon: Icons.dashboard_rounded,
                               label: 'Dashboard',
-                              isSelected: widget.currentItem == AdminNavItem.dashboard,
+                              isSelected:
+                                  widget.currentItem == AdminNavItem.dashboard,
                               onTap: () {
-                                widget.onNavItemSelected(AdminNavItem.dashboard);
+                                widget.onNavItemSelected(
+                                  AdminNavItem.dashboard,
+                                );
                                 NavRailController.hide();
                               },
                             ),
                             _NavItem(
                               icon: Icons.manage_accounts_rounded,
                               label: 'Officers',
-                              isSelected: widget.currentItem == AdminNavItem.officers,
+                              isSelected:
+                                  widget.currentItem == AdminNavItem.officers,
                               onTap: () {
                                 widget.onNavItemSelected(AdminNavItem.officers);
                                 NavRailController.hide();
@@ -184,30 +190,40 @@ class _AdminAppShellState extends State<AdminAppShell> {
                             _NavItem(
                               icon: Icons.assignment_rounded,
                               label: 'Inspections',
-                              isSelected: widget.currentItem == AdminNavItem.inspections,
+                              isSelected:
+                                  widget.currentItem ==
+                                  AdminNavItem.inspections,
                               onTap: () {
-                                widget.onNavItemSelected(AdminNavItem.inspections);
+                                widget.onNavItemSelected(
+                                  AdminNavItem.inspections,
+                                );
                                 NavRailController.hide();
                               },
                             ),
                             _NavItem(
                               icon: Icons.campaign_rounded,
                               label: 'Notices',
-                              isSelected: widget.currentItem == AdminNavItem.notices,
+                              isSelected:
+                                  widget.currentItem == AdminNavItem.notices,
                               onTap: () {
                                 widget.onNavItemSelected(AdminNavItem.notices);
                                 NavRailController.hide();
                               },
                             ),
                             ValueListenableBuilder<ProfileCompletionState>(
-                              valueListenable: ProfileCompletionService.notifier,
+                              valueListenable:
+                                  ProfileCompletionService.notifier,
                               builder: (_, state, __) => _NavItem(
                                 icon: Icons.settings_rounded,
                                 label: 'Settings',
-                                showAlertDot: !state.isComplete && !state.isLoading,
-                                isSelected: widget.currentItem == AdminNavItem.settings,
+                                showAlertDot:
+                                    !state.isComplete && !state.isLoading,
+                                isSelected:
+                                    widget.currentItem == AdminNavItem.settings,
                                 onTap: () {
-                                  widget.onNavItemSelected(AdminNavItem.settings);
+                                  widget.onNavItemSelected(
+                                    AdminNavItem.settings,
+                                  );
                                   NavRailController.hide();
                                 },
                               ),
@@ -225,7 +241,9 @@ class _AdminAppShellState extends State<AdminAppShell> {
                             ),
                           ),
                         ),
-                        child: const _UserInfoSection(roleLabel: 'Administrator'),
+                        child: const _UserInfoSection(
+                          roleLabel: 'Administrator',
+                        ),
                       ),
                     ],
                   ),
@@ -255,7 +273,9 @@ class _AppShellState extends State<AppShell> {
               ? Positioned.fill(
                   child: GestureDetector(
                     onTap: NavRailController.hide,
-                    child: Container(color: Colors.black.withValues(alpha: 0.3)),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                    ),
                   ),
                 )
               : const SizedBox.shrink(),
@@ -279,10 +299,7 @@ class _AppShellState extends State<AppShell> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      NBROColors.primary,
-                      NBROColors.primaryDark,
-                    ],
+                    colors: [NBROColors.primary, NBROColors.primaryDark],
                   ),
                 ),
                 child: SafeArea(
@@ -291,7 +308,10 @@ class _AppShellState extends State<AppShell> {
                       // Header with Logo and Branding
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 24,
+                          horizontal: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.1),
                           border: Border(
@@ -348,9 +368,9 @@ class _AppShellState extends State<AppShell> {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Navigation Items
                       Expanded(
                         child: ListView(
@@ -359,7 +379,8 @@ class _AppShellState extends State<AppShell> {
                             _NavItem(
                               icon: Icons.dashboard_rounded,
                               label: 'Dashboard',
-                              isSelected: widget.currentItem == NavItem.dashboard,
+                              isSelected:
+                                  widget.currentItem == NavItem.dashboard,
                               onTap: () {
                                 widget.onNavItemSelected(NavItem.dashboard);
                                 NavRailController.hide();
@@ -368,7 +389,8 @@ class _AppShellState extends State<AppShell> {
                             _NavItem(
                               icon: Icons.assignment_rounded,
                               label: 'Inspections',
-                              isSelected: widget.currentItem == NavItem.inspection,
+                              isSelected:
+                                  widget.currentItem == NavItem.inspection,
                               onTap: () {
                                 widget.onNavItemSelected(NavItem.inspection);
                                 NavRailController.hide();
@@ -377,7 +399,8 @@ class _AppShellState extends State<AppShell> {
                             _NavItem(
                               icon: Icons.analytics_rounded,
                               label: 'Analytics',
-                              isSelected: widget.currentItem == NavItem.analysis,
+                              isSelected:
+                                  widget.currentItem == NavItem.analysis,
                               onTap: () {
                                 widget.onNavItemSelected(NavItem.analysis);
                                 NavRailController.hide();
@@ -394,7 +417,9 @@ class _AppShellState extends State<AppShell> {
                             ),
                             const SizedBox(height: 16),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               child: Divider(
                                 color: Colors.white.withValues(alpha: 0.2),
                                 thickness: 1,
@@ -411,12 +436,15 @@ class _AppShellState extends State<AppShell> {
                               },
                             ),
                             ValueListenableBuilder<ProfileCompletionState>(
-                              valueListenable: ProfileCompletionService.notifier,
+                              valueListenable:
+                                  ProfileCompletionService.notifier,
                               builder: (_, state, __) => _NavItem(
                                 icon: Icons.settings_rounded,
                                 label: 'Settings',
-                                showAlertDot: !state.isComplete && !state.isLoading,
-                                isSelected: widget.currentItem == NavItem.settings,
+                                showAlertDot:
+                                    !state.isComplete && !state.isLoading,
+                                isSelected:
+                                    widget.currentItem == NavItem.settings,
                                 onTap: () {
                                   widget.onNavItemSelected(NavItem.settings);
                                   NavRailController.hide();
@@ -426,7 +454,7 @@ class _AppShellState extends State<AppShell> {
                           ],
                         ),
                       ),
-                      
+
                       // Footer with User Info
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -481,7 +509,7 @@ class _NavItem extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: isSelected 
+              color: isSelected
                   ? NBROColors.white.withValues(alpha: 0.2)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
@@ -496,8 +524,8 @@ class _NavItem extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected 
-                      ? NBROColors.white 
+                  color: isSelected
+                      ? NBROColors.white
                       : NBROColors.white.withValues(alpha: 0.7),
                   size: 24,
                 ),
@@ -506,11 +534,13 @@ class _NavItem extends StatelessWidget {
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: isSelected 
-                          ? NBROColors.white 
+                      color: isSelected
+                          ? NBROColors.white
                           : NBROColors.white.withValues(alpha: 0.7),
                       fontSize: 15,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -557,9 +587,9 @@ class _UserInfoSection extends StatelessWidget {
         final userName = profile?.fullName.trim().isNotEmpty == true
             ? profile!.fullName
             : user?.userMetadata?['full_name'] ??
-                user?.userMetadata?['name'] ??
-                user?.email?.split('@').first ??
-                'User';
+                  user?.userMetadata?['name'] ??
+                  user?.email?.split('@').first ??
+                  'User';
         final userEmail = user?.email ?? '';
         final avatarUrl = profile?.avatarUrl;
         final initials = _initials(userName);

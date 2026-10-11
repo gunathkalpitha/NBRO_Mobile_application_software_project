@@ -15,10 +15,7 @@ import 'edit_inspection_screen.dart';
 class InspectionDetailScreen extends StatefulWidget {
   final Inspection inspection;
 
-  const InspectionDetailScreen({
-    super.key,
-    required this.inspection,
-  });
+  const InspectionDetailScreen({super.key, required this.inspection});
 
   @override
   State<InspectionDetailScreen> createState() => _InspectionDetailScreenState();
@@ -174,7 +171,9 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
       await PDFReportService.previewPDF(_currentInspection);
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst || !route.willHandlePopInternally);
+        Navigator.of(
+          context,
+        ).popUntil((route) => route.isFirst || !route.willHandlePopInternally);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error generating PDF: $e'),
@@ -209,9 +208,14 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     );
 
     try {
-      final file = await PDFReportService.generateInspectionReport(_currentInspection);
+      final file = await PDFReportService.generateInspectionReport(
+        _currentInspection,
+      );
       if (context.mounted) Navigator.of(context).pop();
-      await PDFReportService.sharePDF(file, 'NBRO_Inspection_${_currentInspection.id}.pdf');
+      await PDFReportService.sharePDF(
+        file,
+        'NBRO_Inspection_${_currentInspection.id}.pdf',
+      );
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop();
@@ -236,7 +240,11 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
         builder: (context, setState) => AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: NBROColors.error, size: 28),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: NBROColors.error,
+                size: 28,
+              ),
               SizedBox(width: 12),
               Text('Delete Inspection'),
             ],
@@ -252,11 +260,17 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                   decoration: BoxDecoration(
                     color: NBROColors.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: NBROColors.error.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: NBROColors.error.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.error_outline, color: NBROColors.error, size: 20),
+                      Icon(
+                        Icons.error_outline,
+                        color: NBROColors.error,
+                        size: 20,
+                      ),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -272,7 +286,9 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Type building reference number "$buildingRefNo" to confirm:'),
+                Text(
+                  'Type building reference number "$buildingRefNo" to confirm:',
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: confirmationController,
@@ -382,7 +398,8 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
   Widget build(BuildContext context) {
     final currentUser = Supabase.instance.client.auth.currentUser;
     final userEmail = currentUser?.email?.toLowerCase() ?? '';
-    final isOfficer = userEmail != 'admin@gmail.com' &&
+    final isOfficer =
+        userEmail != 'admin@gmail.com' &&
         userEmail != 'mainadminnbro@gmail.com' &&
         !userEmail.startsWith('admin.');
 
@@ -390,9 +407,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
     if (_isDeleting) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8F9FA),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -438,7 +453,10 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
             },
           ),
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined, color: NBROColors.white),
+            icon: const Icon(
+              Icons.picture_as_pdf_outlined,
+              color: NBROColors.white,
+            ),
             tooltip: 'Export PDF',
             onPressed: () => _generatePDFReport(context),
           ),
@@ -477,9 +495,16 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 20, color: NBROColors.error),
+                    Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: NBROColors.error,
+                    ),
                     SizedBox(width: 12),
-                    Text('Delete Record', style: TextStyle(color: NBROColors.error)),
+                    Text(
+                      'Delete Record',
+                      style: TextStyle(color: NBROColors.error),
+                    ),
                   ],
                 ),
               ),
@@ -685,11 +710,16 @@ class _HeaderOverviewCard extends StatelessWidget {
             ],
           ),
 
-          if (inspection.contactNo != null && inspection.contactNo!.isNotEmpty) ...[
+          if (inspection.contactNo != null &&
+              inspection.contactNo!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.phone_outlined, size: 16, color: NBROColors.grey),
+                const Icon(
+                  Icons.phone_outlined,
+                  size: 16,
+                  color: NBROColors.grey,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   inspection.contactNo!,
@@ -704,7 +734,8 @@ class _HeaderOverviewCard extends StatelessWidget {
           ],
 
           // Front View Building Image
-          if (inspection.buildingPhotoUrl != null && inspection.buildingPhotoUrl!.isNotEmpty) ...[
+          if (inspection.buildingPhotoUrl != null &&
+              inspection.buildingPhotoUrl!.isNotEmpty) ...[
             const SizedBox(height: 18),
             const Text(
               'Building Front View',
@@ -716,7 +747,11 @@ class _HeaderOverviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: () => _showImageViewer(context, inspection.buildingPhotoUrl!, 'Building Front View'),
+              onTap: () => _showImageViewer(
+                context,
+                inspection.buildingPhotoUrl!,
+                'Building Front View',
+              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
@@ -731,7 +766,11 @@ class _HeaderOverviewCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Center(
-                            child: Icon(Icons.broken_image_outlined, size: 40, color: NBROColors.grey),
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              size: 40,
+                              color: NBROColors.grey,
+                            ),
                           );
                         },
                       ),
@@ -739,7 +778,10 @@ class _HeaderOverviewCard extends StatelessWidget {
                         bottom: 8,
                         right: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
                           decoration: BoxDecoration(
                             color: NBROColors.black.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(20),
@@ -747,7 +789,11 @@ class _HeaderOverviewCard extends StatelessWidget {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.zoom_in, size: 14, color: NBROColors.white),
+                              Icon(
+                                Icons.zoom_in,
+                                size: 14,
+                                color: NBROColors.white,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'Tap to inspect',
@@ -819,7 +865,9 @@ class _KeyInformationSection extends StatelessWidget {
               Expanded(
                 child: _MetricTile(
                   label: 'Age of Structure',
-                  value: inspection.ageOfStructure != null ? '${inspection.ageOfStructure} Years' : 'N/A',
+                  value: inspection.ageOfStructure != null
+                      ? '${inspection.ageOfStructure} Years'
+                      : 'N/A',
                   icon: Icons.calendar_today_outlined,
                 ),
               ),
@@ -828,7 +876,9 @@ class _KeyInformationSection extends StatelessWidget {
           const SizedBox(height: 12),
           _MetricTile(
             label: 'Survey Date & Time',
-            value: DateFormat('dd MMM yyyy • hh:mm a').format(inspection.createdAt),
+            value: DateFormat(
+              'dd MMM yyyy • hh:mm a',
+            ).format(inspection.createdAt),
             icon: Icons.event_note_rounded,
           ),
           if (inspection.latitude != null && inspection.longitude != null) ...[
@@ -846,15 +896,24 @@ class _KeyInformationSection extends StatelessWidget {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: NBROColors.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: NBROColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: NBROColors.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on, size: 18, color: NBROColors.primary),
+                    const Icon(
+                      Icons.location_on,
+                      size: 18,
+                      color: NBROColors.primary,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -862,16 +921,28 @@ class _KeyInformationSection extends StatelessWidget {
                         children: [
                           const Text(
                             'GPS Location',
-                            style: TextStyle(fontSize: 11, color: NBROColors.grey, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: NBROColors.grey,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             '${inspection.latitude!.toStringAsFixed(6)}, ${inspection.longitude!.toStringAsFixed(6)}',
-                            style: const TextStyle(fontSize: 13, color: NBROColors.primary, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: NBROColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 14, color: NBROColors.primary),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: NBROColors.primary,
+                    ),
                   ],
                 ),
               ),
@@ -913,7 +984,9 @@ class _TimestampsSection extends StatelessWidget {
               icon: Icons.edit_calendar_outlined,
               label: 'Last Modified On',
               date: dateFormatter.format(inspection.updatedAt!),
-              officer: OfficerNameResolver.resolve(inspection.updatedBy ?? inspection.createdBy),
+              officer: OfficerNameResolver.resolve(
+                inspection.updatedBy ?? inspection.createdBy,
+              ),
             ),
           ],
         ],
@@ -930,7 +1003,8 @@ class _GeneralObservationsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (inspection.numberOfFloors == null && inspection.distanceFromRow == null) {
+    if (inspection.numberOfFloors == null &&
+        inspection.distanceFromRow == null) {
       return const SizedBox.shrink();
     }
 
@@ -1008,16 +1082,24 @@ class _BuildingProfileSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wallMap = (inspection.wallMaterials != null && inspection.wallMaterials!.isNotEmpty)
+    final wallMap =
+        (inspection.wallMaterials != null &&
+            inspection.wallMaterials!.isNotEmpty)
         ? inspection.wallMaterials!
         : {'Brickwork / Plastered': true};
-    final doorMap = (inspection.doorMaterials != null && inspection.doorMaterials!.isNotEmpty)
+    final doorMap =
+        (inspection.doorMaterials != null &&
+            inspection.doorMaterials!.isNotEmpty)
         ? inspection.doorMaterials!
         : {'Timber Frames & Glass': true};
-    final floorMap = (inspection.floorMaterials != null && inspection.floorMaterials!.isNotEmpty)
+    final floorMap =
+        (inspection.floorMaterials != null &&
+            inspection.floorMaterials!.isNotEmpty)
         ? inspection.floorMaterials!
         : {'Cement Rendered / Tiles': true};
-    final roofMap = (inspection.roofMaterials != null && inspection.roofMaterials!.isNotEmpty)
+    final roofMap =
+        (inspection.roofMaterials != null &&
+            inspection.roofMaterials!.isNotEmpty)
         ? inspection.roofMaterials!
         : {'Timber Frame': true};
 
@@ -1029,14 +1111,24 @@ class _BuildingProfileSection extends StatelessWidget {
         children: [
           _MaterialChipGroup(label: 'Wall Materials', materials: wallMap),
           const SizedBox(height: 12),
-          _MaterialChipGroup(label: 'Door & Window Materials', materials: doorMap),
+          _MaterialChipGroup(
+            label: 'Door & Window Materials',
+            materials: doorMap,
+          ),
           const SizedBox(height: 12),
-          _MaterialChipGroup(label: 'Floor Finish Materials', materials: floorMap),
+          _MaterialChipGroup(
+            label: 'Floor Finish Materials',
+            materials: floorMap,
+          ),
           const SizedBox(height: 12),
           _MaterialChipGroup(label: 'Roof Frame & Cover', materials: roofMap),
-          if (inspection.roofCovering != null && inspection.roofCovering!.isNotEmpty) ...[
+          if (inspection.roofCovering != null &&
+              inspection.roofCovering!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _MaterialChipGroup(label: 'Roof Covering', materials: {inspection.roofCovering!: true}),
+            _MaterialChipGroup(
+              label: 'Roof Covering',
+              materials: {inspection.roofCovering!: true},
+            ),
           ],
         ],
       ),
@@ -1062,14 +1154,17 @@ class _DefectsSection extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
           final defect = defects[index];
-          final hasPhoto = defect.photoUrl != null && defect.photoUrl!.isNotEmpty;
+          final hasPhoto =
+              defect.photoUrl != null && defect.photoUrl!.isNotEmpty;
 
           return Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: const Color(0xFFFFFBFB),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: NBROColors.error.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: NBROColors.error.withValues(alpha: 0.2),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1078,7 +1173,10 @@ class _DefectsSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: NBROColors.error,
                         borderRadius: BorderRadius.circular(6),
@@ -1108,12 +1206,19 @@ class _DefectsSection extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             'Category: ${defect.category.displayName}',
-                            style: const TextStyle(fontSize: 12, color: NBROColors.grey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: NBROColors.grey,
+                            ),
                           ),
-                          if (defect.floorLevel != null && defect.floorLevel!.isNotEmpty)
+                          if (defect.floorLevel != null &&
+                              defect.floorLevel!.isNotEmpty)
                             Text(
                               'Floor: ${defect.floorLevel}',
-                              style: const TextStyle(fontSize: 12, color: NBROColors.grey),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: NBROColors.grey,
+                              ),
                             ),
                         ],
                       ),
@@ -1124,7 +1229,10 @@ class _DefectsSection extends StatelessWidget {
 
                 // Dimension pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(6),
@@ -1132,11 +1240,19 @@ class _DefectsSection extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.straighten, size: 14, color: NBROColors.darkGrey),
+                      const Icon(
+                        Icons.straighten,
+                        size: 14,
+                        color: NBROColors.darkGrey,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Length: ${defect.lengthMm}mm${defect.widthMm != null ? '  ×  Width: ${defect.widthMm}mm' : ''}',
-                        style: const TextStyle(fontSize: 12, color: NBROColors.darkGrey, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: NBROColors.darkGrey,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -1146,7 +1262,11 @@ class _DefectsSection extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Notes: ${defect.remarks}',
-                    style: const TextStyle(fontSize: 12, color: NBROColors.darkGrey, fontStyle: FontStyle.italic),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: NBROColors.darkGrey,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ],
 
@@ -1154,7 +1274,11 @@ class _DefectsSection extends StatelessWidget {
                 if (hasPhoto) ...[
                   const SizedBox(height: 10),
                   GestureDetector(
-                    onTap: () => _showImageViewer(context, defect.photoUrl!, defect.notation.displayName),
+                    onTap: () => _showImageViewer(
+                      context,
+                      defect.photoUrl!,
+                      defect.notation.displayName,
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
@@ -1166,7 +1290,10 @@ class _DefectsSection extends StatelessWidget {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const Center(
-                              child: Icon(Icons.broken_image_outlined, color: NBROColors.grey),
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: NBROColors.grey,
+                              ),
                             );
                           },
                         ),
@@ -1196,7 +1323,11 @@ class _RemarksSection extends StatelessWidget {
       icon: Icons.notes_outlined,
       child: Text(
         remarks,
-        style: const TextStyle(fontSize: 14, color: NBROColors.darkGrey, height: 1.5),
+        style: const TextStyle(
+          fontSize: 14,
+          color: NBROColors.darkGrey,
+          height: 1.5,
+        ),
       ),
     );
   }
@@ -1233,12 +1364,20 @@ class _MetricTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 11, color: NBROColors.grey, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: NBROColors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 13, color: NBROColors.black, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: NBROColors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1276,12 +1415,20 @@ class _AuditItem extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: NBROColors.grey, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: NBROColors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 date,
-                style: const TextStyle(fontSize: 13, color: NBROColors.black, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: NBROColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -1294,7 +1441,11 @@ class _AuditItem extends StatelessWidget {
           ),
           child: Text(
             officer,
-            style: const TextStyle(fontSize: 11, color: NBROColors.primary, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 11,
+              color: NBROColors.primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -1315,8 +1466,18 @@ class _DataRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: NBROColors.grey)),
-          Text(value, style: const TextStyle(fontSize: 13, color: NBROColors.black, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: NBROColors.grey),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              color: NBROColors.black,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -1344,17 +1505,27 @@ class _ServiceTile extends StatelessWidget {
         color: hasService ? const Color(0xFFF4FBF7) : const Color(0xFFFAFAFA),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: hasService ? NBROColors.success.withValues(alpha: 0.3) : Colors.grey.shade300,
+          color: hasService
+              ? NBROColors.success.withValues(alpha: 0.3)
+              : Colors.grey.shade300,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: hasService ? NBROColors.success : NBROColors.grey),
+          Icon(
+            icon,
+            size: 20,
+            color: hasService ? NBROColors.success : NBROColors.grey,
+          ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: NBROColors.grey, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: 11,
+              color: NBROColors.grey,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -1388,29 +1559,50 @@ class _MaterialChipGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = materials.entries.where((e) => e.value).map((e) => e.key).toList();
+    final selected = materials.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: NBROColors.grey, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: NBROColors.grey,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
           runSpacing: 6,
           children: selected
-              .map((material) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: NBROColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: NBROColors.primary.withValues(alpha: 0.2)),
+              .map(
+                (material) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: NBROColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: NBROColors.primary.withValues(alpha: 0.2),
                     ),
-                    child: Text(
-                      material,
-                      style: const TextStyle(fontSize: 12, color: NBROColors.primary, fontWeight: FontWeight.w600),
+                  ),
+                  child: Text(
+                    material,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: NBROColors.primary,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -1425,7 +1617,9 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status == SyncStatus.synced ? NBROColors.success : NBROColors.warning;
+    final color = status == SyncStatus.synced
+        ? NBROColors.success
+        : NBROColors.warning;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1437,11 +1631,19 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(status == SyncStatus.synced ? Icons.check_circle : Icons.sync, size: 14, color: color),
+          Icon(
+            status == SyncStatus.synced ? Icons.check_circle : Icons.sync,
+            size: 14,
+            color: color,
+          ),
           const SizedBox(width: 4),
           Text(
             status.displayName,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -1486,8 +1688,21 @@ class _PDFOptionButton extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: NBROColors.black)),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: NBROColors.black,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: NBROColors.grey,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1522,7 +1737,11 @@ void _showImageViewer(BuildContext context, String imageUrl, String title) {
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return const Center(
-                  child: Icon(Icons.broken_image_outlined, size: 64, color: NBROColors.white),
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    size: 64,
+                    color: NBROColors.white,
+                  ),
                 );
               },
             ),

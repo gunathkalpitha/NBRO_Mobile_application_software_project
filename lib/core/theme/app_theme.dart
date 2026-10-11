@@ -48,9 +48,7 @@ class AppTheme {
           backgroundColor: NBROColors.primary,
           foregroundColor: NBROColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -71,19 +69,11 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: NBROColors.black,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: NBROColors.black,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: NBROColors.darkGrey,
-        ),
+        bodyLarge: TextStyle(fontSize: 16, color: NBROColors.black),
+        bodyMedium: TextStyle(fontSize: 14, color: NBROColors.darkGrey),
       ),
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: NBROColors.grey),
@@ -93,13 +83,14 @@ class AppTheme {
           borderSide: const BorderSide(color: NBROColors.primary, width: 2),
         ),
         labelStyle: const TextStyle(color: NBROColors.darkGrey),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

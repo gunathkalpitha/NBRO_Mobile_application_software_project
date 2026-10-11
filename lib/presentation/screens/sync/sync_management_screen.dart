@@ -66,7 +66,9 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
     if (!_isOnline) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cannot sync: Device is offline or Supabase is unreachable.'),
+          content: Text(
+            'Cannot sync: Device is offline or Supabase is unreachable.',
+          ),
           backgroundColor: NBROColors.warning,
         ),
       );
@@ -92,9 +94,15 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
       );
     }
 
-    final pendingInspections = _inspections.where((e) => e.syncStatus == SyncStatus.pending).toList();
-    final syncedInspections = _inspections.where((e) => e.syncStatus == SyncStatus.synced).toList();
-    final failedInspections = _inspections.where((e) => e.syncStatus == SyncStatus.error).toList();
+    final pendingInspections = _inspections
+        .where((e) => e.syncStatus == SyncStatus.pending)
+        .toList();
+    final syncedInspections = _inspections
+        .where((e) => e.syncStatus == SyncStatus.synced)
+        .toList();
+    final failedInspections = _inspections
+        .where((e) => e.syncStatus == SyncStatus.error)
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -118,7 +126,11 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
               // Pending / Sync Queue Section
               Text(
                 'Sync Queue (${_pendingQueue.length})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NBROColors.black),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.black,
+                ),
               ),
               const SizedBox(height: 10),
               if (pendingInspections.isEmpty && failedInspections.isEmpty)
@@ -132,11 +144,24 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.check_circle_outline, color: NBROColors.success, size: 40),
+                      Icon(
+                        Icons.check_circle_outline,
+                        color: NBROColors.success,
+                        size: 40,
+                      ),
                       SizedBox(height: 8),
-                      Text('All local inspections are synchronized!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        'All local inspections are synchronized!',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       SizedBox(height: 4),
-                      Text('No pending items waiting for upload.', style: TextStyle(color: NBROColors.grey, fontSize: 12)),
+                      Text(
+                        'No pending items waiting for upload.',
+                        style: TextStyle(color: NBROColors.grey, fontSize: 12),
+                      ),
                     ],
                   ),
                 )
@@ -149,13 +174,20 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
               // Synced Inspections History
               Text(
                 'Synchronized Locally Cached (${syncedInspections.length})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NBROColors.black),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: NBROColors.black,
+                ),
               ),
               const SizedBox(height: 10),
               if (syncedInspections.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('No synchronized local records found.', style: TextStyle(color: NBROColors.grey)),
+                  child: Text(
+                    'No synchronized local records found.',
+                    style: TextStyle(color: NBROColors.grey),
+                  ),
                 )
               else
                 ...syncedInspections.map((e) => _buildInspectionTile(e)),
@@ -192,7 +224,9 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _isOnline ? Colors.green.shade50 : Colors.red.shade50,
+                      color: _isOnline
+                          ? Colors.green.shade50
+                          : Colors.red.shade50,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -206,14 +240,21 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isOnline ? 'Online & Reachable' : 'Offline / Disconnected',
+                        _isOnline
+                            ? 'Online & Reachable'
+                            : 'Offline / Disconnected',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: _isOnline ? NBROColors.success : NBROColors.error,
+                          color: _isOnline
+                              ? NBROColors.success
+                              : NBROColors.error,
                         ),
                       ),
-                      const Text('Supabase Cloud Connection', style: TextStyle(fontSize: 11, color: NBROColors.grey)),
+                      const Text(
+                        'Supabase Cloud Connection',
+                        style: TextStyle(fontSize: 11, color: NBROColors.grey),
+                      ),
                     ],
                   ),
                 ],
@@ -222,16 +263,27 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
                 valueListenable: _syncService.isSyncingNotifier,
                 builder: (context, isSyncing, _) {
                   return ElevatedButton.icon(
-                    onPressed: (isSyncing || !_isOnline) ? null : _triggerManualSync,
+                    onPressed: (isSyncing || !_isOnline)
+                        ? null
+                        : _triggerManualSync,
                     icon: isSyncing
-                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.sync, size: 18),
                     label: Text(isSyncing ? 'Syncing...' : 'Sync Now'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: NBROColors.primary,
                       foregroundColor: NBROColors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       elevation: 0,
                     ),
                   );
@@ -245,9 +297,21 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('Pending', '${_pendingQueue.length}', Colors.amber.shade800),
-              _buildStatItem('Local Total', '${_inspections.length}', NBROColors.primary),
-              _buildStatItem('Synced', '${_inspections.where((e) => e.syncStatus == SyncStatus.synced).length}', NBROColors.success),
+              _buildStatItem(
+                'Pending',
+                '${_pendingQueue.length}',
+                Colors.amber.shade800,
+              ),
+              _buildStatItem(
+                'Local Total',
+                '${_inspections.length}',
+                NBROColors.primary,
+              ),
+              _buildStatItem(
+                'Synced',
+                '${_inspections.where((e) => e.syncStatus == SyncStatus.synced).length}',
+                NBROColors.success,
+              ),
             ],
           ),
         ],
@@ -258,9 +322,19 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
   Widget _buildStatItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: NBROColors.grey)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: NBROColors.grey),
+        ),
       ],
     );
   }
@@ -293,7 +367,9 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
         break;
     }
 
-    final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(inspection.createdAt);
+    final dateStr = DateFormat(
+      'dd MMM yyyy, hh:mm a',
+    ).format(inspection.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -311,24 +387,54 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
             children: [
               Text(
                 inspection.id,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: NBROColors.primary),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: NBROColors.primary,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(12)),
-                child: Text(statusText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: badgeFg)),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: badgeFg,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(inspection.ownerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          Text(inspection.siteAddress, style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+          Text(
+            inspection.ownerName,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          Text(
+            inspection.siteAddress,
+            style: const TextStyle(fontSize: 12, color: NBROColors.grey),
+          ),
           const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(dateStr, style: const TextStyle(fontSize: 11, color: NBROColors.grey)),
-              Text('${inspection.defects.length} defects captured', style: const TextStyle(fontSize: 11, color: NBROColors.primary, fontWeight: FontWeight.w600)),
+              Text(
+                dateStr,
+                style: const TextStyle(fontSize: 11, color: NBROColors.grey),
+              ),
+              Text(
+                '${inspection.defects.length} defects captured',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: NBROColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           if (inspection.syncStatus == SyncStatus.error) ...[
@@ -336,7 +442,10 @@ class _SyncManagementScreenState extends State<SyncManagementScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(6),
+              ),
               child: const Text(
                 'Upload interrupted. Tap "Sync Now" above to retry.',
                 style: TextStyle(fontSize: 11, color: NBROColors.error),

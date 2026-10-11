@@ -10,9 +10,10 @@ import 'package:nbro_mobile_application/domain/models/inspection.dart';
 /// Single-Threaded Background Synchronization Manager
 class SyncService {
   static SyncService? _instance;
-  final LocalInspectionDataSource _localDataSource = LocalInspectionDataSource();
+  final LocalInspectionDataSource _localDataSource =
+      LocalInspectionDataSource();
   final SupabaseClient _supabase = Supabase.instance.client;
-  
+
   bool _isSyncing = false;
   final ValueNotifier<bool> isSyncingNotifier = ValueNotifier<bool>(false);
   Timer? _periodicSyncTimer;
@@ -21,7 +22,9 @@ class SyncService {
     // Auto-sync when connectivity transitions to online
     ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
       if (isOnline) {
-        debugPrint('[SyncService] 🌐 Network online detected. Triggering auto-sync...');
+        debugPrint(
+          '[SyncService] 🌐 Network online detected. Triggering auto-sync...',
+        );
         triggerSync();
       }
     });
@@ -50,9 +53,12 @@ class SyncService {
       return;
     }
 
-    final isOnline = await ConnectivityService.instance.checkActualConnectivity();
+    final isOnline = await ConnectivityService.instance
+        .checkActualConnectivity();
     if (!isOnline) {
-      debugPrint('[SyncService] ℹ Offline or Supabase unreachable. Skipping sync.');
+      debugPrint(
+        '[SyncService] ℹ Offline or Supabase unreachable. Skipping sync.',
+      );
       return;
     }
 
@@ -77,7 +83,9 @@ class SyncService {
           await _syncInspection(entityId);
           await _localDataSource.updateQueueItemStatus(queueId, 'SYNCED');
         } catch (e) {
-          debugPrint('[SyncService] ❌ Failed to sync queue item $queueId ($entityId): $e');
+          debugPrint(
+            '[SyncService] ❌ Failed to sync queue item $queueId ($entityId): $e',
+          );
           await _localDataSource.updateQueueItemStatus(
             queueId,
             'FAILED',
@@ -112,7 +120,9 @@ class SyncService {
   Future<void> _syncInspection(String localId) async {
     final inspection = await _localDataSource.getInspection(localId);
     if (inspection == null) {
-      debugPrint('[SyncService] ⚠️ Inspection $localId not found in local database.');
+      debugPrint(
+        '[SyncService] ⚠️ Inspection $localId not found in local database.',
+      );
       return;
     }
 
@@ -121,14 +131,19 @@ class SyncService {
       throw Exception('User is not authenticated');
     }
 
-    await _localDataSource.updateInspectionSyncStatus(localId, SyncStatus.syncing);
+    await _localDataSource.updateInspectionSyncStatus(
+      localId,
+      SyncStatus.syncing,
+    );
 
     // 1. Upload Front View Building Photo if local
     String? buildingPhotoRemoteUrl = inspection.buildingPhotoUrl;
-    if (buildingPhotoRemoteUrl != null && !buildingPhotoRemoteUrl.startsWith('http')) {
+    if (buildingPhotoRemoteUrl != null &&
+        !buildingPhotoRemoteUrl.startsWith('http')) {
       final file = File(buildingPhotoRemoteUrl);
       if (await file.exists()) {
-        final storagePath = '${currentUser.id}/${inspection.id}/building_front.jpg';
+        final storagePath =
+            '${currentUser.id}/${inspection.id}/building_front.jpg';
         final uploadedUrl = await _uploadFileToStorage(
           file: file,
           storagePath: storagePath,
@@ -141,36 +156,45 @@ class SyncService {
     }
 
     // 2. Create/Update Site on Supabase via RPC
-    final siteId = await _supabase.rpc('insert_full_site', params: {
-      'p_user_id': currentUser.id,
-      'p_owner_name': inspection.ownerName,
-      'p_owner_contact': inspection.contactNo,
-      'p_longitude': inspection.longitude,
-      'p_latitude': inspection.latitude,
-      'p_building_ref': inspection.id,
-      'p_distance_from_row': inspection.distanceFromRow,
-      'p_address': inspection.siteAddress,
-      'p_type': inspection.typeOfStructure,
-      'p_present_condition': inspection.presentCondition,
-      'p_approx_age': inspection.ageOfStructure?.toString(),
-      'p_pipe_born_water': inspection.hasPipeBorneWater == true
-          ? (inspection.waterSource ?? 'Available')
-          : 'Not Available',
-      'p_sewage_waste': inspection.hasSewageWaste == true
-          ? (inspection.sewageType ?? 'Available')
-          : 'Not Available',
-      'p_electricity_source': inspection.hasElectricity == true
-          ? (inspection.electricitySource ?? 'Available')
-          : 'Not Available',
-      'p_no_floors': inspection.numberOfFloors,
-    }) as String;
+    final siteId =
+        await _supabase.rpc(
+              'insert_full_site',
+              params: {
+                'p_user_id': currentUser.id,
+                'p_owner_name': inspection.ownerName,
+                'p_owner_contact': inspection.contactNo,
+                'p_longitude': inspection.longitude,
+                'p_latitude': inspection.latitude,
+                'p_building_ref': inspection.id,
+                'p_distance_from_row': inspection.distanceFromRow,
+                'p_address': inspection.siteAddress,
+                'p_type': inspection.typeOfStructure,
+                'p_present_condition': inspection.presentCondition,
+                'p_approx_age': inspection.ageOfStructure?.toString(),
+                'p_pipe_born_water': inspection.hasPipeBorneWater == true
+                    ? (inspection.waterSource ?? 'Available')
+                    : 'Not Available',
+                'p_sewage_waste': inspection.hasSewageWaste == true
+                    ? (inspection.sewageType ?? 'Available')
+                    : 'Not Available',
+                'p_electricity_source': inspection.hasElectricity == true
+                    ? (inspection.electricitySource ?? 'Available')
+                    : 'Not Available',
+                'p_no_floors': inspection.numberOfFloors,
+              },
+            )
+            as String;
 
     // Save photo URL on site record
-    if (buildingPhotoRemoteUrl != null && buildingPhotoRemoteUrl.startsWith('http')) {
-      await _supabase.from('site').update({
-        'building_photo_url': buildingPhotoRemoteUrl,
-        'updated_by': currentUser.id,
-      }).eq('site_id', siteId);
+    if (buildingPhotoRemoteUrl != null &&
+        buildingPhotoRemoteUrl.startsWith('http')) {
+      await _supabase
+          .from('site')
+          .update({
+            'building_photo_url': buildingPhotoRemoteUrl,
+            'updated_by': currentUser.id,
+          })
+          .eq('site_id', siteId);
     }
 
     // 3. Sync Building Elements Specifications
@@ -202,7 +226,8 @@ class SyncService {
           defect.photoPath!.isNotEmpty) {
         final photoFile = File(defect.photoPath!);
         if (await photoFile.exists()) {
-          final defectStoragePath = '${currentUser.id}/${inspection.id}/defects/${defect.id}.jpg';
+          final defectStoragePath =
+              '${currentUser.id}/${inspection.id}/defects/${defect.id}.jpg';
           final uploadedUrl = await _uploadFileToStorage(
             file: photoFile,
             storagePath: defectStoragePath,
@@ -210,24 +235,30 @@ class SyncService {
           );
           if (uploadedUrl != null) {
             defectRemoteUrl = uploadedUrl;
-            await _localDataSource.updateDefectPhotoRemoteUrl(defect.id, defectRemoteUrl);
+            await _localDataSource.updateDefectPhotoRemoteUrl(
+              defect.id,
+              defectRemoteUrl,
+            );
           }
         }
       }
 
       // Call insert_defect_with_details RPC
-      await _supabase.rpc('insert_defect_with_details', params: {
-        'p_site_id': siteId,
-        'p_notation': defect.notation.code,
-        'p_defect_category': defect.category.name,
-        'p_floor_level': defect.floorLevel,
-        'p_location_description': null,
-        'p_length_mm': defect.lengthMm,
-        'p_width_mm': defect.widthMm,
-        'p_remarks': defect.remarks,
-        'p_image_url': defectRemoteUrl,
-        'p_image_path': defect.photoPath,
-      });
+      await _supabase.rpc(
+        'insert_defect_with_details',
+        params: {
+          'p_site_id': siteId,
+          'p_notation': defect.notation.code,
+          'p_defect_category': defect.category.name,
+          'p_floor_level': defect.floorLevel,
+          'p_location_description': null,
+          'p_length_mm': defect.lengthMm,
+          'p_width_mm': defect.widthMm,
+          'p_remarks': defect.remarks,
+          'p_image_url': defectRemoteUrl,
+          'p_image_path': defect.photoPath,
+        },
+      );
     }
 
     // Mark local record as SYNCED
@@ -238,7 +269,9 @@ class SyncService {
       buildingPhotoRemoteUrl: buildingPhotoRemoteUrl,
     );
 
-    debugPrint('[SyncService] 🎉 Successfully synchronized inspection $localId to Supabase.');
+    debugPrint(
+      '[SyncService] 🎉 Successfully synchronized inspection $localId to Supabase.',
+    );
   }
 
   Future<String?> _uploadFileToStorage({
@@ -248,23 +281,39 @@ class SyncService {
   }) async {
     for (final bucket in candidateBuckets) {
       try {
-        await _supabase.storage.from(bucket).upload(
-          storagePath,
-          file,
-          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        await _supabase.storage
+            .from(bucket)
+            .upload(
+              storagePath,
+              file,
+              fileOptions: const FileOptions(
+                upsert: true,
+                contentType: 'image/jpeg',
+              ),
+            );
+        final publicUrl = _supabase.storage
+            .from(bucket)
+            .getPublicUrl(storagePath);
+        debugPrint(
+          '[SyncService] ✓ Uploaded photo to storage bucket "$bucket": $publicUrl',
         );
-        final publicUrl = _supabase.storage.from(bucket).getPublicUrl(storagePath);
-        debugPrint('[SyncService] ✓ Uploaded photo to storage bucket "$bucket": $publicUrl');
         return publicUrl;
       } catch (e) {
-        debugPrint('[SyncService] ⚠️ Storage upload to bucket "$bucket" failed ($e). Trying next bucket...');
+        debugPrint(
+          '[SyncService] ⚠️ Storage upload to bucket "$bucket" failed ($e). Trying next bucket...',
+        );
       }
     }
-    debugPrint('[SyncService] ⚠️ All storage buckets failed for path: $storagePath');
+    debugPrint(
+      '[SyncService] ⚠️ All storage buckets failed for path: $storagePath',
+    );
     return null;
   }
 
-  Future<void> _syncBuildingSpecifications(String buildingId, Inspection inspection) async {
+  Future<void> _syncBuildingSpecifications(
+    String buildingId,
+    Inspection inspection,
+  ) async {
     final specItems = <Map<String, dynamic>>[];
     bool isUsed(dynamic v) => v == true || v == 'true' || v == 1;
 
@@ -286,7 +335,8 @@ class SyncService {
     addSpecs('floor', inspection.floorMaterials);
     addSpecs('roof', inspection.roofMaterials);
 
-    if (inspection.roofCovering != null && inspection.roofCovering!.isNotEmpty) {
+    if (inspection.roofCovering != null &&
+        inspection.roofCovering!.isNotEmpty) {
       specItems.add({
         'building_id': buildingId,
         'is_used': true,
@@ -295,7 +345,10 @@ class SyncService {
     }
 
     if (specItems.isNotEmpty) {
-      await _supabase.from('specification').delete().eq('building_id', buildingId);
+      await _supabase
+          .from('specification')
+          .delete()
+          .eq('building_id', buildingId);
       await _supabase.from('specification').insert(specItems);
     }
   }

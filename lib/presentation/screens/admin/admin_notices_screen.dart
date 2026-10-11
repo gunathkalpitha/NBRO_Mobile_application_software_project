@@ -64,11 +64,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
       _isLoading = true;
     });
 
-    await Future.wait([
-      _loadCurrentProfile(),
-      _loadOfficers(),
-      _loadNotices(),
-    ]);
+    await Future.wait([_loadCurrentProfile(), _loadOfficers(), _loadNotices()]);
 
     if (mounted) {
       setState(() {
@@ -127,22 +123,26 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
     try {
       final response = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name, published_by_avatar_url')
+          .select(
+            'id, title, message, priority, published_at, published_by_name, published_by_avatar_url',
+          )
           .order('published_at', ascending: false);
 
       final notices = (response as List)
-          .map((json) => Notice(
-                id: json['id'] as String,
-                title: json['title'] as String,
-                message: json['message'] as String,
-                publishedAt: DateTime.parse(json['published_at'] as String),
-                publishedBy: json['published_by_name'] as String? ?? 'Admin',
-                publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
-                priority: NoticePriority.values.firstWhere(
-                  (e) => e.name == (json['priority'] as String? ?? 'normal'),
-                  orElse: () => NoticePriority.normal,
-                ),
-              ))
+          .map(
+            (json) => Notice(
+              id: json['id'] as String,
+              title: json['title'] as String,
+              message: json['message'] as String,
+              publishedAt: DateTime.parse(json['published_at'] as String),
+              publishedBy: json['published_by_name'] as String? ?? 'Admin',
+              publishedByAvatarUrl: json['published_by_avatar_url'] as String?,
+              priority: NoticePriority.values.firstWhere(
+                (e) => e.name == (json['priority'] as String? ?? 'normal'),
+                orElse: () => NoticePriority.normal,
+              ),
+            ),
+          )
           .toList();
 
       if (mounted) {
@@ -164,12 +164,14 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
       return;
     }
 
-    if (_targetType == NoticeTargetType.individual && _selectedOfficerId == null) {
+    if (_targetType == NoticeTargetType.individual &&
+        _selectedOfficerId == null) {
       _showSnackBar('Select an officer to send', isWarning: true);
       return;
     }
 
-    if (_targetType == NoticeTargetType.selected && _selectedOfficerIds.isEmpty) {
+    if (_targetType == NoticeTargetType.selected &&
+        _selectedOfficerIds.isEmpty) {
       _showSnackBar('Select at least one officer', isWarning: true);
       return;
     }
@@ -184,9 +186,9 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
       final publishedByName = profile?.fullName.trim().isNotEmpty == true
           ? profile!.fullName
           : user?.userMetadata?['full_name'] ??
-              user?.userMetadata?['name'] ??
-              user?.email?.split('@').first ??
-              'Admin';
+                user?.userMetadata?['name'] ??
+                user?.email?.split('@').first ??
+                'Admin';
       final publishedByAvatarUrl = profile?.avatarUrl;
 
       final targetType = _targetType.name;
@@ -207,36 +209,44 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
 
       final noticeId = noticeResponse['id'] as String;
 
-        final recipients = _targetType == NoticeTargetType.all
+      final recipients = _targetType == NoticeTargetType.all
           ? _officers
-            .where((officer) => (officer['email'] as String?)?.toLowerCase() != 'admin@gmail.com' &&
-                                (officer['role'] as String?) != 'super_admin')
-            .map((officer) => officer['id'] as String)
-            .toList()
+                .where(
+                  (officer) =>
+                      (officer['email'] as String?)?.toLowerCase() !=
+                          'admin@gmail.com' &&
+                      (officer['role'] as String?) != 'super_admin',
+                )
+                .map((officer) => officer['id'] as String)
+                .toList()
           : _targetType == NoticeTargetType.individual
-            ? [_selectedOfficerId!]
-            : _selectedOfficerIds.toList();
+          ? [_selectedOfficerId!]
+          : _selectedOfficerIds.toList();
 
-        if (recipients.isNotEmpty) {
-          final rows = recipients
-              .where((officerId) => officerId.isNotEmpty)
-              .map((officerId) => {
-                    'notice_id': noticeId,
-                    'officer_id': officerId,
-                    'is_read': false,
-                  })
-              .toList();
+      if (recipients.isNotEmpty) {
+        final rows = recipients
+            .where((officerId) => officerId.isNotEmpty)
+            .map(
+              (officerId) => {
+                'notice_id': noticeId,
+                'officer_id': officerId,
+                'is_read': false,
+              },
+            )
+            .toList();
 
-          if (rows.isNotEmpty) {
-            try {
-              await Supabase.instance.client
-                  .from('notice_recipients')
-                  .upsert(rows, onConflict: 'notice_id,officer_id');
-            } catch (recErr) {
-              debugPrint('[AdminNotices] notice_recipients insert warning: $recErr');
-            }
+        if (rows.isNotEmpty) {
+          try {
+            await Supabase.instance.client
+                .from('notice_recipients')
+                .upsert(rows, onConflict: 'notice_id,officer_id');
+          } catch (recErr) {
+            debugPrint(
+              '[AdminNotices] notice_recipients insert warning: $recErr',
+            );
           }
         }
+      }
 
       _titleController.clear();
       _messageController.clear();
@@ -267,13 +277,13 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
     final color = isError
         ? NBROColors.error
         : isWarning
-            ? NBROColors.darkGrey
-            : NBROColors.success;
+        ? NBROColors.darkGrey
+        : NBROColors.success;
     final icon = isError
         ? Icons.error_outline
         : isWarning
-            ? Icons.warning_amber_outlined
-            : Icons.check_circle;
+        ? Icons.warning_amber_outlined
+        : Icons.check_circle;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -328,7 +338,10 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
                       },
                     )
                   : IconButton(
-                      icon: const Icon(Icons.arrow_back, color: NBROColors.white),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: NBROColors.white,
+                      ),
                       iconSize: 24,
                       padding: EdgeInsets.zero,
                       onPressed: () {
@@ -366,9 +379,9 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
                     Text(
                       'Recent Notices',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: NBROColors.black,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        color: NBROColors.black,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     if (_notices.isEmpty)
@@ -385,9 +398,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
   Widget _buildComposeCard() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -396,9 +407,9 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
             Text(
               'Create Notice',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: NBROColors.black,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: NBROColors.black,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -442,9 +453,9 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
             const SizedBox(height: 16),
             Text(
               'Send To',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -518,9 +529,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
           .map(
             (officer) => DropdownMenuItem<String>(
               value: officer['id'] as String,
-              child: Text(
-                _officerLabel(officer),
-              ),
+              child: Text(_officerLabel(officer)),
             ),
           )
           .toList(),
@@ -540,9 +549,7 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
         final officerId = officer['id'] as String;
         final isSelected = _selectedOfficerIds.contains(officerId);
         return FilterChip(
-          label: Text(
-            _officerLabel(officer),
-          ),
+          label: Text(_officerLabel(officer)),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
@@ -579,16 +586,16 @@ class _AdminNoticesScreenState extends State<AdminNoticesScreen> {
           Text(
             'No notices yet',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: NBROColors.darkGrey,
-                ),
+              fontWeight: FontWeight.bold,
+              color: NBROColors.darkGrey,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'Create a notice to notify officers',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: NBROColors.grey,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: NBROColors.grey),
           ),
         ],
       ),
@@ -636,10 +643,14 @@ class _NoticeCard extends StatelessWidget {
     final priorityColor = _getPriorityColor();
     final avatarUrl = notice.publishedByAvatarUrl;
     final initials = notice.publishedBy.trim().isEmpty
-      ? 'AD'
-      : notice.publishedBy.trim().split(RegExp(r'\s+')).length >= 2
-        ? '${notice.publishedBy.trim().split(RegExp(r'\s+'))[0][0]}${notice.publishedBy.trim().split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
-        : notice.publishedBy.trim().substring(0, notice.publishedBy.trim().length >= 2 ? 2 : 1).toUpperCase();
+        ? 'AD'
+        : notice.publishedBy.trim().split(RegExp(r'\s+')).length >= 2
+        ? '${notice.publishedBy.trim().split(RegExp(r'\s+'))[0][0]}${notice.publishedBy.trim().split(RegExp(r'\s+'))[1][0]}'
+              .toUpperCase()
+        : notice.publishedBy
+              .trim()
+              .substring(0, notice.publishedBy.trim().length >= 2 ? 2 : 1)
+              .toUpperCase();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -720,7 +731,10 @@ class _NoticeCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: priorityColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),

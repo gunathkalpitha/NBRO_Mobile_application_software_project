@@ -12,7 +12,7 @@ class ResetPasswordScreen extends StatefulWidget {
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
@@ -37,9 +37,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     }
 
     if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
@@ -47,18 +47,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     try {
       debugPrint('[ResetPasswordScreen] Updating password');
-      
+
       // Update the user's password
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(password: newPassword),
       );
-      
+
       debugPrint('[ResetPasswordScreen] Password updated successfully');
-      
+
       setState(() {
         _passwordReset = true;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -66,14 +66,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             backgroundColor: NBROColors.success,
           ),
         );
-        
+
         // Navigate to login after a delay
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/login',
-              (route) => false,
-            );
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/login', (route) => false);
           }
         });
       }
@@ -119,15 +118,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  NBROColors.primary,
-                  NBROColors.primaryDark,
-                ],
+                colors: [NBROColors.primary, NBROColors.primaryDark],
               ),
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height -
+                minHeight:
+                    MediaQuery.of(context).size.height -
                     MediaQuery.of(context).padding.top -
                     MediaQuery.of(context).padding.bottom,
               ),
@@ -228,10 +225,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         const SizedBox(height: 4),
         const Text(
           'Must be at least 6 characters',
-          style: TextStyle(
-            fontSize: 14,
-            color: NBROColors.grey,
-          ),
+          style: TextStyle(fontSize: 14, color: NBROColors.grey),
         ),
         const SizedBox(height: 32),
 
@@ -292,9 +286,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      NBROColors.white,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(NBROColors.white),
                   ),
                 )
               : const Text('Update Password'),
@@ -370,19 +362,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         const SizedBox(height: 16),
         const Text(
           'Your password has been successfully updated. You can now log in with your new password.',
-          style: TextStyle(
-            fontSize: 14,
-            color: NBROColors.grey,
-          ),
+          style: TextStyle(fontSize: 14, color: NBROColors.grey),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
         const Text(
           'Redirecting to login...',
-          style: TextStyle(
-            fontSize: 13,
-            color: NBROColors.primary,
-          ),
+          style: TextStyle(fontSize: 13, color: NBROColors.primary),
           textAlign: TextAlign.center,
         ),
       ],

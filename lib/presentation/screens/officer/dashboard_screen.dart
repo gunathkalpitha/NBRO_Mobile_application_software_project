@@ -171,7 +171,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               clipBehavior: Clip.none,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined, color: NBROColors.white),
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: NBROColors.white,
+                  ),
                   iconSize: 24,
                   onPressed: () async {
                     await Navigator.of(context).push(
@@ -288,7 +291,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SiteInspectionWizard(),
+                                      builder: (context) =>
+                                          const SiteInspectionWizard(),
                                     ),
                                   );
                                   _loadDrafts();
@@ -304,14 +308,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 accentColor: const Color(0xFFF4F6F9),
                                 onTap: () {
                                   if (widget.onNavItemSelected != null) {
-                                    widget.onNavItemSelected!(NavItem.inspection);
+                                    widget.onNavItemSelected!(
+                                      NavItem.inspection,
+                                    );
                                     return;
                                   }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => const InspectionsScreen(
-                                        initialTabIndex: 0, // Default to Recent (Last 5) tab
+                                        initialTabIndex:
+                                            0, // Default to Recent (Last 5) tab
                                       ),
                                     ),
                                   );
@@ -330,9 +337,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => InspectionMapScreen(
-                                          inspections: state.inspections,
-                                        ),
+                                        builder: (context) =>
+                                            InspectionMapScreen(
+                                              inspections: state.inspections,
+                                            ),
                                       ),
                                     );
                                   }
@@ -354,7 +362,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const AnalysisScreen(),
+                                      builder: (context) =>
+                                          const AnalysisScreen(),
                                     ),
                                   );
                                 },
@@ -375,7 +384,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const ReportsScreen(),
+                                      builder: (context) =>
+                                          const ReportsScreen(),
                                     ),
                                   );
                                 },
@@ -392,7 +402,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const NoticeScreen(),
+                                      builder: (context) =>
+                                          const NoticeScreen(),
                                     ),
                                   );
                                   _loadNoticeSummary();
@@ -416,7 +427,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Official Hero Banner Card with time, greeting & background image
   Widget _buildOfficialHeroBanner(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    final userName = user?.userMetadata?['full_name'] ??
+    final userName =
+        user?.userMetadata?['full_name'] ??
         user?.userMetadata?['name'] ??
         user?.email?.split('@').first ??
         'Government Officer';
@@ -451,7 +463,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   return Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+                        colors: [
+                          Color(0xFF0F2027),
+                          Color(0xFF203A43),
+                          Color(0xFF2C5364),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -495,7 +511,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(6),
@@ -527,10 +546,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 2),
                       const Text(
                         'National Building Research Organization Pre-Crack Survey Portal',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                     ],
                   ),
@@ -622,7 +638,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           _buildStatText('Total Sites', '$totalSites', NBROColors.primary),
           Container(width: 1, height: 20, color: Colors.grey.shade300),
-          _buildStatText('Pending Sync', '$pendingCount', Colors.amber.shade900),
+          _buildStatText(
+            'Pending Sync',
+            '$pendingCount',
+            Colors.amber.shade900,
+          ),
           Container(width: 1, height: 20, color: Colors.grey.shade300),
           _buildStatText('Synced Cloud', '$syncedCount', NBROColors.success),
         ],
@@ -635,11 +655,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         Text(
           '$label: ',
-          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         Text(
           value,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );
@@ -657,7 +685,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               const Row(
                 children: [
-                  Icon(Icons.edit_note_rounded, color: NBROColors.info, size: 20),
+                  Icon(
+                    Icons.edit_note_rounded,
+                    color: NBROColors.info,
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Saved Drafts',
@@ -706,7 +738,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             ? const Color(0xFF1E1E1E)
             : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: NBROColors.info.withValues(alpha: 0.3), width: 1.5),
+        border: Border.all(
+          color: NBROColors.info.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -756,7 +791,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                         children: [
                           Expanded(
                             child: Text(
-                              ownerName.isEmpty ? 'Untitled Inspection' : ownerName,
+                              ownerName.isEmpty
+                                  ? 'Untitled Inspection'
+                                  : ownerName,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -766,7 +803,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: NBROColors.info.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
@@ -785,18 +825,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 2),
                       Text(
                         address,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.access_time, size: 12, color: Colors.grey),
+                          const Icon(
+                            Icons.access_time,
+                            size: 12,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             DateFormat('MMM dd, hh:mm a').format(savedAt),
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
                           const Spacer(),
                           const Text(
@@ -834,7 +884,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       final noticesResponse = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name, target_type')
+          .select(
+            'id, title, message, priority, published_at, published_by_name, target_type',
+          )
           .order('published_at', ascending: false);
 
       final recipientsResponse = await Supabase.instance.client
@@ -857,10 +909,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         final json = row as Map<String, dynamic>;
         final noticeId = json['id'] as String;
         final targetType = (json['target_type'] as String?) ?? 'all';
-        final isVisible = targetType == 'all' || recipientMap.containsKey(noticeId);
+        final isVisible =
+            targetType == 'all' || recipientMap.containsKey(noticeId);
         if (!isVisible) continue;
 
-        final isRead = (recipientMap[noticeId] == true) || localReadIds.contains(noticeId);
+        final isRead =
+            (recipientMap[noticeId] == true) || localReadIds.contains(noticeId);
 
         visibleNotices.add(
           Notice(
@@ -881,7 +935,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!mounted) return;
       final unreadNotices = visibleNotices.where((n) => !n.isRead).toList();
       setState(() {
-        _latestNotice = unreadNotices.isNotEmpty ? unreadNotices.first : _defaultNotice;
+        _latestNotice = unreadNotices.isNotEmpty
+            ? unreadNotices.first
+            : _defaultNotice;
         _unreadNoticeCount = unreadNotices.length;
       });
     } catch (e) {
@@ -1026,11 +1082,16 @@ class _DashboardActionCard extends StatelessWidget {
                       children: [
                         // Tag / Badge Label
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: accentColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: accentColor.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             tag,
@@ -1044,11 +1105,7 @@ class _DashboardActionCard extends StatelessWidget {
                         ),
 
                         // Action Accent Icon
-                        Icon(
-                          icon,
-                          color: accentColor,
-                          size: 26,
-                        ),
+                        Icon(icon, color: accentColor, size: 26),
                       ],
                     ),
 
@@ -1081,10 +1138,7 @@ class _MarqueeText extends StatefulWidget {
   final String text;
   final TextStyle style;
 
-  const _MarqueeText({
-    required this.text,
-    required this.style,
-  });
+  const _MarqueeText({required this.text, required this.style});
 
   @override
   State<_MarqueeText> createState() => _MarqueeTextState();
@@ -1135,10 +1189,7 @@ class _MarqueeTextState extends State<_MarqueeText> {
       controller: _scrollController,
       scrollDirection: Axis.horizontal,
       physics: const NeverScrollableScrollPhysics(),
-      child: Text(
-        widget.text,
-        style: widget.style,
-      ),
+      child: Text(widget.text, style: widget.style),
     );
   }
 }
