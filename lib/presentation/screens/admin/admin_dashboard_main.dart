@@ -58,7 +58,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     });
     try {
       final supabase = Supabase.instance.client;
-      
+
       final officersResponse = await supabase
           .from('profile')
           .select('id')
@@ -74,9 +74,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
           .where((i) => i['sync_status'] == 'pending')
           .length;
 
-      final sitesResponse = await supabase
-          .from('site')
-          .select('site_id');
+      final sitesResponse = await supabase.from('site').select('site_id');
       _totalSites = sitesResponse.length;
 
       setState(() {
@@ -94,7 +92,9 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     try {
       final noticesResponse = await Supabase.instance.client
           .from('notices')
-          .select('id, title, message, priority, published_at, published_by_name')
+          .select(
+            'id, title, message, priority, published_at, published_by_name',
+          )
           .order('published_at', ascending: false)
           .limit(1);
 
@@ -144,7 +144,11 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             ),
             boxShadow: [
               BoxShadow(
-                color: (isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary).withValues(alpha: 0.3),
+                color:
+                    (isSuperAdmin
+                            ? const Color(0xFF4A148C)
+                            : NBROColors.primary)
+                        .withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -240,13 +244,16 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                       accentColor: const Color(0xFFFFD700),
                                       onTap: () {
                                         if (widget.onNavItemSelected != null) {
-                                          widget.onNavItemSelected!(AdminNavItem.officers);
+                                          widget.onNavItemSelected!(
+                                            AdminNavItem.officers,
+                                          );
                                           return;
                                         }
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AdminOfficersScreen(),
+                                            builder: (context) =>
+                                                const AdminOfficersScreen(),
                                           ),
                                         ).then((_) => _loadAdminStats());
                                       },
@@ -261,13 +268,16 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                       accentColor: const Color(0xFFF4F6F9),
                                       onTap: () {
                                         if (widget.onNavItemSelected != null) {
-                                          widget.onNavItemSelected!(AdminNavItem.notices);
+                                          widget.onNavItemSelected!(
+                                            AdminNavItem.notices,
+                                          );
                                           return;
                                         }
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AdminNoticesScreen(),
+                                            builder: (context) =>
+                                                const AdminNoticesScreen(),
                                           ),
                                         ).then((_) => _loadNoticeSummary());
                                       },
@@ -284,7 +294,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AuditlogScreen(),
+                                            builder: (context) =>
+                                                const AuditlogScreen(),
                                           ),
                                         );
                                       },
@@ -301,7 +312,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const Task_managerScreen(),
+                                            builder: (context) =>
+                                                const TaskmanagerScreen(),
                                           ),
                                         );
                                       },
@@ -313,17 +325,21 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                       title: 'Inspections\n(View All)',
                                       tag: 'ALL SITES',
                                       icon: Icons.fact_check_outlined,
-                                      bgAsset: 'assets/images/bg_inspections.jpg',
+                                      bgAsset:
+                                          'assets/images/bg_inspections.jpg',
                                       accentColor: const Color(0xFFF4F6F9),
                                       onTap: () {
                                         if (widget.onNavItemSelected != null) {
-                                          widget.onNavItemSelected!(AdminNavItem.inspections);
+                                          widget.onNavItemSelected!(
+                                            AdminNavItem.inspections,
+                                          );
                                           return;
                                         }
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AdminInspectionsManagementScreen(),
+                                            builder: (context) =>
+                                                const AdminInspectionsManagementScreen(),
                                           ),
                                         );
                                       },
@@ -338,13 +354,16 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                       accentColor: const Color(0xFFF4F6F9),
                                       onTap: () {
                                         if (widget.onNavItemSelected != null) {
-                                          widget.onNavItemSelected!(AdminNavItem.officers);
+                                          widget.onNavItemSelected!(
+                                            AdminNavItem.officers,
+                                          );
                                           return;
                                         }
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AdminOfficersScreen(),
+                                            builder: (context) =>
+                                                const AdminOfficersScreen(),
                                           ),
                                         ).then((_) => _loadAdminStats());
                                       },
@@ -369,13 +388,16 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                       accentColor: const Color(0xFFF4F6F9),
                                       onTap: () {
                                         if (widget.onNavItemSelected != null) {
-                                          widget.onNavItemSelected!(AdminNavItem.notices);
+                                          widget.onNavItemSelected!(
+                                            AdminNavItem.notices,
+                                          );
                                           return;
                                         }
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AdminNoticesScreen(),
+                                            builder: (context) =>
+                                                const AdminNoticesScreen(),
                                           ),
                                         ).then((_) => _loadNoticeSummary());
                                       },
@@ -392,7 +414,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const ReportsScreen(),
+                                            builder: (context) =>
+                                                const ReportsScreen(),
                                           ),
                                         );
                                       },
@@ -409,7 +432,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AuditlogScreen(),
+                                            builder: (context) =>
+                                                const AuditlogScreen(),
                                           ),
                                         );
                                       },
@@ -426,7 +450,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const AnalysisScreen(),
+                                            builder: (context) =>
+                                                const AnalysisScreen(),
                                           ),
                                         );
                                       },
@@ -443,7 +468,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => const Task_managerScreen(),
+                                            builder: (context) =>
+                                                const TaskmanagerScreen(),
                                           ),
                                         );
                                       },
@@ -463,7 +489,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
   // Official Hero Banner Card
   Widget _buildOfficialHeroBanner(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    final adminName = user?.userMetadata?['full_name'] ??
+    final adminName =
+        user?.userMetadata?['full_name'] ??
         user?.userMetadata?['name'] ??
         user?.email?.split('@').first ??
         'Administrator';
@@ -502,7 +529,11 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                       return Container(
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+                            colors: [
+                              Color(0xFF0F2027),
+                              Color(0xFF203A43),
+                              Color(0xFF2C5364),
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -548,7 +579,10 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(6),
@@ -580,10 +614,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
                       const SizedBox(height: 2),
                       const Text(
                         'National Building Research Organization Pre-Crack Survey Management',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                     ],
                   ),
@@ -673,9 +704,17 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
         children: [
           _buildStatText('Total Sites', '$_totalSites', NBROColors.primary),
           Container(width: 1, height: 20, color: Colors.grey.shade300),
-          _buildStatText('Active Officers', '$_totalOfficers', NBROColors.primaryDark),
+          _buildStatText(
+            'Active Officers',
+            '$_totalOfficers',
+            NBROColors.primaryDark,
+          ),
           Container(width: 1, height: 20, color: Colors.grey.shade300),
-          _buildStatText('Pending Sync', '$_pendingInspections', Colors.amber.shade900),
+          _buildStatText(
+            'Pending Sync',
+            '$_pendingInspections',
+            Colors.amber.shade900,
+          ),
         ],
       ),
     );
@@ -686,11 +725,19 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
       children: [
         Text(
           '$label: ',
-          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         Text(
           value,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
       ],
     );
@@ -720,8 +767,8 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     );
 
     try {
-      final List<Inspection> inspections =
-          await _inspectionRepository.getInspections();
+      final List<Inspection> inspections = await _inspectionRepository
+          .getInspections();
       if (!mounted) return;
       Navigator.of(context).pop();
       await Navigator.push(
@@ -842,11 +889,16 @@ class _AdminActionCard extends StatelessWidget {
                       children: [
                         // Tag / Badge Label
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: accentColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: accentColor.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             tag,
@@ -860,11 +912,7 @@ class _AdminActionCard extends StatelessWidget {
                         ),
 
                         // Action Accent Icon
-                        Icon(
-                          icon,
-                          color: accentColor,
-                          size: 26,
-                        ),
+                        Icon(icon, color: accentColor, size: 26),
                       ],
                     ),
 
@@ -897,10 +945,7 @@ class _MarqueeText extends StatefulWidget {
   final String text;
   final TextStyle style;
 
-  const _MarqueeText({
-    required this.text,
-    required this.style,
-  });
+  const _MarqueeText({required this.text, required this.style});
 
   @override
   State<_MarqueeText> createState() => _MarqueeTextState();
@@ -951,10 +996,7 @@ class _MarqueeTextState extends State<_MarqueeText> {
       controller: _scrollController,
       scrollDirection: Axis.horizontal,
       physics: const NeverScrollableScrollPhysics(),
-      child: Text(
-        widget.text,
-        style: widget.style,
-      ),
+      child: Text(widget.text, style: widget.style),
     );
   }
 }
