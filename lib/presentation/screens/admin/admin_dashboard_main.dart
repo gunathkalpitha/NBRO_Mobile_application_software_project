@@ -15,7 +15,7 @@ import '../inspection/inspection_map_screen.dart';
 import 'reports_screen_admin.dart';
 import 'analysis_screen_admin.dart';
 import 'auditlog.dart';
-import 'Task_manager.dart';
+import 'task_manager.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   final void Function(AdminNavItem)? onNavItemSelected;
