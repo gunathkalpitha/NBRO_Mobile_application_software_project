@@ -1248,8 +1248,9 @@ class _AdminInspectionsManagementScreenState
                                   },
                                   loadingBuilder:
                                       (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return Container(
                                           height: 200,
                                           color: NBROColors.light,
@@ -1758,8 +1759,9 @@ class _AdminInspectionsManagementScreenState
                                             );
                                           },
                                       loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
+                                        if (loadingProgress == null) {
                                           return child;
+                                        }
                                         return Center(
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,

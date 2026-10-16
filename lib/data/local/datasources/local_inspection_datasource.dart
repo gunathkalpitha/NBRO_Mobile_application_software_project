@@ -416,9 +416,9 @@ class LocalInspectionDataSource {
     SyncStatus status = SyncStatus.pending;
     if (statusStr == 'synced') status = SyncStatus.synced;
     if (statusStr == 'syncing') status = SyncStatus.syncing;
-    if (statusStr == 'error' || statusStr == 'failed')
+    if (statusStr == 'error' || statusStr == 'failed') {
       status = SyncStatus.error;
-
+    }
     return Inspection(
       id: (row['building_ref'] as String?) ?? (row['local_id'] as String),
       ownerName: row['owner_name'] as String,

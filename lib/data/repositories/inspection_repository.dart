@@ -160,9 +160,9 @@ class InspectionRepository {
   Future<List<Inspection>> getInspections() async {
     try {
       final currentUser = _supabase.auth.currentUser;
-      if (currentUser == null)
+      if (currentUser == null) {
         return await _localDataSource.getAllInspections();
-
+      }
       final email = currentUser.email?.toLowerCase() ?? '';
       final role = await _getUserRole(currentUser.id, email);
 
