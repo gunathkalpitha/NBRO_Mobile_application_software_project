@@ -130,25 +130,32 @@ class _AdminInspectionsManagementScreenState
           'present_condition': observation['present_condition'],
           'number_of_floors': building['no_floors'],
           'water_source': pipeWater,
-          'has_pipe_borne_water': (pipeWater ?? '').toLowerCase().contains('available'),
+          'has_pipe_borne_water': (pipeWater ?? '').toLowerCase().contains(
+            'available',
+          ),
           'electricity_source': electricity,
-          'has_electricity': (electricity ?? '').toLowerCase().contains('available'),
+          'has_electricity': (electricity ?? '').toLowerCase().contains(
+            'available',
+          ),
           'sewage_type': sewage,
-          'has_sewage_waste': (sewage ?? '').toLowerCase().contains('available'),
+          'has_sewage_waste': (sewage ?? '').toLowerCase().contains(
+            'available',
+          ),
         };
 
-        final officer = (userId != null && userId.isNotEmpty) 
-            ? (officersMap[userId] ?? {
-                'id': userId,
-                'full_name': 'Unknown Officer',
-                'role': 'officer'
-              })
+        final officer = (userId != null && userId.isNotEmpty)
+            ? (officersMap[userId] ??
+                  {
+                    'id': userId,
+                    'full_name': 'Unknown Officer',
+                    'role': 'officer',
+                  })
             : {
                 'id': 'unknown',
                 'full_name': 'Unknown Officer',
-                'role': 'officer'
+                'role': 'officer',
               };
-        
+
         inspectionsWithProfiles.add({
           'id': row['site_id'],
           'site_id': row['site_id'],
@@ -202,7 +209,9 @@ class _AdminInspectionsManagementScreenState
     }
   }
 
-  Future<void> _updatePhotoCountsForInspections(List<Map<String, dynamic>> inspections) async {
+  Future<void> _updatePhotoCountsForInspections(
+    List<Map<String, dynamic>> inspections,
+  ) async {
     try {
       final supabase = Supabase.instance.client;
 
@@ -278,7 +287,9 @@ class _AdminInspectionsManagementScreenState
         }
       }
 
-      debugPrint('✅ Updated photo counts for ${inspections.length} inspections');
+      debugPrint(
+        '✅ Updated photo counts for ${inspections.length} inspections',
+      );
     } catch (e) {
       debugPrint('⚠️ Error updating photo counts: $e');
       // Continue without photo counts rather than failing completely
@@ -319,16 +330,19 @@ class _AdminInspectionsManagementScreenState
         _filteredInspections = _inspections.where((inspection) {
           final siteName = (inspection['site_name'] ?? '').toLowerCase();
           final location = (inspection['site_location'] ?? '').toLowerCase();
-          final buildingRef = (inspection['building_reference_no'] ?? '').toLowerCase();
-          final officerProfile = inspection['officer_profile'] as Map<String, dynamic>?;
-          final officerName = (officerProfile?['full_name'] ?? '').toLowerCase();
+          final buildingRef = (inspection['building_reference_no'] ?? '')
+              .toLowerCase();
+          final officerProfile =
+              inspection['officer_profile'] as Map<String, dynamic>?;
+          final officerName = (officerProfile?['full_name'] ?? '')
+              .toLowerCase();
           final officerEmail = (officerProfile?['email'] ?? '').toLowerCase();
-          
+
           return siteName.contains(query) ||
-                 location.contains(query) ||
-                 buildingRef.contains(query) ||
-                 officerName.contains(query) ||
-                 officerEmail.contains(query);
+              location.contains(query) ||
+              buildingRef.contains(query) ||
+              officerName.contains(query) ||
+              officerEmail.contains(query);
         }).toList();
       }
     });
@@ -427,10 +441,7 @@ class _AdminInspectionsManagementScreenState
                   ),
                   Text(
                     'View and monitor all inspections',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: NBROColors.white,
-                    ),
+                    style: TextStyle(fontSize: 12, color: NBROColors.white),
                   ),
                 ],
               ),
@@ -445,109 +456,118 @@ class _AdminInspectionsManagementScreenState
               ),
             )
           : _inspections.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.assignment_outlined,
-                        size: 80,
-                        color: NBROColors.grey.withValues(alpha: 0.5),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No inspections yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: NBROColors.darkGrey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Officers will record inspections here',
-                        style: TextStyle(
-                          color: NBROColors.grey,
-                        ),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 80,
+                    color: NBROColors.grey.withValues(alpha: 0.5),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadInspections,
-                  child: CustomScrollView(
-                    slivers: [
-                      // Search Bar
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Search by site, location, or officer...',
-                              prefixIcon: const Icon(Icons.search, color: NBROColors.primary),
-                              suffixIcon: _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                      },
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: NBROColors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: NBROColors.grey.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: NBROColors.grey.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: NBROColors.primary,
-                                  width: 2,
-                                ),
-                              ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No inspections yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: NBROColors.darkGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Officers will record inspections here',
+                    style: TextStyle(color: NBROColors.grey),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadInspections,
+              child: CustomScrollView(
+                slivers: [
+                  // Search Bar
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search by site, location, or officer...',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: NBROColors.primary,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: NBROColors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: NBROColors.grey.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: NBROColors.grey.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: NBROColors.primary,
+                              width: 2,
                             ),
                           ),
                         ),
                       ),
-
-                      // View Selector
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              _buildViewChip('recent', 'Recent (5)', Icons.schedule),
-                              const SizedBox(width: 8),
-                              _buildViewChip('all', 'All Inspections', Icons.list),
-                              const SizedBox(width: 8),
-                              _buildViewChip('officers', 'By Officers', Icons.people),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                      // Content based on selected view
-                      if (_selectedView == 'recent')
-                        _buildRecentInspections()
-                      else if (_selectedView == 'all')
-                        _buildAllInspections()
-                      else
-                        _buildOfficersList(),
-                    ],
+                    ),
                   ),
-                ),
+
+                  // View Selector
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          _buildViewChip(
+                            'recent',
+                            'Recent (5)',
+                            Icons.schedule,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildViewChip('all', 'All Inspections', Icons.list),
+                          const SizedBox(width: 8),
+                          _buildViewChip(
+                            'officers',
+                            'By Officers',
+                            Icons.people,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+                  // Content based on selected view
+                  if (_selectedView == 'recent')
+                    _buildRecentInspections()
+                  else if (_selectedView == 'all')
+                    _buildAllInspections()
+                  else
+                    _buildOfficersList(),
+                ],
+              ),
+            ),
     );
   }
 
@@ -566,7 +586,9 @@ class _AdminInspectionsManagementScreenState
             color: isSelected ? NBROColors.primary : NBROColors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? NBROColors.primary : NBROColors.grey.withValues(alpha: 0.3),
+              color: isSelected
+                  ? NBROColors.primary
+                  : NBROColors.grey.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -583,7 +605,9 @@ class _AdminInspectionsManagementScreenState
                   label,
                   style: TextStyle(
                     color: isSelected ? NBROColors.white : NBROColors.darkGrey,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     fontSize: 12,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -598,7 +622,7 @@ class _AdminInspectionsManagementScreenState
 
   Widget _buildRecentInspections() {
     final recentInspections = _filteredInspections.take(5).toList();
-    
+
     if (recentInspections.isEmpty) {
       return SliverFillRemaining(
         child: Center(
@@ -613,12 +637,9 @@ class _AdminInspectionsManagementScreenState
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return _buildInspectionCard(recentInspections[index]);
-          },
-          childCount: recentInspections.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          return _buildInspectionCard(recentInspections[index]);
+        }, childCount: recentInspections.length),
       ),
     );
   }
@@ -638,12 +659,9 @@ class _AdminInspectionsManagementScreenState
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return _buildInspectionCard(_filteredInspections[index]);
-          },
-          childCount: _filteredInspections.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          return _buildInspectionCard(_filteredInspections[index]);
+        }, childCount: _filteredInspections.length),
       ),
     );
   }
@@ -666,15 +684,12 @@ class _AdminInspectionsManagementScreenState
     return SliverPadding(
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final officer = officers[index];
-            final officerId = officer['id'] as String?;
-            final count = (officerId != null) ? (counts[officerId] ?? 0) : 0;
-            return _buildOfficerCard(officer, count);
-          },
-          childCount: officers.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final officer = officers[index];
+          final officerId = officer['id'] as String?;
+          final count = (officerId != null) ? (counts[officerId] ?? 0) : 0;
+          return _buildOfficerCard(officer, count);
+        }, childCount: officers.length),
       ),
     );
   }
@@ -689,25 +704,15 @@ class _AdminInspectionsManagementScreenState
             color: NBROColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(
-            Icons.person,
-            color: NBROColors.primary,
-            size: 24,
-          ),
+          child: const Icon(Icons.person, color: NBROColors.primary, size: 24),
         ),
         title: Text(
           officer['full_name'] ?? officer['email'] ?? 'Unknown Officer',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         subtitle: Text(
           officer['email'] ?? '',
-          style: TextStyle(
-            fontSize: 12,
-            color: NBROColors.grey,
-          ),
+          style: TextStyle(fontSize: 12, color: NBROColors.grey),
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -734,7 +739,7 @@ class _AdminInspectionsManagementScreenState
   void _showOfficerInspections(Map<String, dynamic> officer) {
     final officerId = officer['id'] as String?;
     if (officerId == null || officerId.isEmpty) return;
-    
+
     final officerInspections = _inspections
         .where((inspection) => inspection['user_id'] == officerId)
         .toList();
@@ -759,7 +764,9 @@ class _AdminInspectionsManagementScreenState
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: NBROColors.primary.withValues(alpha: 0.1),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -792,7 +799,9 @@ class _AdminInspectionsManagementScreenState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  officer['full_name'] ?? officer['email'] ?? 'Unknown',
+                                  officer['full_name'] ??
+                                      officer['email'] ??
+                                      'Unknown',
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -834,14 +843,18 @@ class _AdminInspectionsManagementScreenState
   Widget _buildInspectionCard(Map<String, dynamic> inspection) {
     final syncStatus = inspection['sync_status'] ?? 'unknown';
     final createdAt = inspection['created_at'] != null
-        ? DateFormat('MMM dd, yyyy • hh:mm a').format(
-            DateTime.parse(inspection['created_at']),
-          )
+        ? DateFormat(
+            'MMM dd, yyyy • hh:mm a',
+          ).format(DateTime.parse(inspection['created_at']))
         : 'N/A';
-    
-    final officerProfile = inspection['officer_profile'] as Map<String, dynamic>?;
-    final officerName = officerProfile?['full_name'] ?? officerProfile?['email'] ?? 'Unknown Officer';
-    
+
+    final officerProfile =
+        inspection['officer_profile'] as Map<String, dynamic>?;
+    final officerName =
+        officerProfile?['full_name'] ??
+        officerProfile?['email'] ??
+        'Unknown Officer';
+
     final siteData = _resolveSiteData(inspection);
     final buildingPhotoUrl = siteData?['building_photo_url'] as String?;
 
@@ -934,7 +947,9 @@ class _AdminInspectionsManagementScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          inspection['site_name'] ?? inspection['building_reference_no'] ?? 'Unknown Site',
+                          inspection['site_name'] ??
+                              inspection['building_reference_no'] ??
+                              'Unknown Site',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -1007,7 +1022,11 @@ class _AdminInspectionsManagementScreenState
                         Expanded(
                           child: Row(
                             children: [
-                              Icon(Icons.access_time, size: 14, color: NBROColors.grey),
+                              Icon(
+                                Icons.access_time,
+                                size: 14,
+                                color: NBROColors.grey,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -1042,7 +1061,11 @@ class _AdminInspectionsManagementScreenState
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Icon(Icons.image_outlined, size: 14, color: NBROColors.success),
+                  Icon(
+                    Icons.image_outlined,
+                    size: 14,
+                    color: NBROColors.success,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${inspection['defects_with_photos'] ?? 0} photos',
@@ -1062,12 +1085,16 @@ class _AdminInspectionsManagementScreenState
   }
 
   void _showInspectionDetails(Map<String, dynamic> inspection) {
-    final officerProfile = inspection['officer_profile'] as Map<String, dynamic>?;
-    final officerName = officerProfile?['full_name'] ?? officerProfile?['email'] ?? 'Unknown Officer';
+    final officerProfile =
+        inspection['officer_profile'] as Map<String, dynamic>?;
+    final officerName =
+        officerProfile?['full_name'] ??
+        officerProfile?['email'] ??
+        'Unknown Officer';
     final siteData = _resolveSiteData(inspection);
     final buildingPhotoUrl = siteData?['building_photo_url'] as String?;
     final buildingRef = inspection['building_reference_no'] as String?;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1092,7 +1119,9 @@ class _AdminInspectionsManagementScreenState
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -1107,7 +1136,11 @@ class _AdminInspectionsManagementScreenState
                       ),
                       Row(
                         children: [
-                          const Icon(Icons.visibility, color: NBROColors.white, size: 24),
+                          const Icon(
+                            Icons.visibility,
+                            color: NBROColors.white,
+                            size: 24,
+                          ),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
@@ -1120,7 +1153,10 @@ class _AdminInspectionsManagementScreenState
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: NBROColors.white),
+                            icon: const Icon(
+                              Icons.close,
+                              color: NBROColors.white,
+                            ),
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
@@ -1134,7 +1170,8 @@ class _AdminInspectionsManagementScreenState
                     padding: const EdgeInsets.all(16),
                     children: [
                       // Building Photo Section
-                      if (buildingPhotoUrl != null && buildingPhotoUrl.isNotEmpty)
+                      if (buildingPhotoUrl != null &&
+                          buildingPhotoUrl.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
@@ -1149,7 +1186,9 @@ class _AdminInspectionsManagementScreenState
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: NBROColors.primary.withValues(alpha: 0.1),
+                                  color: NBROColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(12),
                                   ),
@@ -1187,7 +1226,8 @@ class _AdminInspectionsManagementScreenState
                                       height: 200,
                                       color: NBROColors.light,
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Icon(
                                             Icons.broken_image,
@@ -1206,24 +1246,33 @@ class _AdminInspectionsManagementScreenState
                                       ),
                                     );
                                   },
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      height: 200,
-                                      color: NBROColors.light,
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          value: loadingProgress.expectedTotalBytes != null
-                                              ? loadingProgress.cumulativeBytesLoaded /
-                                                  loadingProgress.expectedTotalBytes!
-                                              : null,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            NBROColors.primary,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return Container(
+                                          height: 200,
+                                          color: NBROColors.light,
+                                          child: Center(
+                                            child: CircularProgressIndicator(
+                                              value:
+                                                  loadingProgress
+                                                          .expectedTotalBytes !=
+                                                      null
+                                                  ? loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!
+                                                  : null,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    NBROColors.primary,
+                                                  ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                        );
+                                      },
                                 ),
                               ),
                             ],
@@ -1232,9 +1281,18 @@ class _AdminInspectionsManagementScreenState
                       if (buildingRef != null && buildingRef.isNotEmpty)
                         _buildDefectsSection(buildingRef),
                       _buildDetailSection('Site Information', [
-                        _buildDetailRow('Site Name', inspection['site_name'] ?? 'N/A'),
-                        _buildDetailRow('Building Ref', inspection['building_reference_no'] ?? 'N/A'),
-                        _buildDetailRow('Location', inspection['site_location'] ?? 'N/A'),
+                        _buildDetailRow(
+                          'Site Name',
+                          inspection['site_name'] ?? 'N/A',
+                        ),
+                        _buildDetailRow(
+                          'Building Ref',
+                          inspection['building_reference_no'] ?? 'N/A',
+                        ),
+                        _buildDetailRow(
+                          'Location',
+                          inspection['site_location'] ?? 'N/A',
+                        ),
                         _buildDetailRow(
                           'Site Address',
                           _getSiteValue(siteData, 'site_address'),
@@ -1254,8 +1312,14 @@ class _AdminInspectionsManagementScreenState
                       ]),
                       const SizedBox(height: 16),
                       _buildDetailSection('Owner Information', [
-                        _buildDetailRow('Owner Name', _getSiteValue(siteData, 'owner_name')),
-                        _buildDetailRow('Contact', _getSiteValue(siteData, 'owner_contact')),
+                        _buildDetailRow(
+                          'Owner Name',
+                          _getSiteValue(siteData, 'owner_name'),
+                        ),
+                        _buildDetailRow(
+                          'Contact',
+                          _getSiteValue(siteData, 'owner_contact'),
+                        ),
                       ]),
                       const SizedBox(height: 16),
                       _buildDetailSection('General Observations', [
@@ -1280,7 +1344,9 @@ class _AdminInspectionsManagementScreenState
                       _buildDetailSection('External Services', [
                         _buildDetailRow(
                           'Pipe-borne Water',
-                          _formatYesNo(_getSiteBool(siteData, 'has_pipe_borne_water')),
+                          _formatYesNo(
+                            _getSiteBool(siteData, 'has_pipe_borne_water'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Water Source',
@@ -1288,7 +1354,9 @@ class _AdminInspectionsManagementScreenState
                         ),
                         _buildDetailRow(
                           'Electricity',
-                          _formatYesNo(_getSiteBool(siteData, 'has_electricity')),
+                          _formatYesNo(
+                            _getSiteBool(siteData, 'has_electricity'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Electricity Source',
@@ -1296,7 +1364,9 @@ class _AdminInspectionsManagementScreenState
                         ),
                         _buildDetailRow(
                           'Sewage Waste',
-                          _formatYesNo(_getSiteBool(siteData, 'has_sewage_waste')),
+                          _formatYesNo(
+                            _getSiteBool(siteData, 'has_sewage_waste'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Sewage Type',
@@ -1307,19 +1377,27 @@ class _AdminInspectionsManagementScreenState
                       _buildDetailSection('Building Materials', [
                         _buildDetailRow(
                           'Wall Materials',
-                          _formatMaterialMap(_getSiteField(siteData, 'wall_materials')),
+                          _formatMaterialMap(
+                            _getSiteField(siteData, 'wall_materials'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Door Materials',
-                          _formatMaterialMap(_getSiteField(siteData, 'door_materials')),
+                          _formatMaterialMap(
+                            _getSiteField(siteData, 'door_materials'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Floor Materials',
-                          _formatMaterialMap(_getSiteField(siteData, 'floor_materials')),
+                          _formatMaterialMap(
+                            _getSiteField(siteData, 'floor_materials'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Roof Materials',
-                          _formatMaterialMap(_getSiteField(siteData, 'roof_materials')),
+                          _formatMaterialMap(
+                            _getSiteField(siteData, 'roof_materials'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Roof Covering',
@@ -1330,7 +1408,9 @@ class _AdminInspectionsManagementScreenState
                       _buildDetailSection('Additional Details', [
                         _buildDetailRow(
                           'Ancillary Structures',
-                          _formatJsonList(_getSiteField(siteData, 'ancillary_structures')),
+                          _formatJsonList(
+                            _getSiteField(siteData, 'ancillary_structures'),
+                          ),
                         ),
                         _buildDetailRow(
                           'Finishes',
@@ -1348,29 +1428,55 @@ class _AdminInspectionsManagementScreenState
                       const SizedBox(height: 16),
                       _buildDetailSection('Inspection Details', [
                         _buildDetailRow('Inspector', officerName),
-                        _buildDetailRow('Inspection Date', 
+                        _buildDetailRow(
+                          'Inspection Date',
                           inspection['inspection_date'] != null
-                            ? DateFormat('MMM dd, yyyy').format(DateTime.parse(inspection['inspection_date']))
-                            : 'N/A'),
-                        _buildDetailRow('Created At',
+                              ? DateFormat('MMM dd, yyyy').format(
+                                  DateTime.parse(inspection['inspection_date']),
+                                )
+                              : 'N/A',
+                        ),
+                        _buildDetailRow(
+                          'Created At',
                           inspection['created_at'] != null
-                            ? DateFormat('MMM dd, yyyy • hh:mm a').format(DateTime.parse(inspection['created_at']))
-                            : 'N/A'),
-                        _buildDetailRow('Last Updated',
+                              ? DateFormat('MMM dd, yyyy • hh:mm a').format(
+                                  DateTime.parse(inspection['created_at']),
+                                )
+                              : 'N/A',
+                        ),
+                        _buildDetailRow(
+                          'Last Updated',
                           inspection['updated_at'] != null
-                            ? DateFormat('MMM dd, yyyy • hh:mm a').format(DateTime.parse(inspection['updated_at']))
-                            : 'N/A'),
+                              ? DateFormat('MMM dd, yyyy • hh:mm a').format(
+                                  DateTime.parse(inspection['updated_at']),
+                                )
+                              : 'N/A',
+                        ),
                       ]),
                       const SizedBox(height: 16),
                       _buildDetailSection('Statistics', [
-                        _buildDetailRow('Total Defects', '${inspection['total_defects'] ?? 0}'),
-                        _buildDetailRow('Photos Captured', '${inspection['defects_with_photos'] ?? 0}'),
-                        _buildDetailRow('Sync Status', _getStatusLabel(inspection['sync_status'] ?? 'unknown')),
+                        _buildDetailRow(
+                          'Total Defects',
+                          '${inspection['total_defects'] ?? 0}',
+                        ),
+                        _buildDetailRow(
+                          'Photos Captured',
+                          '${inspection['defects_with_photos'] ?? 0}',
+                        ),
+                        _buildDetailRow(
+                          'Sync Status',
+                          _getStatusLabel(
+                            inspection['sync_status'] ?? 'unknown',
+                          ),
+                        ),
                       ]),
                       const SizedBox(height: 16),
                       _buildDetailSection('Officer', [
                         _buildDetailRow('Name', officerName),
-                        _buildDetailRow('Email', officerProfile?['email'] ?? 'N/A'),
+                        _buildDetailRow(
+                          'Email',
+                          officerProfile?['email'] ?? 'N/A',
+                        ),
                       ]),
                     ],
                   ),
@@ -1383,7 +1489,9 @@ class _AdminInspectionsManagementScreenState
     );
   }
 
-  Future<List<Map<String, dynamic>>> _fetchDefectDetails(String buildingRef) async {
+  Future<List<Map<String, dynamic>>> _fetchDefectDetails(
+    String buildingRef,
+  ) async {
     final supabase = Supabase.instance.client;
     final site = await supabase
         .from('site')
@@ -1415,7 +1523,9 @@ class _AdminInspectionsManagementScreenState
     // Fetch defect_info separately
     final infosResponse = await supabase
         .from('defect_info')
-        .select('defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)')
+        .select(
+          'defect_id, info_id, remarks, length, width, defect_image(image_url, image_path)',
+        )
         .inFilter('defect_id', defectIds);
 
     // Create a map for quick lookup
@@ -1430,7 +1540,9 @@ class _AdminInspectionsManagementScreenState
     return (defectsResponse as List).map((defect) {
       final defectRow = defect as Map<String, dynamic>;
       final defectId = defectRow['defect_id'] as String?;
-      final info = (defectId != null ? infosMap[defectId] : null) ?? const <String, dynamic>{};
+      final info =
+          (defectId != null ? infosMap[defectId] : null) ??
+          const <String, dynamic>{};
 
       final imageList = (info['defect_image'] as List?) ?? const [];
       final image = imageList.isNotEmpty
@@ -1502,9 +1614,7 @@ class _AdminInspectionsManagementScreenState
             decoration: BoxDecoration(
               color: NBROColors.light,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: NBROColors.grey.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: NBROColors.grey.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -1516,10 +1626,7 @@ class _AdminInspectionsManagementScreenState
                 const SizedBox(width: 12),
                 Text(
                   'Loading defect photos...',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: NBROColors.grey,
-                  ),
+                  style: TextStyle(fontSize: 12, color: NBROColors.grey),
                 ),
               ],
             ),
@@ -1533,16 +1640,11 @@ class _AdminInspectionsManagementScreenState
             decoration: BoxDecoration(
               color: NBROColors.light,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: NBROColors.grey.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: NBROColors.grey.withValues(alpha: 0.2)),
             ),
             child: Text(
               'Failed to load defect photos',
-              style: TextStyle(
-                fontSize: 12,
-                color: NBROColors.grey,
-              ),
+              style: TextStyle(fontSize: 12, color: NBROColors.grey),
             ),
           );
         }
@@ -1555,22 +1657,19 @@ class _AdminInspectionsManagementScreenState
             decoration: BoxDecoration(
               color: NBROColors.light,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: NBROColors.grey.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: NBROColors.grey.withValues(alpha: 0.2)),
             ),
             child: Text(
               'No defects available',
-              style: TextStyle(
-                fontSize: 12,
-                color: NBROColors.grey,
-              ),
+              style: TextStyle(fontSize: 12, color: NBROColors.grey),
             ),
           );
         }
 
         final defectsWithPhotos = defects
-            .where((defect) => (defect['photo_url'] as String?)?.isNotEmpty == true)
+            .where(
+              (defect) => (defect['photo_url'] as String?)?.isNotEmpty == true,
+            )
             .toList();
 
         return Container(
@@ -1579,9 +1678,7 @@ class _AdminInspectionsManagementScreenState
           decoration: BoxDecoration(
             color: NBROColors.light,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: NBROColors.grey.withValues(alpha: 0.2),
-            ),
+            border: Border.all(color: NBROColors.grey.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1622,103 +1719,109 @@ class _AdminInspectionsManagementScreenState
                     final notation = photo['notation'] as String?;
                     final location = photo['location_description'] as String?;
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: NBROColors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: NBROColors.grey.withValues(alpha: 0.2),
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: NBROColors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: NBROColors.grey.withValues(alpha: 0.2),
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(10),
-                            ),
-                            child: photoUrl == null || photoUrl.isEmpty
-                                ? Container(
-                                    color: NBROColors.white,
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      color: NBROColors.grey,
-                                      size: 32,
-                                    ),
-                                  )
-                                : Image.network(
-                                    photoUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: NBROColors.white,
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: NBROColors.grey,
-                                          size: 32,
-                                        ),
-                                      );
-                                    },
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          value: loadingProgress.expectedTotalBytes != null
-                                              ? loadingProgress.cumulativeBytesLoaded /
-                                                  loadingProgress.expectedTotalBytes!
-                                              : null,
-                                          valueColor: const AlwaysStoppedAnimation<Color>(
-                                            NBROColors.primary,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(10),
+                              ),
+                              child: photoUrl == null || photoUrl.isEmpty
+                                  ? Container(
+                                      color: NBROColors.white,
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        color: NBROColors.grey,
+                                        size: 32,
+                                      ),
+                                    )
+                                  : Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              color: NBROColors.white,
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                color: NBROColors.grey,
+                                                size: 32,
+                                              ),
+                                            );
+                                          },
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                            valueColor:
+                                                const AlwaysStoppedAnimation<
+                                                  Color
+                                                >(NBROColors.primary),
                                           ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                        );
+                                      },
+                                    ),
+                            ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (notation != null && notation.isNotEmpty)
-                                Text(
-                                  'Type: $notation',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: NBROColors.darkGrey,
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (notation != null && notation.isNotEmpty)
+                                  Text(
+                                    'Type: $notation',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: NBROColors.darkGrey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              if (location != null && location.isNotEmpty)
-                                Text(
-                                  location,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: NBROColors.grey,
+                                if (location != null && location.isNotEmpty)
+                                  Text(
+                                    location,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: NBROColors.grey,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
+                        ],
+                      ),
+                    );
                   },
                 )
               else
                 Text(
                   'No defect photos available',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: NBROColors.grey,
-                  ),
+                  style: TextStyle(fontSize: 12, color: NBROColors.grey),
                 ),
               const SizedBox(height: 16),
               ListView.separated(
@@ -1764,11 +1867,20 @@ class _AdminInspectionsManagementScreenState
                         ),
                         const SizedBox(height: 8),
                         _buildInlineDetail('Notation', defect['notation']),
-                        _buildInlineDetail('Category', defect['defect_category']),
-                        _buildInlineDetail('Floor Level', defect['floor_level']),
+                        _buildInlineDetail(
+                          'Category',
+                          defect['defect_category'],
+                        ),
+                        _buildInlineDetail(
+                          'Floor Level',
+                          defect['floor_level'],
+                        ),
                         _buildInlineDetail('Length (mm)', defect['length_mm']),
                         _buildInlineDetail('Width (mm)', defect['width_mm']),
-                        _buildInlineDetail('Location', defect['location_description']),
+                        _buildInlineDetail(
+                          'Location',
+                          defect['location_description'],
+                        ),
                         _buildInlineDetail('Remarks', defect['remarks']),
                       ],
                     ),
@@ -1800,7 +1912,7 @@ class _AdminInspectionsManagementScreenState
     if (sites is Map<String, dynamic>) {
       return sites;
     }
-    
+
     // Fallback to old field names
     final byId = inspection['sites_by_id'];
     if (byId is Map<String, dynamic>) {
@@ -1859,7 +1971,9 @@ class _AdminInspectionsManagementScreenState
   }
 
   Widget _buildInlineDetail(String label, dynamic value) {
-    final displayValue = (value == null || value.toString().isEmpty) ? 'N/A' : value.toString();
+    final displayValue = (value == null || value.toString().isEmpty)
+        ? 'N/A'
+        : value.toString();
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
@@ -1878,10 +1992,7 @@ class _AdminInspectionsManagementScreenState
           Expanded(
             child: Text(
               displayValue,
-              style: const TextStyle(
-                fontSize: 11,
-                color: NBROColors.darkGrey,
-              ),
+              style: const TextStyle(fontSize: 11, color: NBROColors.darkGrey),
             ),
           ),
         ],
@@ -1895,9 +2006,7 @@ class _AdminInspectionsManagementScreenState
       decoration: BoxDecoration(
         color: NBROColors.light,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: NBROColors.grey.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: NBROColors.grey.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1942,13 +2051,11 @@ class _AdminInspectionsManagementScreenState
             flex: 3,
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 13,
-                color: NBROColors.black,
-              ),
+              style: const TextStyle(fontSize: 13, color: NBROColors.black),
             ),
           ),
         ],
       ),
     );
-  }}
+  }
+}

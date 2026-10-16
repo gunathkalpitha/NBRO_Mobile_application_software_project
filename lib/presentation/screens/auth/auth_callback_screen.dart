@@ -65,7 +65,8 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
   }
 
   Uri? _getIncomingAuthUri() {
-    final routeName = WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+    final routeName =
+        WidgetsBinding.instance.platformDispatcher.defaultRouteName;
 
     if (routeName.isNotEmpty && routeName != '/') {
       final routeUri = Uri.tryParse(routeName);
@@ -113,9 +114,7 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
     }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const ResetPasswordScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
     );
   }
 
@@ -154,16 +153,15 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
   }
 
   Future<void> _navigateToPostLoginDestination() async {
-    final shouldShowGuide = await FirstLoginGuideService.shouldShowForCurrentUser();
+    final shouldShowGuide =
+        await FirstLoginGuideService.shouldShowForCurrentUser();
     if (!mounted) {
       return;
     }
 
     if (shouldShowGuide) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const FirstLoginGuideScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const FirstLoginGuideScreen()),
       );
       return;
     }
@@ -207,8 +205,9 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
                   width: 64,
                   height: 64,
                   child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(NBROColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      NBROColors.primary,
+                    ),
                   ),
                 ),
               ),
@@ -216,16 +215,14 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
             Text(
               _statusMessage,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: NBROColors.darkGrey,
-              ),
+              style: const TextStyle(fontSize: 16, color: NBROColors.darkGrey),
             ),
             if (!_isSuccess)
               Padding(
                 padding: const EdgeInsets.only(top: 32),
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onPressed: () =>
+                      Navigator.pushReplacementNamed(context, '/login'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: NBROColors.primary,
                   ),

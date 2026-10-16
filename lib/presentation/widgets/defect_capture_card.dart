@@ -10,14 +10,10 @@ import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/domain/models/inspection.dart';
 import 'package:path_provider/path_provider.dart';
 
-
 class DefectCaptureCard extends StatefulWidget {
   final Function(Defect) onDefectCapture;
 
-  const DefectCaptureCard({
-    super.key,
-    required this.onDefectCapture,
-  });
+  const DefectCaptureCard({super.key, required this.onDefectCapture});
 
   @override
   State<DefectCaptureCard> createState() => _DefectCaptureCardState();
@@ -42,7 +38,11 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
         _skipImage = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image capture is not supported on Web. Skipping image.')),
+        const SnackBar(
+          content: Text(
+            'Image capture is not supported on Web. Skipping image.',
+          ),
+        ),
       );
       return;
     }
@@ -69,20 +69,24 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
           setState(() {
             _selectedImage = annotatedImage;
           });
-          debugPrint('[DefectCaptureCard] Annotated image selected: ${annotatedImage.path}');
+          debugPrint(
+            '[DefectCaptureCard] Annotated image selected: ${annotatedImage.path}',
+          );
         } else if (mounted) {
           setState(() {
             _selectedImage = imageFile;
           });
-          debugPrint('[DefectCaptureCard] Original image selected: ${pickedFile.path}');
+          debugPrint(
+            '[DefectCaptureCard] Original image selected: ${pickedFile.path}',
+          );
         }
       }
     } catch (e) {
       debugPrint('[DefectCaptureCard] Error picking image: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error selecting image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error selecting image: $e')));
       }
     }
   }
@@ -112,7 +116,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
 
     if (_selectedImage == null && !_skipImage) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please capture a photo of the defect or skip on web.')),
+        const SnackBar(
+          content: Text('Please capture a photo of the defect or skip on web.'),
+        ),
       );
       return;
     }
@@ -162,9 +168,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
     } catch (e) {
       debugPrint('[DefectCaptureCard] Error submitting defect: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       setState(() => _isSubmitting = false);
@@ -199,10 +205,7 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
               // Photo Capture Section
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: NBROColors.light,
-                    width: 2,
-                  ),
+                  border: Border.all(color: NBROColors.light, width: 2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: _selectedImage == null && !_skipImage
@@ -223,7 +226,9 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
                                   const SizedBox(height: 12),
                                   Text(
                                     'Tap to capture defect photo',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
@@ -242,36 +247,39 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
                         ],
                       )
                     : _skipImage
-                        ? Container(
-                            height: 200,
-                            alignment: Alignment.center,
-                            child: const Text('Image skipped (Web)', style: TextStyle(color: Colors.grey)),
-                          )
-                        : Stack(
-                            children: [
-                              if (!kIsWeb && _selectedImage != null)
-                                Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: 200,
-                                ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: FloatingActionButton.small(
-                                  backgroundColor: NBROColors.error,
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedImage = null;
-                                      _skipImage = false;
-                                    });
-                                  },
-                                  child: const Icon(Icons.close),
-                                ),
-                              ),
-                            ],
+                    ? Container(
+                        height: 200,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Image skipped (Web)',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : Stack(
+                        children: [
+                          if (!kIsWeb && _selectedImage != null)
+                            Image.file(
+                              _selectedImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 200,
+                            ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: FloatingActionButton.small(
+                              backgroundColor: NBROColors.error,
+                              onPressed: () {
+                                setState(() {
+                                  _selectedImage = null;
+                                  _skipImage = false;
+                                });
+                              },
+                              child: const Icon(Icons.close),
+                            ),
                           ),
+                        ],
+                      ),
               ),
               const SizedBox(height: 24),
 
@@ -349,7 +357,10 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
                   prefixIcon: Icon(Icons.layers),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Ground', child: Text('Ground Floor')),
+                  DropdownMenuItem(
+                    value: 'Ground',
+                    child: Text('Ground Floor'),
+                  ),
                   DropdownMenuItem(value: '1st', child: Text('1st Floor')),
                   DropdownMenuItem(value: '2nd', child: Text('2nd Floor')),
                   DropdownMenuItem(value: '3rd', child: Text('3rd Floor')),
@@ -453,35 +464,27 @@ class _DefectCaptureCardState extends State<DefectCaptureCard> {
   }
 }
 
-enum _AnnotationTool {
-  freehand,
-  rectangle,
-  circle,
-}
+enum _AnnotationTool { freehand, rectangle, circle }
 
 class _AnnotationStroke {
   final List<Offset> points;
   final _AnnotationTool tool;
 
-  const _AnnotationStroke({
-    required this.points,
-    required this.tool,
-  });
+  const _AnnotationStroke({required this.points, required this.tool});
 }
 
 class DefectPhotoAnnotatorScreen extends StatefulWidget {
   final File imageFile;
 
-  const DefectPhotoAnnotatorScreen({
-    super.key,
-    required this.imageFile,
-  });
+  const DefectPhotoAnnotatorScreen({super.key, required this.imageFile});
 
   @override
-  State<DefectPhotoAnnotatorScreen> createState() => _DefectPhotoAnnotatorScreenState();
+  State<DefectPhotoAnnotatorScreen> createState() =>
+      _DefectPhotoAnnotatorScreenState();
 }
 
-class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen> {
+class _DefectPhotoAnnotatorScreenState
+    extends State<DefectPhotoAnnotatorScreen> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   final List<_AnnotationStroke> _strokes = [];
   List<Offset> _currentPoints = [];
@@ -517,7 +520,12 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
     }
 
     setState(() {
-      _strokes.add(_AnnotationStroke(points: List<Offset>.from(_currentPoints), tool: _selectedTool));
+      _strokes.add(
+        _AnnotationStroke(
+          points: List<Offset>.from(_currentPoints),
+          tool: _selectedTool,
+        ),
+      );
       _currentPoints = [];
     });
   }
@@ -532,18 +540,24 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
     });
 
     try {
-      final boundary = _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary =
+          _repaintBoundaryKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not prepare image for saving.')),
+            const SnackBar(
+              content: Text('Could not prepare image for saving.'),
+            ),
           );
         }
         return;
       }
 
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -581,9 +595,7 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mark Defects'),
-      ),
+      appBar: AppBar(title: const Text('Mark Defects')),
       body: SafeArea(
         child: Column(
           children: [
@@ -647,10 +659,12 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: _selectedTool == _AnnotationTool.freehand
+                            backgroundColor:
+                                _selectedTool == _AnnotationTool.freehand
                                 ? NBROColors.primary.withOpacity(0.12)
                                 : null,
-                            foregroundColor: _selectedTool == _AnnotationTool.freehand
+                            foregroundColor:
+                                _selectedTool == _AnnotationTool.freehand
                                 ? NBROColors.primary
                                 : Theme.of(context).colorScheme.onSurface,
                             minimumSize: const Size.fromHeight(54),
@@ -670,10 +684,12 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: _selectedTool == _AnnotationTool.rectangle
+                            backgroundColor:
+                                _selectedTool == _AnnotationTool.rectangle
                                 ? NBROColors.primary.withOpacity(0.12)
                                 : null,
-                            foregroundColor: _selectedTool == _AnnotationTool.rectangle
+                            foregroundColor:
+                                _selectedTool == _AnnotationTool.rectangle
                                 ? NBROColors.primary
                                 : Theme.of(context).colorScheme.onSurface,
                             minimumSize: const Size.fromHeight(54),
@@ -693,10 +709,12 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: _selectedTool == _AnnotationTool.circle
+                            backgroundColor:
+                                _selectedTool == _AnnotationTool.circle
                                 ? NBROColors.primary.withOpacity(0.12)
                                 : null,
-                            foregroundColor: _selectedTool == _AnnotationTool.circle
+                            foregroundColor:
+                                _selectedTool == _AnnotationTool.circle
                                 ? NBROColors.primary
                                 : Theme.of(context).colorScheme.onSurface,
                             minimumSize: const Size.fromHeight(54),
@@ -758,18 +776,21 @@ class _DefectPhotoAnnotatorScreenState extends State<DefectPhotoAnnotatorScreen>
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : useIconOnly
-                                      ? const Icon(Icons.check)
-                                      : const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.check),
-                                            SizedBox(width: 8),
-                                            Text('Use Photo'),
-                                          ],
-                                        ),
+                                  ? const Icon(Icons.check)
+                                  : const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.check),
+                                        SizedBox(width: 8),
+                                        Text('Use Photo'),
+                                      ],
+                                    ),
                             );
                           },
                         ),
@@ -824,10 +845,38 @@ class _DefectAnnotationPainter extends CustomPainter {
 
     if (stroke.tool == _AnnotationTool.rectangle) {
       final rect = Rect.fromPoints(stroke.points.first, stroke.points.last);
-      _drawDashedLine(canvas, rect.topLeft, rect.topRight, paint, dashLength, dashGap);
-      _drawDashedLine(canvas, rect.topRight, rect.bottomRight, paint, dashLength, dashGap);
-      _drawDashedLine(canvas, rect.bottomRight, rect.bottomLeft, paint, dashLength, dashGap);
-      _drawDashedLine(canvas, rect.bottomLeft, rect.topLeft, paint, dashLength, dashGap);
+      _drawDashedLine(
+        canvas,
+        rect.topLeft,
+        rect.topRight,
+        paint,
+        dashLength,
+        dashGap,
+      );
+      _drawDashedLine(
+        canvas,
+        rect.topRight,
+        rect.bottomRight,
+        paint,
+        dashLength,
+        dashGap,
+      );
+      _drawDashedLine(
+        canvas,
+        rect.bottomRight,
+        rect.bottomLeft,
+        paint,
+        dashLength,
+        dashGap,
+      );
+      _drawDashedLine(
+        canvas,
+        rect.bottomLeft,
+        rect.topLeft,
+        paint,
+        dashLength,
+        dashGap,
+      );
       return;
     }
 
@@ -893,7 +942,8 @@ class _DefectAnnotationPainter extends CustomPainter {
     double distance = 0;
     while (distance < totalDistance) {
       final dashStart = start + direction * distance;
-      final dashEnd = start + direction * math.min(distance + dashLength, totalDistance);
+      final dashEnd =
+          start + direction * math.min(distance + dashLength, totalDistance);
       canvas.drawLine(dashStart, dashEnd, paint);
       distance += dashLength + dashGap;
     }

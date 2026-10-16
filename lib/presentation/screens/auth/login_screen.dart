@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _localAuth = LocalAuthentication();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _biometricAvailable = false;
@@ -39,11 +39,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final canCheckBiometrics = await _localAuth.canCheckBiometrics;
       final isDeviceSupported = await _localAuth.isDeviceSupported();
-      
+
       setState(() {
         _biometricAvailable = canCheckBiometrics && isDeviceSupported;
       });
-      
+
       if (_biometricAvailable) {
         debugPrint('[LoginScreen] Biometric authentication available');
       }
@@ -56,7 +56,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (kIsWeb) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric login is not available on web')),
+          const SnackBar(
+            content: Text('Biometric login is not available on web'),
+          ),
         );
       }
       return;
@@ -66,7 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please login once with email/password before using biometric unlock.'),
+            content: Text(
+              'Please login once with email/password before using biometric unlock.',
+            ),
           ),
         );
       }
@@ -109,33 +113,39 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      
+
       debugPrint('[LoginScreen] Attempting login with email: $email');
-      
+
       // Authenticate with Supabase
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      
+
       if (response.user != null) {
-        debugPrint('[LoginScreen] Login successful for user: ${response.user!.id}');
+        debugPrint(
+          '[LoginScreen] Login successful for user: ${response.user!.id}',
+        );
 
         await SessionSecurityService.recordPasswordLogin();
-        
+
         // Check if the account is active
         try {
           final userEmail = response.user?.email?.toLowerCase() ?? '';
-          final isProtectedAdmin = userEmail == 'admin@gmail.com' || userEmail == 'mainadminnbro@gmail.com';
+          final isProtectedAdmin =
+              userEmail == 'admin@gmail.com' ||
+              userEmail == 'mainadminnbro@gmail.com';
 
           final profileResponse = await Supabase.instance.client
               .from('profile')
               .select('is_active')
               .eq('id', response.user!.id)
               .maybeSingle();
-          
-          final isActive = isProtectedAdmin || (profileResponse?['is_active'] as bool? ?? true);
-          
+
+          final isActive =
+              isProtectedAdmin ||
+              (profileResponse?['is_active'] as bool? ?? true);
+
           if (!isActive) {
             // Account is disabled, sign out immediately
             await Supabase.instance.client.auth.signOut();
@@ -143,14 +153,16 @@ class _LoginScreenState extends State<LoginScreen> {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Your account has been disabled. Please contact an administrator.'),
+                  content: Text(
+                    'Your account has been disabled. Please contact an administrator.',
+                  ),
                   duration: Duration(seconds: 5),
                 ),
               );
             }
             return;
           }
-          
+
           if (mounted) {
             _navigateToPostLoginDestination();
           }
@@ -172,16 +184,16 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (e) {
       debugPrint('[LoginScreen] Authentication error: ${e.message}');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
       }
     } catch (e) {
       debugPrint('[LoginScreen] Login error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
       }
     } finally {
       setState(() => _isLoading = false);
@@ -191,7 +203,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _navigateToPostLoginDestination() async {
     // Trigger login success status bar notification ONLY when logging in from login screen
     final user = Supabase.instance.client.auth.currentUser;
-    final userName = user?.userMetadata?['full_name'] ??
+    final userName =
+        user?.userMetadata?['full_name'] ??
         user?.userMetadata?['name'] ??
         user?.email?.split('@').first ??
         'Officer';
@@ -203,7 +216,8 @@ class _LoginScreenState extends State<LoginScreen> {
       role: role,
     );
 
-    final shouldShowGuide = await FirstLoginGuideService.shouldShowForCurrentUser();
+    final shouldShowGuide =
+        await FirstLoginGuideService.shouldShowForCurrentUser();
 
     if (!mounted) {
       return;
@@ -212,9 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (shouldShowGuide) {
       debugPrint('[LoginScreen] First login detected - opening guide');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const FirstLoginGuideScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const FirstLoginGuideScreen()),
       );
       return;
     }
@@ -247,9 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   width: double.infinity,
                   height: headerHeight,
-                  decoration: const BoxDecoration(
-                    color: NBROColors.primary,
-                  ),
+                  decoration: const BoxDecoration(color: NBROColors.primary),
                   child: Image.asset(
                     'assets/images/login_bg.png',
                     fit: BoxFit.cover,
@@ -359,10 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 6),
                   const Text(
                     'Sign in to continue',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: NBROColors.grey,
-                    ),
+                    style: TextStyle(fontSize: 15, color: NBROColors.grey),
                   ),
                   const SizedBox(height: 32),
 
@@ -372,7 +379,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       hintText: 'Email Address',
                       hintStyle: const TextStyle(color: NBROColors.grey),
-                      prefixIcon: const Icon(Icons.email_outlined, color: NBROColors.primary),
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: NBROColors.primary,
+                      ),
                       enabled: !_isLoading,
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -386,7 +396,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       hintText: 'Password',
                       hintStyle: const TextStyle(color: NBROColors.grey),
-                      prefixIcon: const Icon(Icons.lock_outlined, color: NBROColors.primary),
+                      prefixIcon: const Icon(
+                        Icons.lock_outlined,
+                        color: NBROColors.primary,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -394,9 +407,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               : Icons.visibility_off_outlined,
                         ),
                         onPressed: () {
-                          setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          );
+                          setState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
                       enabled: !_isLoading,
@@ -426,7 +437,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : const Text(
                             'Sign In',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                   ),
                   const SizedBox(height: 24),
@@ -440,7 +454,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             Expanded(child: Divider(color: NBROColors.light)),
                             Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('OR', style: TextStyle(color: NBROColors.grey, fontSize: 12)),
+                              child: Text(
+                                'OR',
+                                style: TextStyle(
+                                  color: NBROColors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                             Expanded(child: Divider(color: NBROColors.light)),
                           ],
@@ -450,7 +470,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _authenticateWithBiometric,
                           icon: const Icon(Icons.fingerprint),
                           label: const Text('Use Biometric Login'),
-
                         ),
                       ],
                     ),

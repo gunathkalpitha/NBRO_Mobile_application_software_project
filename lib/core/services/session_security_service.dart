@@ -23,12 +23,12 @@ class BiometricVerificationResult {
   final String? message;
 
   const BiometricVerificationResult.success()
-      : success = true,
-        code = null,
-        message = null;
+    : success = true,
+      code = null,
+      message = null;
 
   const BiometricVerificationResult.failure({this.code, this.message})
-      : success = false;
+    : success = false;
 }
 
 class SessionSecurityService {
@@ -54,8 +54,8 @@ class SessionSecurityService {
     final persistedHours = prefs.getInt(_kStaySignedInHours);
     final persistedAppLockMinutes = prefs.getInt(_kAppLockTimeoutMinutes);
 
-    final resolvedHours = persistedHours ??
-        (legacyDays != null ? legacyDays * 24 : 2);
+    final resolvedHours =
+        persistedHours ?? (legacyDays != null ? legacyDays * 24 : 2);
     final resolvedAppLockMinutes = persistedAppLockMinutes ?? 30;
 
     return SessionSecuritySettings(
@@ -88,7 +88,10 @@ class SessionSecurityService {
 
   static Future<void> recordPasswordLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kLastPasswordLoginAt, DateTime.now().toIso8601String());
+    await prefs.setString(
+      _kLastPasswordLoginAt,
+      DateTime.now().toIso8601String(),
+    );
   }
 
   static Future<bool> isSessionWithinAllowedPeriod() async {
@@ -142,7 +145,8 @@ class SessionSecurityService {
     }
   }
 
-  static Future<BiometricVerificationResult> verifyFingerprintForEnable() async {
+  static Future<BiometricVerificationResult>
+  verifyFingerprintForEnable() async {
     if (kIsWeb) {
       return const BiometricVerificationResult.failure(
         code: 'web_unsupported',
@@ -288,10 +292,11 @@ class SessionSecurityService {
     required String localizedReason,
     required int maxAttempts,
   }) async {
-    BiometricVerificationResult lastResult = const BiometricVerificationResult.failure(
-      code: 'unknown_error',
-      message: 'Fingerprint verification failed.',
-    );
+    BiometricVerificationResult lastResult =
+        const BiometricVerificationResult.failure(
+          code: 'unknown_error',
+          message: 'Fingerprint verification failed.',
+        );
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       try {

@@ -28,9 +28,15 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
   @override
   void initState() {
     super.initState();
-    _lengthController = TextEditingController(text: widget.defect.lengthMm.toString());
-    _widthController = TextEditingController(text: widget.defect.widthMm?.toString() ?? '0');
-    _remarksController = TextEditingController(text: widget.defect.remarks ?? '');
+    _lengthController = TextEditingController(
+      text: widget.defect.lengthMm.toString(),
+    );
+    _widthController = TextEditingController(
+      text: widget.defect.widthMm?.toString() ?? '0',
+    );
+    _remarksController = TextEditingController(
+      text: widget.defect.remarks ?? '',
+    );
     _selectedType = widget.defect.notation;
   }
 
@@ -52,7 +58,9 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
       lengthMm: double.parse(_lengthController.text),
       widthMm: double.tryParse(_widthController.text),
       photoPath: widget.defect.photoPath,
-      remarks: _remarksController.text.isNotEmpty ? _remarksController.text : null,
+      remarks: _remarksController.text.isNotEmpty
+          ? _remarksController.text
+          : null,
       createdAt: widget.defect.createdAt,
     );
 
@@ -83,17 +91,18 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                     children: [
                       Text(
                         'Defect: ${widget.defect.notation.displayName}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: NBROColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: NBROColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'ID: ${widget.defect.id.substring(0, 8)}...',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                       ),
                     ],
                   ),
@@ -149,7 +158,10 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Length (mm)', style: Theme.of(context).textTheme.bodyLarge),
+                            Text(
+                              'Length (mm)',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _lengthController,
@@ -167,7 +179,10 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Width (mm)', style: Theme.of(context).textTheme.bodyLarge),
+                            Text(
+                              'Width (mm)',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _widthController,
@@ -219,15 +234,27 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildDetailRow('Type', widget.defect.notation.displayName),
-                  _buildDetailRow('Length', '${widget.defect.lengthMm.toStringAsFixed(2)} mm'),
-                  _buildDetailRow('Width', '${widget.defect.widthMm?.toStringAsFixed(2) ?? '-'} mm'),
+                  _buildDetailRow(
+                    'Length',
+                    '${widget.defect.lengthMm.toStringAsFixed(2)} mm',
+                  ),
+                  _buildDetailRow(
+                    'Width',
+                    '${widget.defect.widthMm?.toStringAsFixed(2) ?? '-'} mm',
+                  ),
                   if (widget.defect.photoPath != null)
-                    _buildDetailRow('Photo', widget.defect.photoPath!.split('/').last)
+                    _buildDetailRow(
+                      'Photo',
+                      widget.defect.photoPath!.split('/').last,
+                    )
                   else
                     _buildDetailRow('Photo', 'Not captured (skipped)'),
                   if (widget.defect.remarks != null)
                     _buildDetailRow('Remarks', widget.defect.remarks!),
-                  _buildDetailRow('Created', _formatDate(widget.defect.createdAt)),
+                  _buildDetailRow(
+                    'Created',
+                    _formatDate(widget.defect.createdAt),
+                  ),
                 ],
               ),
           ],
@@ -246,16 +273,13 @@ class _DefectReviewCardState extends State<DefectReviewCard> {
             width: 100,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),

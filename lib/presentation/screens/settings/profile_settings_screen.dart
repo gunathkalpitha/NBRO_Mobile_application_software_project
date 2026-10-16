@@ -162,11 +162,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final profile = _profile;
@@ -184,15 +180,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           positionTitle: _positionController.text,
           employeeId: _employeeIdController.text,
           workRole: _workRoleController.text,
-          avatarUrl: _newAvatarBytes != null ? 'local-preview' : profile.avatarUrl,
+          avatarUrl: _newAvatarBytes != null
+              ? 'local-preview'
+              : profile.avatarUrl,
         )
         .completionPercentage(email: _email);
 
     return Scaffold(
       backgroundColor: NBROColors.light,
-      appBar: AppBar(
-        title: const Text('Profile Settings'),
-      ),
+      appBar: AppBar(title: const Text('Profile Settings')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -259,7 +255,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(NBROColors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              NBROColors.white,
+                            ),
                           ),
                         )
                       : const Icon(Icons.save_outlined),
@@ -280,8 +278,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     final avatarProvider = _newAvatarBytes != null
         ? MemoryImage(_newAvatarBytes!) as ImageProvider
         : (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-            ? NetworkImage(profile.avatarUrl!) as ImageProvider
-            : null);
+              ? NetworkImage(profile.avatarUrl!) as ImageProvider
+              : null);
 
     return Container(
       width: double.infinity,
@@ -331,7 +329,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       color: NBROColors.accent,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.camera_alt, color: NBROColors.white, size: 16),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: NBROColors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ),
@@ -365,7 +367,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     minHeight: 8,
                     value: completion / 100,
                     backgroundColor: Colors.white.withValues(alpha: 0.25),
-                    valueColor: const AlwaysStoppedAnimation<Color>(NBROColors.accent),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      NBROColors.accent,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -386,9 +390,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     required List<Widget> children,
   }) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -420,10 +422,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       controller: controller,
       keyboardType: keyboardType,
       onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
     );
   }
 
@@ -446,7 +445,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
     final parts = cleaned.split(RegExp(r'\s+'));
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length >= 2 ? 2 : 1)
+          .toUpperCase();
     }
 
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();

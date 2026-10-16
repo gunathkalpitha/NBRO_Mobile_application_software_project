@@ -14,10 +14,7 @@ class ProfileCompletionState {
 
   bool get isComplete => percentage >= 100;
 
-  ProfileCompletionState copyWith({
-    int? percentage,
-    bool? isLoading,
-  }) {
+  ProfileCompletionState copyWith({int? percentage, bool? isLoading}) {
     return ProfileCompletionState(
       percentage: percentage ?? this.percentage,
       isLoading: isLoading ?? this.isLoading,
@@ -28,14 +25,17 @@ class ProfileCompletionState {
 class ProfileCompletionService {
   static final ValueNotifier<ProfileCompletionState> notifier =
       ValueNotifier<ProfileCompletionState>(
-    const ProfileCompletionState(percentage: 0, isLoading: false),
-  );
+        const ProfileCompletionState(percentage: 0, isLoading: false),
+      );
 
   static Future<void> refresh() async {
     final client = Supabase.instance.client;
     final user = client.auth.currentUser;
     if (user == null) {
-      notifier.value = const ProfileCompletionState(percentage: 0, isLoading: false);
+      notifier.value = const ProfileCompletionState(
+        percentage: 0,
+        isLoading: false,
+      );
       return;
     }
 

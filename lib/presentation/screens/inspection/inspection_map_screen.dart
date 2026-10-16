@@ -36,7 +36,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
 
   void _createMarkers() {
     final markers = <Marker>{};
-    
+
     for (final inspection in widget.inspections) {
       if (inspection.latitude != null && inspection.longitude != null) {
         markers.add(
@@ -49,8 +49,8 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
               onTap: () => _onMarkerTapped(inspection),
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(
-              widget.selectedInspection?.id == inspection.id 
-                  ? BitmapDescriptor.hueRed 
+              widget.selectedInspection?.id == inspection.id
+                  ? BitmapDescriptor.hueRed
                   : BitmapDescriptor.hueBlue,
             ),
             onTap: () => _onMarkerTapped(inspection),
@@ -58,7 +58,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
         );
       }
     }
-    
+
     setState(() {
       _markers = markers;
     });
@@ -79,9 +79,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => InspectionDetailScreen(
-          inspection: inspection,
-        ),
+        builder: (context) => InspectionDetailScreen(inspection: inspection),
       ),
     );
   }
@@ -95,24 +93,24 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
         widget.selectedInspection!.longitude!,
       );
     }
-    
+
     // Find average position of all sites with coordinates
     final sitesWithCoords = widget.inspections
         .where((i) => i.latitude != null && i.longitude != null)
         .toList();
-    
+
     if (sitesWithCoords.isEmpty) {
       // Default to Sri Lanka coordinates
       return const LatLng(7.8731, 80.7718);
     }
-    
-    final avgLat = sitesWithCoords
-        .map((i) => i.latitude!)
-        .reduce((a, b) => a + b) / sitesWithCoords.length;
-    final avgLng = sitesWithCoords
-        .map((i) => i.longitude!)
-        .reduce((a, b) => a + b) / sitesWithCoords.length;
-    
+
+    final avgLat =
+        sitesWithCoords.map((i) => i.latitude!).reduce((a, b) => a + b) /
+        sitesWithCoords.length;
+    final avgLng =
+        sitesWithCoords.map((i) => i.longitude!).reduce((a, b) => a + b) /
+        sitesWithCoords.length;
+
     return LatLng(avgLat, avgLng);
   }
 
@@ -126,7 +124,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
   @override
   Widget build(BuildContext context) {
     final initialPosition = _getInitialPosition();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -147,7 +145,10 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
               padding: const EdgeInsets.only(right: 8),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: NBROColors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -182,7 +183,7 @@ class _InspectionMapScreenState extends State<InspectionMapScreen> {
             mapToolbarEnabled: false,
             zoomControlsEnabled: true,
           ),
-          
+
           // Site info card at bottom
           if (_selectedSite != null)
             Positioned(
@@ -248,7 +249,10 @@ class _SiteInfoCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: NBROColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -273,7 +277,7 @@ class _SiteInfoCard extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Site information
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
@@ -291,7 +295,11 @@ class _SiteInfoCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_on, size: 16, color: NBROColors.grey),
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: NBROColors.grey,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -307,7 +315,11 @@ class _SiteInfoCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.gps_fixed, size: 16, color: NBROColors.grey),
+                    const Icon(
+                      Icons.gps_fixed,
+                      size: 16,
+                      color: NBROColors.grey,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${inspection.latitude!.toStringAsFixed(6)}, ${inspection.longitude!.toStringAsFixed(6)}',
@@ -320,7 +332,7 @@ class _SiteInfoCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Stats row
                 Row(
                   children: [
@@ -339,7 +351,7 @@ class _SiteInfoCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // View details button
                 SizedBox(
                   width: double.infinity,
@@ -385,10 +397,7 @@ class _StatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

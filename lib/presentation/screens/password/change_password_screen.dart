@@ -13,7 +13,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _isChanging = false;
@@ -31,12 +31,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() => _isChanging = true);
     try {
       final supabase = Supabase.instance.client;
-      
+
       // Update password
       await supabase.auth.updateUser(
-        UserAttributes(
-          password: _newPasswordController.text.trim(),
-        ),
+        UserAttributes(password: _newPasswordController.text.trim()),
       );
 
       if (mounted) {
@@ -64,7 +62,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               children: [
                 const Icon(Icons.error_outline, color: NBROColors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Error changing password: ${e.toString()}')),
+                Expanded(
+                  child: Text('Error changing password: ${e.toString()}'),
+                ),
               ],
             ),
             backgroundColor: NBROColors.error,
@@ -122,10 +122,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   Text(
                     'Update your account password',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: NBROColors.white,
-                    ),
+                    style: TextStyle(fontSize: 12, color: NBROColors.white),
                   ),
                 ],
               ),
@@ -153,19 +150,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: NBROColors.info,
-                      size: 24,
-                    ),
+                    Icon(Icons.info_outline, color: NBROColors.info, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Password must be at least 6 characters long',
-                        style: TextStyle(
-                          color: NBROColors.info,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: NBROColors.info, fontSize: 13),
                       ),
                     ),
                   ],
@@ -216,7 +206,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
+                      _obscureNewPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
@@ -251,7 +243,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   prefixIcon: const Icon(Icons.lock_reset),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () {
                       setState(() {
@@ -296,7 +290,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                         )
                       : const Icon(Icons.check_circle),
-                  label: Text(_isChanging ? 'Changing Password...' : 'Change Password'),
+                  label: Text(
+                    _isChanging ? 'Changing Password...' : 'Change Password',
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: NBROColors.primary,
                     foregroundColor: NBROColors.white,

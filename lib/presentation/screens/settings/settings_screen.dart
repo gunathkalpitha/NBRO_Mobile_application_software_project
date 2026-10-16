@@ -49,7 +49,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               builder: (context, state, _) {
                 final isIncomplete = !state.isComplete && !state.isLoading;
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: ListTile(
                     leading: Stack(
                       clipBehavior: Clip.none,
@@ -75,8 +78,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       state.isLoading
                           ? 'Checking profile completion...'
                           : isIncomplete
-                              ? 'Complete your profile (${state.percentage}%)'
-                              : 'Profile completed (100%)',
+                          ? 'Complete your profile (${state.percentage}%)'
+                          : 'Profile completed (100%)',
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () async {
@@ -117,7 +120,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   children: [
                     SwitchListTile(
-                      secondary: const Icon(Icons.cloud_sync, color: NBROColors.primary),
+                      secondary: const Icon(
+                        Icons.cloud_sync,
+                        color: NBROColors.primary,
+                      ),
                       title: const Text('Auto Sync'),
                       subtitle: const Text('Automatically sync inspections'),
                       value: _autoSync,
@@ -127,15 +133,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     if (_autoSync)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Sync Interval',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 8),
                             DropdownButton<String>(
@@ -181,7 +189,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Storage management coming soon')),
+                      const SnackBar(
+                        content: Text('Storage management coming soon'),
+                      ),
                     );
                   },
                 ),
@@ -196,7 +206,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 children: [
                   SwitchListTile(
-                    secondary: const Icon(Icons.notifications, color: NBROColors.primary),
+                    secondary: const Icon(
+                      Icons.notifications,
+                      color: NBROColors.primary,
+                    ),
                     title: const Text('Notifications'),
                     subtitle: const Text('Receive app notifications'),
                     value: _notifications,
@@ -205,7 +218,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                   SwitchListTile(
-                    secondary: const Icon(Icons.location_on, color: NBROColors.primary),
+                    secondary: const Icon(
+                      Icons.location_on,
+                      color: NBROColors.primary,
+                    ),
                     title: const Text('Location Tracking'),
                     subtitle: const Text('Track location during inspections'),
                     value: _locationTracking,
@@ -229,7 +245,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Language settings coming soon')),
+                    const SnackBar(
+                      content: Text('Language settings coming soon'),
+                    ),
                   );
                 },
               ),
@@ -257,10 +275,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: () async {
                     await Supabase.instance.client.auth.signOut();
                     if (!context.mounted) return;
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/login',
-                      (route) => false,
-                    );
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
                   },
                   icon: const Icon(Icons.logout),
                   label: const Text('Logout'),
@@ -305,7 +322,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text('Version 1.0.0'),
             SizedBox(height: 8),
-            Text('A comprehensive field surveying application for structural inspections.'),
+            Text(
+              'A comprehensive field surveying application for structural inspections.',
+            ),
             SizedBox(height: 16),
             Text('© 2024 NBRO. All rights reserved.'),
           ],
@@ -319,5 +338,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 }

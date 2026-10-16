@@ -28,7 +28,9 @@ class NoticeReadStateService {
   }
 
   /// Mark multiple notice IDs as read locally
-  static Future<void> markMultipleAsReadLocally(Iterable<String> noticeIds) async {
+  static Future<void> markMultipleAsReadLocally(
+    Iterable<String> noticeIds,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = prefs.getStringList(_readNoticeIdsKey) ?? [];

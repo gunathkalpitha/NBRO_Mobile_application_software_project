@@ -28,19 +28,19 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
   final _formKey = GlobalKey<FormState>();
   final InspectionRepository _repository = InspectionRepository();
   late TabController _tabController;
-  
+
   // Site Data Sheet controllers
   late TextEditingController _ownerNameController;
   late TextEditingController _siteAddressController;
   late TextEditingController _contactNoController;
   late TextEditingController _remarksController;
   late TextEditingController _distanceFromRowController;
-  
+
   // General Observations controllers
   late TextEditingController _ageOfStructureController;
   String? _typeOfStructure;
   String? _presentCondition;
-  
+
   // External Services
   bool? _hasPipeBorneWater;
   String? _waterSource;
@@ -48,7 +48,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
   String? _electricitySource;
   bool? _hasSewageWaste;
   String? _sewageType;
-  
+
   // Building Profile
   late TextEditingController _numberOfFloorsController;
   Map<String, bool> _wallMaterials = {};
@@ -56,14 +56,15 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
   Map<String, bool> _floorMaterials = {};
   Map<String, bool> _roofMaterials = {};
   String? _roofCovering;
-  
+
   // Defects
   List<Defect> _defects = [];
-  
+
   // Building Photo
   String? _buildingPhotoUrl;
-  String? _newBuildingPhotoPath; // local path of a newly picked photo (not yet uploaded)
-  
+  String?
+  _newBuildingPhotoPath; // local path of a newly picked photo (not yet uploaded)
+
   bool _isLoading = false;
   bool _hasChanges = false;
 
@@ -74,34 +75,34 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     'Warehouse',
     'Factory',
     'Mixed Use',
-    'Other'
+    'Other',
   ];
 
   final List<String> _conditionTypes = [
     'Permanent',
     'Semi-permanent',
-    'Temporary'
+    'Temporary',
   ];
 
   final List<String> _waterSources = [
     'From Well',
     'From Main Supply',
     'Borehole',
-    'None'
+    'None',
   ];
 
   final List<String> _electricitySources = [
     'From Private Solar',
     'From Main Supply',
     'Generator',
-    'None'
+    'None',
   ];
 
   final List<String> _sewageTypes = [
     'Private Septic tank',
     'Connected to Sewer',
     'Pit Latrine',
-    'None'
+    'None',
   ];
 
   final List<String> _roofCoverings = [
@@ -110,7 +111,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     'Metal',
     'Zinc/Al',
     'Concrete',
-    'Thatch'
+    'Thatch',
   ];
 
   final Map<String, String> _wallMaterialOptions = {
@@ -177,21 +178,29 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
   }
 
   void _initializeControllers() {
-    _ownerNameController = TextEditingController(text: widget.inspection.ownerName);
-    _siteAddressController = TextEditingController(text: widget.inspection.siteAddress);
-    _contactNoController = TextEditingController(text: widget.inspection.contactNo ?? '');
-    _remarksController = TextEditingController(text: widget.inspection.remarks ?? '');
+    _ownerNameController = TextEditingController(
+      text: widget.inspection.ownerName,
+    );
+    _siteAddressController = TextEditingController(
+      text: widget.inspection.siteAddress,
+    );
+    _contactNoController = TextEditingController(
+      text: widget.inspection.contactNo ?? '',
+    );
+    _remarksController = TextEditingController(
+      text: widget.inspection.remarks ?? '',
+    );
     _distanceFromRowController = TextEditingController(
       text: widget.inspection.distanceFromRow?.toString() ?? '',
     );
-    
+
     // General Observations
     _ageOfStructureController = TextEditingController(
       text: widget.inspection.ageOfStructure?.toString() ?? '',
     );
     _typeOfStructure = widget.inspection.typeOfStructure;
     _presentCondition = widget.inspection.presentCondition;
-    
+
     // External Services
     _hasPipeBorneWater = widget.inspection.hasPipeBorneWater;
     _waterSource = widget.inspection.waterSource;
@@ -199,7 +208,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
     _electricitySource = widget.inspection.electricitySource;
     _hasSewageWaste = widget.inspection.hasSewageWaste;
     _sewageType = widget.inspection.sewageType;
-    
+
     // Building Profile
     _numberOfFloorsController = TextEditingController(
       text: widget.inspection.numberOfFloors ?? '',
@@ -239,7 +248,11 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enable GPS location services on your device')),
+            const SnackBar(
+              content: Text(
+                'Please enable GPS location services on your device',
+              ),
+            ),
           );
         }
         return;
@@ -261,7 +274,11 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission permanently denied in settings')),
+            const SnackBar(
+              content: Text(
+                'Location permission permanently denied in settings',
+              ),
+            ),
           );
         }
         return;
@@ -274,7 +291,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
           timeLimit: const Duration(seconds: 12),
         );
       } catch (e) {
-        debugPrint('[EditInspection] getCurrentPosition failed ($e), trying last known...');
+        debugPrint(
+          '[EditInspection] getCurrentPosition failed ($e), trying last known...',
+        );
         position = await Geolocator.getLastKnownPosition();
       }
 
@@ -303,9 +322,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting location: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGettingLocation = false);
@@ -349,9 +368,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
       }
     }
   }
@@ -369,16 +388,16 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       final updatedInspection = widget.inspection.copyWith(
         ownerName: _ownerNameController.text.trim(),
         siteAddress: _siteAddressController.text.trim(),
-        contactNo: _contactNoController.text.trim().isEmpty 
-            ? null 
+        contactNo: _contactNoController.text.trim().isEmpty
+            ? null
             : _contactNoController.text.trim(),
         latitude: _latitude,
         longitude: _longitude,
-        remarks: _remarksController.text.trim().isEmpty 
-            ? null 
+        remarks: _remarksController.text.trim().isEmpty
+            ? null
             : _remarksController.text.trim(),
-        distanceFromRow: _distanceFromRowController.text.trim().isEmpty 
-            ? null 
+        distanceFromRow: _distanceFromRowController.text.trim().isEmpty
+            ? null
             : double.tryParse(_distanceFromRowController.text.trim()),
         ageOfStructure: _ageOfStructureController.text.trim().isEmpty
             ? null
@@ -446,7 +465,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Discard Changes?'),
-        content: const Text('You have unsaved changes. Do you want to discard them?'),
+        content: const Text(
+          'You have unsaved changes. Do you want to discard them?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -565,7 +586,11 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                   const Divider(),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Created: ',
@@ -671,7 +696,10 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                       SizedBox(width: 8),
                       Text(
                         'GPS Location Coordinates',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -685,9 +713,17 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                   ElevatedButton.icon(
                     onPressed: _isGettingLocation ? null : _getCurrentLocation,
                     icon: _isGettingLocation
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.my_location),
-                    label: Text(_latitude != null ? 'Update GPS Coordinates' : 'Get GPS Coordinates'),
+                    label: Text(
+                      _latitude != null
+                          ? 'Update GPS Coordinates'
+                          : 'Get GPS Coordinates',
+                    ),
                   ),
                 ],
               ),
@@ -721,9 +757,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
           // Building Photo Section
           Text(
             'Building Photo',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (_newBuildingPhotoPath != null || _buildingPhotoUrl != null) ...[
@@ -731,8 +767,18 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
               borderRadius: BorderRadius.circular(12),
               child: _newBuildingPhotoPath != null
                   ? (kIsWeb
-                      ? Image.network(_newBuildingPhotoPath!, height: 200, width: double.infinity, fit: BoxFit.cover)
-                      : Image.file(File(_newBuildingPhotoPath!), height: 200, width: double.infinity, fit: BoxFit.cover))
+                        ? Image.network(
+                            _newBuildingPhotoPath!,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(_newBuildingPhotoPath!),
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ))
                   : Image.network(
                       _buildingPhotoUrl!,
                       height: 200,
@@ -749,7 +795,11 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
                                 SizedBox(height: 8),
                                 Text('Failed to load image'),
                               ],
@@ -811,7 +861,10 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                 });
               },
               icon: const Icon(Icons.delete, color: Colors.red),
-              label: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+              label: const Text(
+                'Remove Photo',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ],
@@ -827,9 +880,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
         children: [
           Text(
             'General Observations',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -847,17 +900,24 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
 
           // ignore: deprecated_member_use
           DropdownButtonFormField<String>(
-            value: _typeOfStructure, // Using value for controlled component with dynamic items
+            value:
+                _typeOfStructure, // Using value for controlled component with dynamic items
             decoration: const InputDecoration(
               labelText: 'Type of Structure',
               prefixIcon: Icon(Icons.business),
               border: OutlineInputBorder(),
             ),
             items: [
-              ..._structureTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))),
+              ..._structureTypes.map(
+                (type) => DropdownMenuItem(value: type, child: Text(type)),
+              ),
               // Add current value if it's not in the predefined list
-              if (_typeOfStructure != null && !_structureTypes.contains(_typeOfStructure))
-                DropdownMenuItem(value: _typeOfStructure, child: Text(_typeOfStructure!)),
+              if (_typeOfStructure != null &&
+                  !_structureTypes.contains(_typeOfStructure))
+                DropdownMenuItem(
+                  value: _typeOfStructure,
+                  child: Text(_typeOfStructure!),
+                ),
             ],
             onChanged: (value) {
               setState(() {
@@ -870,17 +930,24 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
 
           // ignore: deprecated_member_use
           DropdownButtonFormField<String>(
-            value: _presentCondition, // Using value for controlled component with dynamic items
+            value:
+                _presentCondition, // Using value for controlled component with dynamic items
             decoration: const InputDecoration(
               labelText: 'Present Condition',
               prefixIcon: Icon(Icons.grade),
               border: OutlineInputBorder(),
             ),
             items: [
-              ..._conditionTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))),
+              ..._conditionTypes.map(
+                (type) => DropdownMenuItem(value: type, child: Text(type)),
+              ),
               // Add current value if it's not in the predefined list
-              if (_presentCondition != null && !_conditionTypes.contains(_presentCondition))
-                DropdownMenuItem(value: _presentCondition, child: Text(_presentCondition!)),
+              if (_presentCondition != null &&
+                  !_conditionTypes.contains(_presentCondition))
+                DropdownMenuItem(
+                  value: _presentCondition,
+                  child: Text(_presentCondition!),
+                ),
             ],
             onChanged: (value) {
               setState(() {
@@ -893,9 +960,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
 
           Text(
             'External Services',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -913,17 +980,25 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
             const SizedBox(height: 8),
             // ignore: deprecated_member_use
             DropdownButtonFormField<String>(
-              value: _waterSource, // Using value for controlled component with dynamic items
+              value:
+                  _waterSource, // Using value for controlled component with dynamic items
               decoration: const InputDecoration(
                 labelText: 'Water Source',
                 prefixIcon: Icon(Icons.water_drop),
                 border: OutlineInputBorder(),
               ),
               items: [
-                ..._waterSources.map((source) => DropdownMenuItem(value: source, child: Text(source))),
+                ..._waterSources.map(
+                  (source) =>
+                      DropdownMenuItem(value: source, child: Text(source)),
+                ),
                 // Add current value if it's not in the predefined list
-                if (_waterSource != null && !_waterSources.contains(_waterSource))
-                  DropdownMenuItem(value: _waterSource, child: Text(_waterSource!)),
+                if (_waterSource != null &&
+                    !_waterSources.contains(_waterSource))
+                  DropdownMenuItem(
+                    value: _waterSource,
+                    child: Text(_waterSource!),
+                  ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -949,17 +1024,25 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
             const SizedBox(height: 8),
             // ignore: deprecated_member_use
             DropdownButtonFormField<String>(
-              value: _electricitySource, // Using value for controlled component with dynamic items
+              value:
+                  _electricitySource, // Using value for controlled component with dynamic items
               decoration: const InputDecoration(
                 labelText: 'Electricity Source',
                 prefixIcon: Icon(Icons.electrical_services),
                 border: OutlineInputBorder(),
               ),
               items: [
-                ..._electricitySources.map((source) => DropdownMenuItem(value: source, child: Text(source))),
+                ..._electricitySources.map(
+                  (source) =>
+                      DropdownMenuItem(value: source, child: Text(source)),
+                ),
                 // Add current value if it's not in the predefined list
-                if (_electricitySource != null && !_electricitySources.contains(_electricitySource))
-                  DropdownMenuItem(value: _electricitySource, child: Text(_electricitySource!)),
+                if (_electricitySource != null &&
+                    !_electricitySources.contains(_electricitySource))
+                  DropdownMenuItem(
+                    value: _electricitySource,
+                    child: Text(_electricitySource!),
+                  ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -985,17 +1068,23 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
             const SizedBox(height: 8),
             // ignore: deprecated_member_use
             DropdownButtonFormField<String>(
-              value: _sewageType, // Using value for controlled component with dynamic items
+              value:
+                  _sewageType, // Using value for controlled component with dynamic items
               decoration: const InputDecoration(
                 labelText: 'Sewage Type',
                 prefixIcon: Icon(Icons.water_damage),
                 border: OutlineInputBorder(),
               ),
               items: [
-                ..._sewageTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))),
+                ..._sewageTypes.map(
+                  (type) => DropdownMenuItem(value: type, child: Text(type)),
+                ),
                 // Add current value if it's not in the predefined list
                 if (_sewageType != null && !_sewageTypes.contains(_sewageType))
-                  DropdownMenuItem(value: _sewageType, child: Text(_sewageType!)),
+                  DropdownMenuItem(
+                    value: _sewageType,
+                    child: Text(_sewageType!),
+                  ),
               ],
               onChanged: (value) {
                 setState(() {
@@ -1018,9 +1107,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
         children: [
           Text(
             'Building Profile',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -1065,17 +1154,25 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
 
           // ignore: deprecated_member_use
           DropdownButtonFormField<String>(
-            value: _roofCovering, // Using value for controlled component with dynamic items
+            value:
+                _roofCovering, // Using value for controlled component with dynamic items
             decoration: const InputDecoration(
               labelText: 'Roof Covering',
               prefixIcon: Icon(Icons.roofing),
               border: OutlineInputBorder(),
             ),
             items: [
-              ..._roofCoverings.map((covering) => DropdownMenuItem(value: covering, child: Text(covering))),
+              ..._roofCoverings.map(
+                (covering) =>
+                    DropdownMenuItem(value: covering, child: Text(covering)),
+              ),
               // Add current value if it's not in the predefined list
-              if (_roofCovering != null && !_roofCoverings.contains(_roofCovering))
-                DropdownMenuItem(value: _roofCovering, child: Text(_roofCovering!)),
+              if (_roofCovering != null &&
+                  !_roofCoverings.contains(_roofCovering))
+                DropdownMenuItem(
+                  value: _roofCovering,
+                  child: Text(_roofCovering!),
+                ),
             ],
             onChanged: (value) {
               setState(() {
@@ -1099,10 +1196,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Card(
@@ -1142,9 +1236,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
               Expanded(
                 child: Text(
                   'Defects (${_defects.length})',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
               ElevatedButton.icon(
@@ -1161,10 +1255,7 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.warning_amber,
-                        size: 64,
-                      ),
+                      Icon(Icons.warning_amber, size: 64),
                       const SizedBox(height: 16),
                       Text(
                         'No defects recorded',
@@ -1198,13 +1289,16 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                                     backgroundColor: NBROColors.primary,
                                     child: Text(
                                       defect.notation.code,
-                                      style: const TextStyle(color: Colors.white),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           defect.category.displayName,
@@ -1212,26 +1306,37 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        if (defect.floorLevel != null && defect.floorLevel!.isNotEmpty)
+                                        if (defect.floorLevel != null &&
+                                            defect.floorLevel!.isNotEmpty)
                                           Text(
                                             'Floor: ${defect.floorLevel}',
-                                            style: TextStyle(color: Colors.grey.shade600),
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                            ),
                                           ),
                                       ],
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.edit, color: NBROColors.primary),
-                                    onPressed: () => _showEditDefectModal(index),
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: NBROColors.primary,
+                                    ),
+                                    onPressed: () =>
+                                        _showEditDefectModal(index),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
                                     onPressed: () => _deleteDefect(index),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              if (defectImageUrl != null && defectImageUrl.isNotEmpty)
+                              if (defectImageUrl != null &&
+                                  defectImageUrl.isNotEmpty)
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: Image.network(
@@ -1246,7 +1351,9 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                                           color: Colors.grey.shade200,
                                         ),
                                         child: const Center(
-                                          child: Icon(Icons.image_not_supported),
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                          ),
                                         ),
                                       );
                                     },
@@ -1260,7 +1367,8 @@ class _EditInspectionScreenState extends State<EditInspectionScreen>
                                   color: Colors.grey.shade700,
                                 ),
                               ),
-                              if (defect.remarks != null && defect.remarks!.isNotEmpty)
+                              if (defect.remarks != null &&
+                                  defect.remarks!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(

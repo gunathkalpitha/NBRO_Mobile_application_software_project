@@ -88,7 +88,9 @@ class _SyncStatusBadgeState extends State<SyncStatusBadge> {
             onTap: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SyncManagementScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const SyncManagementScreen(),
+                ),
               );
               _checkStatus();
             },
@@ -98,7 +100,10 @@ class _SyncStatusBadgeState extends State<SyncStatusBadge> {
               decoration: BoxDecoration(
                 color: badgeBg,
                 shape: BoxShape.circle,
-                border: Border.all(color: iconColor.withValues(alpha: 0.4), width: 1.5),
+                border: Border.all(
+                  color: iconColor.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
               ),
               child: Stack(
                 clipBehavior: Clip.none,

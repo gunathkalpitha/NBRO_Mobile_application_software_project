@@ -16,7 +16,7 @@ import 'package:uuid/uuid.dart';
 class SiteInspectionWizard extends StatefulWidget {
   final String? draftId;
   final Map<String, dynamic>? draftData;
-  
+
   const SiteInspectionWizard({super.key, this.draftId, this.draftData});
 
   @override
@@ -28,20 +28,20 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
   late PageController _pageController;
   late TabController _tabController;
   int _currentStep = 0;
-  
+
   // Step 1: Site Data
   final _buildingRefController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _addressController = TextEditingController();
   final _contactController = TextEditingController();
   String? _buildingPhotoPath;
-  
+
   // GPS Location
   double? _latitude;
   double? _longitude;
   final _distanceController = TextEditingController();
   bool _isGettingLocation = false;
-  
+
   // Step 2: Observations & Utilities
   final _ageController = TextEditingController();
   String? _typeOfStructure;
@@ -52,10 +52,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
     'Others (Please specify)',
     'Permanent',
     'Semi-permanent',
-    'Temporary'
+    'Temporary',
   ];
   String? _presentCondition;
-  
+
   // External Services
   bool _hasPipeBorneWater = false;
   String? _waterSource;
@@ -63,16 +63,25 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
   String? _electricitySource;
   bool _hasSewageWaste = false;
   String? _sewageType;
-  
+
   // Ancillary Structures
   final Map<String, Map<String, bool>> _ancillaryStructures = {
-    'Boundary walls': {'Brick': false, 'Block wall': false, 'Parapet': false, 'Not Painted': false},
-    'Others': {'Wall cracks': false, 'External Toilets': false, 'Water Tanks': false},
+    'Boundary walls': {
+      'Brick': false,
+      'Block wall': false,
+      'Parapet': false,
+      'Not Painted': false,
+    },
+    'Others': {
+      'Wall cracks': false,
+      'External Toilets': false,
+      'Water Tanks': false,
+    },
   };
-  
+
   // Step 3: Building Profile
   final _numberOfFloorsController = TextEditingController();
-  
+
   final Map<String, Map<String, bool>> _buildingElements = {
     'Walls': {
       'Brick (9" thick wall)': false,
@@ -109,12 +118,12 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       'Other': false,
     },
   };
-  
+
   String? _roofCovering;
-  
+
   // Step 4: Defects
   final List<Defect> _capturedDefects = [];
-  
+
   // Draft Storage
   late String _inspectionId;
   final DraftStorageService _draftService = DraftStorageService();
@@ -179,7 +188,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       maxHeight: 1080,
       imageQuality: 85,
     );
-    
+
     if (photo != null) {
       setState(() {
         _buildingPhotoPath = photo.path;
@@ -200,7 +209,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enable GPS location services on your device')),
+            const SnackBar(
+              content: Text(
+                'Please enable GPS location services on your device',
+              ),
+            ),
           );
         }
         return;
@@ -222,7 +235,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission permanently denied in settings')),
+            const SnackBar(
+              content: Text(
+                'Location permission permanently denied in settings',
+              ),
+            ),
           );
         }
         return;
@@ -235,7 +252,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
           timeLimit: const Duration(seconds: 12),
         );
       } catch (e) {
-        debugPrint('[Wizard] getCurrentPosition failed ($e), trying last known...');
+        debugPrint(
+          '[Wizard] getCurrentPosition failed ($e), trying last known...',
+        );
         position = await Geolocator.getLastKnownPosition();
       }
 
@@ -263,9 +282,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting location: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGettingLocation = false);
@@ -324,11 +343,17 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       id: inspectionId,
       ownerName: ownerName,
       siteAddress: address,
-      contactNo: _contactController.text.trim().isEmpty ? null : _contactController.text.trim(),
+      contactNo: _contactController.text.trim().isEmpty
+          ? null
+          : _contactController.text.trim(),
       latitude: _latitude,
       longitude: _longitude,
-      distanceFromRow: _distanceController.text.trim().isEmpty ? null : double.tryParse(_distanceController.text.trim()),
-      ageOfStructure: _ageController.text.trim().isEmpty ? null : int.tryParse(_ageController.text.trim()),
+      distanceFromRow: _distanceController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_distanceController.text.trim()),
+      ageOfStructure: _ageController.text.trim().isEmpty
+          ? null
+          : int.tryParse(_ageController.text.trim()),
       typeOfStructure: _typeOfStructure,
       presentCondition: _presentCondition,
       hasPipeBorneWater: _hasPipeBorneWater,
@@ -337,7 +362,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       electricitySource: _electricitySource,
       hasSewageWaste: _hasSewageWaste,
       sewageType: _sewageType,
-      numberOfFloors: _numberOfFloorsController.text.trim().isEmpty ? null : _numberOfFloorsController.text.trim(),
+      numberOfFloors: _numberOfFloorsController.text.trim().isEmpty
+          ? null
+          : _numberOfFloorsController.text.trim(),
       wallMaterials: _buildingElements['Walls'],
       doorMaterials: _buildingElements['Doors'],
       floorMaterials: _buildingElements['Floors'],
@@ -350,7 +377,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
 
     final messenger = ScaffoldMessenger.of(context);
     final bloc = context.read<InspectionBloc>();
-    final isOnline = await ConnectivityService.instance.checkActualConnectivity();
+    final isOnline = await ConnectivityService.instance
+        .checkActualConnectivity();
     if (!mounted) return;
 
     // Show professional uploading loading dialog
@@ -361,7 +389,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       builder: (ctx) {
         loadingCtx = ctx;
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -373,7 +403,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  isOnline ? 'Uploading Inspection Data...' : 'Saving Inspection Offline...',
+                  isOnline
+                      ? 'Uploading Inspection Data...'
+                      : 'Saving Inspection Offline...',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -494,16 +526,42 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Building Ref:', style: TextStyle(fontSize: 12, color: NBROColors.grey)),
-                        Text(refNo, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.primary)),
+                        const Text(
+                          'Building Ref:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: NBROColors.grey,
+                          ),
+                        ),
+                        Text(
+                          refNo,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: NBROColors.primary,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Owner:', style: TextStyle(fontSize: 12, color: NBROColors.grey)),
-                        Text(ownerName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.black)),
+                        const Text(
+                          'Owner:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: NBROColors.grey,
+                          ),
+                        ),
+                        Text(
+                          ownerName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: NBROColors.black,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -515,7 +573,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(ctx).pop(); // Close modal
-                    Navigator.of(context).pop(); // Exit wizard back to Dashboard
+                    Navigator.of(
+                      context,
+                    ).pop(); // Exit wizard back to Dashboard
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: NBROColors.primary,
@@ -526,7 +586,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                     ),
                     elevation: 0,
                   ),
-                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                 ),
               ),
             ],
@@ -565,7 +628,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       'building_photo_path': _buildingPhotoPath,
     };
 
-    await _draftService.saveDraft(draftId: _currentDraftId!, draftData: draftData);
+    await _draftService.saveDraft(
+      draftId: _currentDraftId!,
+      draftData: draftData,
+    );
   }
 
   void _restoreFromDraft(Map<String, dynamic> data) {
@@ -586,7 +652,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
     _hasSewageWaste = data['has_sewage_waste'] ?? false;
     _sewageType = data['sewage_type'];
     _buildingPhotoPath = data['building_photo_path'];
-    
+
     if (data['ancillary_structures'] != null) {
       final saved = Map<String, dynamic>.from(data['ancillary_structures']);
       saved.forEach((key, value) {
@@ -595,9 +661,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
         }
       });
     }
-    
+
     _numberOfFloorsController.text = data['number_of_floors'] ?? '';
-    
+
     if (data['building_elements'] != null) {
       final saved = Map<String, dynamic>.from(data['building_elements']);
       saved.forEach((key, value) {
@@ -606,27 +672,28 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
         }
       });
     }
-    
+
     _roofCovering = data['roof_covering'];
-    
+
     if (data['defects'] != null) {
       _capturedDefects.clear();
       for (final defectJson in (data['defects'] as List)) {
         _capturedDefects.add(Defect.fromJson(defectJson));
       }
     }
-    
+
     _currentStep = data['current_step'] ?? 0;
   }
 
   Future<bool> _handleBackPress() async {
-    final hasData = _buildingRefController.text.isNotEmpty ||
-                    _ownerNameController.text.isNotEmpty ||
-                    _addressController.text.isNotEmpty ||
-                    _capturedDefects.isNotEmpty;
-    
+    final hasData =
+        _buildingRefController.text.isNotEmpty ||
+        _ownerNameController.text.isNotEmpty ||
+        _addressController.text.isNotEmpty ||
+        _capturedDefects.isNotEmpty;
+
     if (!hasData) return true;
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -643,18 +710,23 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'discard'),
-            child: const Text('Discard', style: TextStyle(color: NBROColors.error)),
+            child: const Text(
+              'Discard',
+              style: TextStyle(color: NBROColors.error),
+            ),
           ),
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context, 'save'),
             icon: const Icon(Icons.save),
             label: const Text('Save Draft'),
-            style: ElevatedButton.styleFrom(backgroundColor: NBROColors.primary),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: NBROColors.primary,
+            ),
           ),
         ],
       ),
     );
-    
+
     if (result == 'save') {
       await _saveDraft();
       if (mounted) {
@@ -672,7 +744,7 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       }
       return true;
     }
-    
+
     return false;
   }
 
@@ -742,8 +814,14 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                 indicatorWeight: 3,
                 labelColor: NBROColors.primary,
                 unselectedLabelColor: NBROColors.grey,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 13),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 13,
+                ),
                 onTap: (index) {
                   _goToStep(index);
                 },
@@ -764,7 +842,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
             LinearProgressIndicator(
               value: (_currentStep + 1) / 5,
               backgroundColor: Colors.grey.shade200,
-              valueColor: const AlwaysStoppedAnimation<Color>(NBROColors.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                NBROColors.primary,
+              ),
               minHeight: 3,
             ),
 
@@ -812,7 +892,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                       label: const Text('Back'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   )
@@ -823,7 +905,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                         final pop = await _handleBackPress();
                         if (pop && context.mounted) Navigator.pop(context);
                       },
-                      child: const Text('Cancel', style: TextStyle(color: NBROColors.grey)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: NBROColors.grey),
+                      ),
                     ),
                   ),
                 const SizedBox(width: 12),
@@ -837,13 +922,21 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                         _completeInspection();
                       }
                     },
-                    icon: Icon(_currentStep == 4 ? Icons.check_circle : Icons.arrow_forward),
-                    label: Text(_currentStep == 4 ? 'Complete Inspection' : 'Next Step'),
+                    icon: Icon(
+                      _currentStep == 4
+                          ? Icons.check_circle
+                          : Icons.arrow_forward,
+                    ),
+                    label: Text(
+                      _currentStep == 4 ? 'Complete Inspection' : 'Next Step',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: NBROColors.primary,
                       foregroundColor: NBROColors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       elevation: 0,
                     ),
                   ),
@@ -890,15 +983,28 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                    border: Border.all(
+                      color: Colors.grey.shade300,
+                      style: BorderStyle.solid,
+                    ),
                   ),
                   child: const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 40, color: NBROColors.grey),
+                        Icon(
+                          Icons.add_a_photo_outlined,
+                          size: 40,
+                          color: NBROColors.grey,
+                        ),
                         SizedBox(height: 8),
-                        Text('No photo captured', style: TextStyle(color: NBROColors.grey, fontSize: 13)),
+                        Text(
+                          'No photo captured',
+                          style: TextStyle(
+                            color: NBROColors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -907,7 +1013,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               OutlinedButton.icon(
                 onPressed: _takeBuildingPhoto,
                 icon: const Icon(Icons.camera_alt),
-                label: Text(_buildingPhotoPath == null ? 'Capture Photo' : 'Retake Photo'),
+                label: Text(
+                  _buildingPhotoPath == null ? 'Capture Photo' : 'Retake Photo',
+                ),
               ),
             ],
           ),
@@ -972,20 +1080,34 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   decoration: BoxDecoration(
                     color: NBROColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: NBROColors.success.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: NBROColors.success.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: NBROColors.success, size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: NBROColors.success,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'GPS: ${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: NBROColors.success, fontSize: 13),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: NBROColors.success,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.refresh, size: 18, color: NBROColors.success),
+                        icon: const Icon(
+                          Icons.refresh,
+                          size: 18,
+                          color: NBROColors.success,
+                        ),
                         onPressed: _getCurrentLocation,
                       ),
                     ],
@@ -995,7 +1117,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                 OutlinedButton.icon(
                   onPressed: _isGettingLocation ? null : _getCurrentLocation,
                   icon: _isGettingLocation
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.my_location),
                   label: const Text('Get Live GPS Coordinates'),
                 ),
@@ -1045,11 +1171,25 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   prefixIcon: Icon(Icons.apartment),
                   border: OutlineInputBorder(),
                 ),
-                items: _structureTypes.map((type) => DropdownMenuItem(value: type, child: Text(type, overflow: TextOverflow.ellipsis))).toList(),
+                items: _structureTypes
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (val) => setState(() => _typeOfStructure = val),
               ),
               const SizedBox(height: 14),
-              const Text('Present Condition', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: NBROColors.grey)),
+              const Text(
+                'Present Condition',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: NBROColors.grey,
+                ),
+              ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _presentCondition,
@@ -1059,8 +1199,17 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Permanent', child: Text('Permanent', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'Semi-permanent / Temporary', child: Text('Semi-permanent / Temporary', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(
+                    value: 'Permanent',
+                    child: Text('Permanent', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Semi-permanent / Temporary',
+                    child: Text(
+                      'Semi-permanent / Temporary',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
                 onChanged: (val) => setState(() => _presentCondition = val),
               ),
@@ -1074,7 +1223,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
           child: Column(
             children: [
               SwitchListTile(
-                title: const Text('Pipe-borne water supply', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Pipe-borne water supply',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 value: _hasPipeBorneWater,
                 onChanged: (val) => setState(() => _hasPipeBorneWater = val),
               ),
@@ -1084,17 +1236,35 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   child: DropdownButtonFormField<String>(
                     value: _waterSource,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Water Source', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Water Source',
+                      border: OutlineInputBorder(),
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'From Well', child: Text('From Well', overflow: TextOverflow.ellipsis)),
-                      DropdownMenuItem(value: 'From main supply', child: Text('From main supply', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                        value: 'From Well',
+                        child: Text(
+                          'From Well',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'From main supply',
+                        child: Text(
+                          'From main supply',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                     onChanged: (val) => setState(() => _waterSource = val),
                   ),
                 ),
               const Divider(),
               SwitchListTile(
-                title: const Text('Electricity Main Supply', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Electricity Main Supply',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 value: _hasElectricity,
                 onChanged: (val) => setState(() => _hasElectricity = val),
               ),
@@ -1104,17 +1274,36 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   child: DropdownButtonFormField<String>(
                     value: _electricitySource,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Electricity Source', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Electricity Source',
+                      border: OutlineInputBorder(),
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'From Private Solar supply', child: Text('From Private Solar supply', overflow: TextOverflow.ellipsis)),
-                      DropdownMenuItem(value: 'From Main supply', child: Text('From Main supply', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                        value: 'From Private Solar supply',
+                        child: Text(
+                          'From Private Solar supply',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'From Main supply',
+                        child: Text(
+                          'From Main supply',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
-                    onChanged: (val) => setState(() => _electricitySource = val),
+                    onChanged: (val) =>
+                        setState(() => _electricitySource = val),
                   ),
                 ),
               const Divider(),
               SwitchListTile(
-                title: const Text('Sewage & Waste Water Disposal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Sewage & Waste Water Disposal',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
                 value: _hasSewageWaste,
                 onChanged: (val) => setState(() => _hasSewageWaste = val),
               ),
@@ -1124,10 +1313,25 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   child: DropdownButtonFormField<String>(
                     value: _sewageType,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Sewage Disposal Type', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Sewage Disposal Type',
+                      border: OutlineInputBorder(),
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'Private Septic tank & Soakage pits', child: Text('Private Septic tank & Soakage pits', overflow: TextOverflow.ellipsis)),
-                      DropdownMenuItem(value: 'Connected to Sewer Main', child: Text('Connected to Sewer Main', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(
+                        value: 'Private Septic tank & Soakage pits',
+                        child: Text(
+                          'Private Septic tank & Soakage pits',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Connected to Sewer Main',
+                        child: Text(
+                          'Connected to Sewer Main',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                     onChanged: (val) => setState(() => _sewageType = val),
                   ),
@@ -1168,10 +1372,25 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Clay Tiles', child: Text('Clay Tiles', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'Asbestos', child: Text('Asbestos', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'Covering Metal', child: Text('Covering Metal', overflow: TextOverflow.ellipsis)),
-                  DropdownMenuItem(value: 'Zinc/Al', child: Text('Zinc/Al', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(
+                    value: 'Clay Tiles',
+                    child: Text('Clay Tiles', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Asbestos',
+                    child: Text('Asbestos', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Covering Metal',
+                    child: Text(
+                      'Covering Metal',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Zinc/Al',
+                    child: Text('Zinc/Al', overflow: TextOverflow.ellipsis),
+                  ),
                 ],
                 onChanged: (val) => setState(() => _roofCovering = val),
               ),
@@ -1192,7 +1411,8 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                     value: item.value,
                     onChanged: (val) {
                       setState(() {
-                        _buildingElements[category.key]![item.key] = val ?? false;
+                        _buildingElements[category.key]![item.key] =
+                            val ?? false;
                       });
                     },
                     dense: true,
@@ -1220,9 +1440,9 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               setState(() {
                 _capturedDefects.add(defect);
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✓ Defect added')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('✓ Defect added')));
             },
           ),
         ),
@@ -1230,7 +1450,11 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
         if (_capturedDefects.isNotEmpty) ...[
           Text(
             'Captured Defects (${_capturedDefects.length})',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: NBROColors.black),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: NBROColors.black,
+            ),
           ),
           const SizedBox(height: 12),
           ListView.separated(
@@ -1259,7 +1483,10 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                       child: defect.photoPath != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.file(File(defect.photoPath!), fit: BoxFit.cover),
+                              child: Image.file(
+                                File(defect.photoPath!),
+                                fit: BoxFit.cover,
+                              ),
                             )
                           : const Icon(Icons.image, color: NBROColors.grey),
                     ),
@@ -1268,13 +1495,28 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(defect.notation.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          Text('${defect.lengthMm}mm${defect.widthMm != null ? ' × ${defect.widthMm}mm' : ''}', style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+                          Text(
+                            defect.notation.displayName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            '${defect.lengthMm}mm${defect.widthMm != null ? ' × ${defect.widthMm}mm' : ''}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: NBROColors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: NBROColors.error),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: NBROColors.error,
+                      ),
                       onPressed: () => _removeDefect(index),
                     ),
                   ],
@@ -1288,9 +1530,16 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.photo_library_outlined,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 10),
-                  const Text('No defects captured yet', style: TextStyle(color: NBROColors.grey)),
+                  const Text(
+                    'No defects captured yet',
+                    style: TextStyle(color: NBROColors.grey),
+                  ),
                 ],
               ),
             ),
@@ -1323,9 +1572,15 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
               if (_contactController.text.isNotEmpty)
                 _buildReviewRow('Contact No.', _contactController.text),
               if (_latitude != null && _longitude != null)
-                _buildReviewRow('GPS Coordinates', '${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°'),
+                _buildReviewRow(
+                  'GPS Coordinates',
+                  '${_latitude!.toStringAsFixed(6)}°, ${_longitude!.toStringAsFixed(6)}°',
+                ),
               if (_distanceController.text.isNotEmpty)
-                _buildReviewRow('Distance from ROW', '${_distanceController.text} m'),
+                _buildReviewRow(
+                  'Distance from ROW',
+                  '${_distanceController.text} m',
+                ),
             ],
           ),
         ),
@@ -1337,12 +1592,30 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_typeOfStructure != null) _buildReviewRow('Structure Type', _typeOfStructure!),
-              if (_presentCondition != null) _buildReviewRow('Present Condition', _presentCondition!),
-              if (_ageController.text.isNotEmpty) _buildReviewRow('Approx. Age', '${_ageController.text} years'),
-              _buildReviewRow('Water Supply', _hasPipeBorneWater ? (_waterSource ?? 'Available') : 'Not Available'),
-              _buildReviewRow('Electricity', _hasElectricity ? (_electricitySource ?? 'Available') : 'Not Available'),
-              _buildReviewRow('Sewage & Waste', _hasSewageWaste ? (_sewageType ?? 'Available') : 'Not Available'),
+              if (_typeOfStructure != null)
+                _buildReviewRow('Structure Type', _typeOfStructure!),
+              if (_presentCondition != null)
+                _buildReviewRow('Present Condition', _presentCondition!),
+              if (_ageController.text.isNotEmpty)
+                _buildReviewRow('Approx. Age', '${_ageController.text} years'),
+              _buildReviewRow(
+                'Water Supply',
+                _hasPipeBorneWater
+                    ? (_waterSource ?? 'Available')
+                    : 'Not Available',
+              ),
+              _buildReviewRow(
+                'Electricity',
+                _hasElectricity
+                    ? (_electricitySource ?? 'Available')
+                    : 'Not Available',
+              ),
+              _buildReviewRow(
+                'Sewage & Waste',
+                _hasSewageWaste
+                    ? (_sewageType ?? 'Available')
+                    : 'Not Available',
+              ),
             ],
           ),
         ),
@@ -1355,25 +1628,47 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_numberOfFloorsController.text.isNotEmpty)
-                _buildReviewRow('Number of Floors', _numberOfFloorsController.text),
+                _buildReviewRow(
+                  'Number of Floors',
+                  _numberOfFloorsController.text,
+                ),
               if (_roofCovering != null)
                 _buildReviewRow('Roof Covering', _roofCovering!),
               if (selectedMaterialsList.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                const Text('Selected Specifications:', style: TextStyle(fontSize: 12, color: NBROColors.grey, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Selected Specifications:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: NBROColors.grey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: selectedMaterialsList
-                      .map((mat) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: NBROColors.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
+                      .map(
+                        (mat) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: NBROColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            mat,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: NBROColors.primary,
+                              fontWeight: FontWeight.w600,
                             ),
-                            child: Text(mat, style: const TextStyle(fontSize: 11, color: NBROColors.primary, fontWeight: FontWeight.w600)),
-                          ))
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ],
@@ -1393,24 +1688,49 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: NBROColors.error,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(defect.notation.code, style: const TextStyle(color: NBROColors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              defect.notation.code,
+                              style: const TextStyle(
+                                color: NBROColors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(defect.notation.displayName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              defect.notation.displayName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          Text('${defect.lengthMm}mm', style: const TextStyle(fontSize: 12, color: NBROColors.grey)),
+                          Text(
+                            '${defect.lengthMm}mm',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: NBROColors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     );
                   }).toList(),
                 )
-              : const Text('No defects captured for this inspection.', style: TextStyle(fontSize: 13, color: NBROColors.grey)),
+              : const Text(
+                  'No defects captured for this inspection.',
+                  style: TextStyle(fontSize: 13, color: NBROColors.grey),
+                ),
         ),
         const SizedBox(height: 16),
 
@@ -1444,8 +1764,18 @@ class _SiteInspectionWizardState extends State<SiteInspectionWizard>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: NBROColors.grey)),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: NBROColors.black)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: NBROColors.grey),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: NBROColors.black,
+            ),
+          ),
         ],
       ),
     );

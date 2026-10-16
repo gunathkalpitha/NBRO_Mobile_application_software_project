@@ -26,7 +26,7 @@ class LocalDatabase {
     try {
       // Ensure SQLite native libraries are initialized on Android/iOS
       applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-      
+
       final docsDir = await getApplicationDocumentsDirectory();
       final dbPath = p.join(docsDir.path, 'nbro_offline_v2.db');
 
@@ -119,9 +119,15 @@ class LocalDatabase {
     ''');
 
     // Create Indexes
-    database.execute('CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(sync_status);');
-    database.execute('CREATE INDEX IF NOT EXISTS idx_defects_inspection ON defects(inspection_local_id);');
-    database.execute('CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status);');
+    database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_inspections_status ON inspections(sync_status);',
+    );
+    database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_defects_inspection ON defects(inspection_local_id);',
+    );
+    database.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sync_queue_status ON sync_queue(status);',
+    );
   }
 
   /// Run operation inside an atomic database transaction

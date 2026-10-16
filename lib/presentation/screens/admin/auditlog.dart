@@ -87,9 +87,9 @@ class _AuditlogScreenState extends State<AuditlogScreen> {
               const SizedBox(height: 16),
               Text(
                 'We\'re working on comprehensive reporting features to help you analyze and monitor your inspection data. Stay tuned!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: NBROColors.grey,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: NBROColors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -105,18 +105,14 @@ class _AuditlogScreenState extends State<AuditlogScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: NBROColors.info,
-                      size: 24,
-                    ),
+                    Icon(Icons.info_outline, color: NBROColors.info, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Future features will include customizable audit reports, PDF exports, and monitor officer activities.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: NBROColors.info,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: NBROColors.info),
                       ),
                     ),
                   ],

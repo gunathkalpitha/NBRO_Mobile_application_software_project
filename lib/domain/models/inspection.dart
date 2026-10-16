@@ -7,12 +7,12 @@ class Inspection {
   final double? latitude;
   final double? longitude;
   final double? distanceFromRow; // Distance from Row in meters
-  
+
   // General Observations
   final int? ageOfStructure; // in years
   final String? typeOfStructure; // House, Office, Shop, etc.
   final String? presentCondition; // Permanent, Semi-permanent, Temporary
-  
+
   // External Services
   final bool? hasPipeBorneWater;
   final String? waterSource; // From Well, From Main Supply
@@ -20,22 +20,24 @@ class Inspection {
   final String? electricitySource; // From Private Solar, From Main Supply
   final bool? hasSewageWaste;
   final String? sewageType; // Private Septic tank, Connected to Sewer, etc.
-  
+
   // Building Profile (Details of Main Building Elements)
   final String? numberOfFloors; // e.g., G+2
   final Map<String, bool>? wallMaterials; // Brick, Concrete, Timber, etc.
-  final Map<String, bool>? doorMaterials; // Solid Timber, Glazed Aluminium, etc.
+  final Map<String, bool>?
+  doorMaterials; // Solid Timber, Glazed Aluminium, etc.
   final Map<String, bool>? floorMaterials; // Cement Rendered, Floor Tiles, etc.
   final Map<String, bool>? roofMaterials; // Single Pitched, Gable, etc.
   final String? roofCovering; // Clay Tiles, Asbestos, Metal, Zinc/Al
-  
+
   final List<Defect> defects;
   final SyncStatus syncStatus;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? remarks;
   final String? createdBy; // User ID from Supabase Auth
-  final String? updatedBy; // User ID of the officer who last modified this inspection
+  final String?
+  updatedBy; // User ID of the officer who last modified this inspection
   final String? buildingPhotoUrl; // Front view building image URL
 
   Inspection({
@@ -167,19 +169,29 @@ class Inspection {
     }
 
     return Inspection(
-      id: (json['building_ref'] as String?) ??
+      id:
+          (json['building_ref'] as String?) ??
           (json['building_reference_no'] as String?) ??
           (json['site_id'] as String?) ??
           'UNKNOWN',
       ownerName: (json['owner_name'] as String?) ?? 'Unknown Owner',
-      siteAddress: (json['address'] as String?) ??
+      siteAddress:
+          (json['address'] as String?) ??
           (json['site_address'] as String?) ??
           'Unknown Address',
       contactNo: json['owner_contact'] as String?,
-      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
-      distanceFromRow: json['distance_from_row'] != null ? (json['distance_from_row'] as num).toDouble() : null,
-      ageOfStructure: parseApproxAge(json['age_of_structure'] ?? json['approx_age']),
+      latitude: json['latitude'] != null
+          ? (json['latitude'] as num).toDouble()
+          : null,
+      longitude: json['longitude'] != null
+          ? (json['longitude'] as num).toDouble()
+          : null,
+      distanceFromRow: json['distance_from_row'] != null
+          ? (json['distance_from_row'] as num).toDouble()
+          : null,
+      ageOfStructure: parseApproxAge(
+        json['age_of_structure'] ?? json['approx_age'],
+      ),
       typeOfStructure: json['type_of_structure'] as String?,
       presentCondition: json['present_condition'] as String?,
       hasPipeBorneWater: json['has_pipe_borne_water'] as bool?,
@@ -206,14 +218,15 @@ class Inspection {
         (e) => e.name == json['sync_status'],
         orElse: () => SyncStatus.pending,
       ),
-      createdAt: json['created_at'] != null 
+      createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       remarks: json['remarks'] as String?,
-      createdBy: (json['user_id'] as String?) ?? (json['created_by'] as String?),
+      createdBy:
+          (json['user_id'] as String?) ?? (json['created_by'] as String?),
       updatedBy: json['updated_by'] as String?,
       buildingPhotoUrl: json['building_photo_url'] as String?,
     );
@@ -225,7 +238,8 @@ class Defect {
   final String id;
   final String inspectionId;
   final DefectNotation notation; // Standardized notation (C, BC, CC, etc.)
-  final DefectCategory category; // Type 01: Building Floor / Type 02: Boundary Wall
+  final DefectCategory
+  category; // Type 01: Building Floor / Type 02: Boundary Wall
   final String? floorLevel; // Basement, Ground, 1st, 2nd, etc.
   final double lengthMm;
   final double? widthMm; // Optional for patches
@@ -279,7 +293,9 @@ class Defect {
       ),
       floorLevel: json['floor_level'] as String?,
       lengthMm: (json['length_mm'] as num).toDouble(),
-      widthMm: json['width_mm'] != null ? (json['width_mm'] as num).toDouble() : null,
+      widthMm: json['width_mm'] != null
+          ? (json['width_mm'] as num).toDouble()
+          : null,
       photoPath: json['photo_path'] as String?,
       remarks: json['remarks'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -306,35 +322,35 @@ enum DefectCategory {
 /// Defect Notation - Standardized from NBRO Defects Order
 enum DefectNotation {
   // Cracks
-  c,    // Wall Crack
-  bc,   // Beam Crack
-  cc,   // Column Crack
-  fc,   // Floor Crack
-  sc,   // Slab Crack
-  tc,   // Tile Crack
-  
+  c, // Wall Crack
+  bc, // Beam Crack
+  cc, // Column Crack
+  fc, // Floor Crack
+  sc, // Slab Crack
+  tc, // Tile Crack
+
   // Separations
-  sp,   // Separation (Where should be contained in remark column)
-  
+  sp, // Separation (Where should be contained in remark column)
+
   // Damages
-  d,    // Damaged Area
-  wd,   // Wall Damage
-  bd,   // Beam Damage
-  cd,   // Column Damage
-  fd,   // Floor Damage
-  dd,   // Door/Windows Frame Damages
-  td,   // Tile Damage
-  gd,   // Glass Damage
-  pd,   // Plaster Damage
-  rd,   // Roof Damage
-  
+  d, // Damaged Area
+  wd, // Wall Damage
+  bd, // Beam Damage
+  cd, // Column Damage
+  fd, // Floor Damage
+  dd, // Door/Windows Frame Damages
+  td, // Tile Damage
+  gd, // Glass Damage
+  pd, // Plaster Damage
+  rd, // Roof Damage
+
   // Patches
-  dp,   // Damp Patch
-  
+  dp, // Damp Patch
+
   // Boundary Wall (BWC = Boundary Wall Crack, BWD = Boundary Wall Damage, BWDP = Boundary Wall Damp Patch)
-  bwc,  // Boundary Wall Crack
-  bws,  // Boundary Wall Separation
-  bwd,  // Boundary Wall Damage
+  bwc, // Boundary Wall Crack
+  bws, // Boundary Wall Separation
+  bwd, // Boundary Wall Damage
   bwdp; // Boundary Wall Damp Patch
 
   String get displayName {

@@ -17,11 +17,7 @@ class SuperAdminBrandLogo extends StatelessWidget {
         color: Color(0xFFFFD700), // Royal Gold
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
       padding: const EdgeInsets.all(2),
@@ -30,11 +26,7 @@ class SuperAdminBrandLogo extends StatelessWidget {
           color: Color(0xFF4A148C), // Deep Purple
           shape: BoxShape.circle,
         ),
-        child: const Icon(
-          Icons.shield,
-          color: Color(0xFFFFD700),
-          size: 18,
-        ),
+        child: const Icon(Icons.shield, color: Color(0xFFFFD700), size: 18),
       ),
     );
   }
@@ -61,7 +53,7 @@ class NBROBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,9 +73,9 @@ class NBROBrand extends StatelessWidget {
                   Text(
                     isSuperAdmin
                         ? 'SUPER ADMIN PORTAL'
-                        : (isSmallScreen 
-                            ? 'NBRO'
-                            : 'National Building Research Organization'),
+                        : (isSmallScreen
+                              ? 'NBRO'
+                              : 'National Building Research Organization'),
                     style: TextStyle(
                       color: isSuperAdmin ? const Color(0xFFFFD700) : color,
                       fontWeight: FontWeight.bold,
@@ -97,9 +89,9 @@ class NBROBrand extends StatelessWidget {
                   Text(
                     isSuperAdmin ? 'SUPER ADMIN' : 'NBRO $title',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: isSuperAdmin ? const Color(0xFFFFD700) : color,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: isSuperAdmin ? const Color(0xFFFFD700) : color,
+                      fontWeight: FontWeight.bold,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -117,7 +109,7 @@ class NBROBrand extends StatelessWidget {
               ],
             ),
           ),
-        )
+        ),
       ],
     );
   }

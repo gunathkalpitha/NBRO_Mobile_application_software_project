@@ -6,10 +6,7 @@ import 'package:nbro_mobile_application/presentation/state/inspection_bloc.dart'
 class SyncStatusIndicator extends StatelessWidget {
   final VoidCallback onSyncPressed;
 
-  const SyncStatusIndicator({
-    super.key,
-    required this.onSyncPressed,
-  });
+  const SyncStatusIndicator({super.key, required this.onSyncPressed});
 
   @override
   Widget build(BuildContext context) {
