@@ -18,7 +18,9 @@ class ImageStorageService {
   /// Get directory path for a specific inspection's images
   Future<Directory> getInspectionDirectory(String inspectionLocalId) async {
     final docsDir = await getApplicationDocumentsDirectory();
-    final inspectionDir = Directory(p.join(docsDir.path, 'inspections', inspectionLocalId));
+    final inspectionDir = Directory(
+      p.join(docsDir.path, 'inspections', inspectionLocalId),
+    );
     if (!await inspectionDir.exists()) {
       await inspectionDir.create(recursive: true);
     }
@@ -34,18 +36,24 @@ class ImageStorageService {
     try {
       final sourceFile = File(sourcePath);
       if (!await sourceFile.exists()) {
-        debugPrint('[ImageStorageService] ⚠️ Source file does not exist: $sourcePath');
+        debugPrint(
+          '[ImageStorageService] ⚠️ Source file does not exist: $sourcePath',
+        );
         return null;
       }
 
       final dir = await getInspectionDirectory(inspectionLocalId);
-      final ext = p.extension(sourcePath).isEmpty ? '.jpg' : p.extension(sourcePath);
+      final ext = p.extension(sourcePath).isEmpty
+          ? '.jpg'
+          : p.extension(sourcePath);
       final fileName = customFileName ?? 'img_${const Uuid().v4()}$ext';
       final targetPath = p.join(dir.path, fileName);
 
       // Copy file to local app storage
       final savedFile = await sourceFile.copy(targetPath);
-      debugPrint('[ImageStorageService] ✓ Saved image locally at: ${savedFile.path}');
+      debugPrint(
+        '[ImageStorageService] ✓ Saved image locally at: ${savedFile.path}',
+      );
       return savedFile.path;
     } catch (e) {
       debugPrint('[ImageStorageService] ❌ Failed to save image locally: $e');
@@ -65,23 +73,31 @@ class ImageStorageService {
       final dir = await getInspectionDirectory(inspectionLocalId);
       if (await dir.exists()) {
         await dir.delete(recursive: true);
-        debugPrint('[ImageStorageService] ✓ Deleted directory for inspection: $inspectionLocalId');
+        debugPrint(
+          '[ImageStorageService] ✓ Deleted directory for inspection: $inspectionLocalId',
+        );
       }
     } catch (e) {
-      debugPrint('[ImageStorageService] ❌ Failed to delete inspection directory: $e');
+      debugPrint(
+        '[ImageStorageService] ❌ Failed to delete inspection directory: $e',
+      );
     }
   }
 
   /// Delete local photo files for synced inspections older than 30 days
-  Future<void> cleanupOldSyncedPhotos(List<Map<String, String>> oldSyncedItems) async {
+  Future<void> cleanupOldSyncedPhotos(
+    List<Map<String, String>> oldSyncedItems,
+  ) async {
     try {
       int deletedCount = 0;
       for (final item in oldSyncedItems) {
         final localPath = item['local_path'];
         final remoteUrl = item['remote_url'];
-        
+
         // Only delete local photo file if remote URL is valid and confirmed synced on Supabase
-        if (remoteUrl != null && remoteUrl.startsWith('http') && localPath != null) {
+        if (remoteUrl != null &&
+            remoteUrl.startsWith('http') &&
+            localPath != null) {
           final file = File(localPath);
           if (await file.exists()) {
             await file.delete();
@@ -90,10 +106,14 @@ class ImageStorageService {
         }
       }
       if (deletedCount > 0) {
-        debugPrint('[ImageStorageService] 🧹 Cleaned up $deletedCount synced local photo files older than 30 days.');
+        debugPrint(
+          '[ImageStorageService] 🧹 Cleaned up $deletedCount synced local photo files older than 30 days.',
+        );
       }
     } catch (e) {
-      debugPrint('[ImageStorageService] ❌ Failed to cleanup old synced photos: $e');
+      debugPrint(
+        '[ImageStorageService] ❌ Failed to cleanup old synced photos: $e',
+      );
     }
   }
 }

@@ -19,11 +19,13 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  List<Map<String, dynamic>> get _activeOfficers =>
-      _officers.where((o) => (o['is_active'] as bool? ?? true) == true).toList();
+  List<Map<String, dynamic>> get _activeOfficers => _officers
+      .where((o) => (o['is_active'] as bool? ?? true) == true)
+      .toList();
 
-  List<Map<String, dynamic>> get _disabledOfficers =>
-      _officers.where((o) => (o['is_active'] as bool? ?? true) == false).toList();
+  List<Map<String, dynamic>> get _disabledOfficers => _officers
+      .where((o) => (o['is_active'] as bool? ?? true) == false)
+      .toList();
 
   @override
   void initState() {
@@ -50,13 +52,13 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     final color = isError
         ? NBROColors.error
         : isWarning
-            ? NBROColors.darkGrey
-            : NBROColors.success;
+        ? NBROColors.darkGrey
+        : NBROColors.success;
     final icon = isError
         ? Icons.error_outline
         : isWarning
-            ? Icons.warning_amber_outlined
-            : Icons.check_circle;
+        ? Icons.warning_amber_outlined
+        : Icons.check_circle;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -99,8 +101,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     final initials = name.isEmpty
         ? 'OFF'
         : name.split(RegExp(r'\s+')).length >= 2
-            ? '${name.split(RegExp(r'\s+'))[0][0]}${name.split(RegExp(r'\s+'))[1][0]}'.toUpperCase()
-            : name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+        ? '${name.split(RegExp(r'\s+'))[0][0]}${name.split(RegExp(r'\s+'))[1][0]}'
+              .toUpperCase()
+        : name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
 
     return CircleAvatar(
       radius: 22,
@@ -135,7 +138,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
       }
 
       if (isSuperAdmin) {
-        query = query.or('role.eq.admin,role.eq.main_admin,role.eq.super_admin');
+        query = query.or(
+          'role.eq.admin,role.eq.main_admin,role.eq.super_admin',
+        );
       } else if (isMainAdmin) {
         query = query.or('role.eq.officer,role.eq.admin,role.eq.main_admin');
       } else {
@@ -155,7 +160,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading officers primary query ($e), executing fallback...');
+      debugPrint(
+        'Error loading officers primary query ($e), executing fallback...',
+      );
       try {
         final user = Supabase.instance.client.auth.currentUser;
         final email = user?.email?.toLowerCase() ?? '';
@@ -190,7 +197,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         debugPrint('Error loading officers fallback query: $fallbackErr');
         if (mounted) {
           setState(() => _isLoading = false);
-          _showSnackBar('Error loading user accounts: $fallbackErr', isError: true);
+          _showSnackBar(
+            'Error loading user accounts: $fallbackErr',
+            isError: true,
+          );
         }
       }
     }
@@ -222,17 +232,29 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: NBROColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.badge_outlined, color: NBROColors.success),
+                    child: const Icon(
+                      Icons.badge_outlined,
+                      color: NBROColors.success,
+                    ),
                   ),
-                  title: const Text('Field Surveyor / Officer', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Conducts 5-step site surveys & defect capture', style: TextStyle(fontSize: 11)),
+                  title: const Text(
+                    'Field Surveyor / Officer',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Conducts 5-step site surveys & defect capture',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -244,17 +266,29 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               Card(
                 elevation: 2,
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: const Color(0xFF4A148C).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFF4A148C)),
+                    child: const Icon(
+                      Icons.admin_panel_settings_outlined,
+                      color: Color(0xFF4A148C),
+                    ),
                   ),
-                  title: const Text('Regional Administrator', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Manages officers & regional branch data', style: TextStyle(fontSize: 11)),
+                  title: const Text(
+                    'Regional Administrator',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Manages officers & regional branch data',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -294,7 +328,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                targetRole == 'admin' ? Icons.admin_panel_settings : Icons.person_add,
+                targetRole == 'admin'
+                    ? Icons.admin_panel_settings
+                    : Icons.person_add,
                 color: NBROColors.primary,
               ),
             ),
@@ -302,7 +338,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             Expanded(
               child: Text(
                 'Add New $roleLabel',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -310,7 +349,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Choose how to add the $roleLabel:', style: const TextStyle(fontSize: 14)),
+            Text(
+              'Choose how to add the $roleLabel:',
+              style: const TextStyle(fontSize: 14),
+            ),
             const SizedBox(height: 16),
 
             // Method 1: Email Invitation
@@ -447,6 +489,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     );
   }
 
+  // ignore: unused_element
   void _showDirectCreationDialog({required String targetRole}) {
     final roleLabel = targetRole == 'admin' ? 'Administrator' : 'Field Officer';
 
@@ -556,11 +599,7 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
     try {
       await Supabase.instance.client.functions.invoke(
         'invite-officer',
-        body: {
-          'email': email,
-          'fullName': fullName,
-          'role': targetRole,
-        },
+        body: {'email': email, 'fullName': fullName, 'role': targetRole},
       );
 
       // Link creator ID in database profile
@@ -615,7 +654,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
 
       // Ensure profile role & created_by are set correctly in database
       try {
-        final Map<String, dynamic>? resMap = response.data is Map<String, dynamic> ? response.data as Map<String, dynamic> : null;
+        final Map<String, dynamic>? resMap =
+            response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : null;
         final newUserId = (resMap?['user']?['id'] ?? resMap?['id']) as String?;
 
         if (newUserId != null) {
@@ -660,8 +702,14 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
   }) async {
     final lowerRole = role.toLowerCase();
     final lowerName = userName.toLowerCase();
-    if (lowerRole == 'super_admin' || lowerRole == 'main_admin' || lowerName.contains('super admin') || lowerName.contains('main admin')) {
-      _showSnackBar('Super Admin and Main Admin accounts cannot be modified', isWarning: true);
+    if (lowerRole == 'super_admin' ||
+        lowerRole == 'main_admin' ||
+        lowerName.contains('super admin') ||
+        lowerName.contains('main admin')) {
+      _showSnackBar(
+        'Super Admin and Main Admin accounts cannot be modified',
+        isWarning: true,
+      );
       return;
     }
 
@@ -674,7 +722,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         title: Row(
           children: [
             Icon(
-              newStatus ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+              newStatus
+                  ? Icons.check_circle_outline
+                  : Icons.warning_amber_rounded,
               color: newStatus ? NBROColors.success : NBROColors.error,
             ),
             const SizedBox(width: 12),
@@ -694,7 +744,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: newStatus ? NBROColors.success : NBROColors.error,
+              backgroundColor: newStatus
+                  ? NBROColors.success
+                  : NBROColors.error,
             ),
             child: Text(newStatus ? 'Enable' : 'Disable'),
           ),
@@ -717,7 +769,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         });
 
         _showSnackBar(
-          newStatus ? '$userName enabled successfully' : '$userName disabled successfully',
+          newStatus
+              ? '$userName enabled successfully'
+              : '$userName disabled successfully',
         );
       } catch (e) {
         debugPrint('Error toggling account status: $e');
@@ -728,7 +782,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
 
   // ─── List Builder Widget ──────────────────────────────────────────────────────
 
-  Widget _buildOfficersListView(List<Map<String, dynamic>> officersList, {required bool isActiveTab}) {
+  Widget _buildOfficersListView(
+    List<Map<String, dynamic>> officersList, {
+    required bool isActiveTab,
+  }) {
     if (officersList.isEmpty) {
       return Center(
         child: Column(
@@ -741,7 +798,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              isActiveTab ? 'No active accounts found' : 'No disabled accounts found',
+              isActiveTab
+                  ? 'No active accounts found'
+                  : 'No disabled accounts found',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -767,12 +826,17 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
         itemCount: officersList.length,
         itemBuilder: (context, index) {
           final officer = officersList[index];
-          final roleStr = (officer['role'] as String?)?.toLowerCase() ?? 'officer';
+          final roleStr =
+              (officer['role'] as String?)?.toLowerCase() ?? 'officer';
           final isAdminRole = roleStr.contains('admin');
           final isActive = officer['is_active'] as bool? ?? true;
-          final isProtectedAdmin = roleStr == 'super_admin' ||
+          final isProtectedAdmin =
+              roleStr == 'super_admin' ||
               roleStr == 'main_admin' ||
-              (officer['full_name'] as String?)?.toLowerCase().contains('super admin') == true;
+              (officer['full_name'] as String?)?.toLowerCase().contains(
+                    'super admin',
+                  ) ==
+                  true;
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -800,7 +864,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isActive ? NBROColors.black : NBROColors.grey,
+                            color: isActive
+                                ? NBROColors.black
+                                : NBROColors.grey,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -824,8 +890,12 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isAdminRole
-                                    ? const Color(0xFF4A148C).withValues(alpha: 0.12)
-                                    : NBROColors.primary.withValues(alpha: 0.12),
+                                    ? const Color(
+                                        0xFF4A148C,
+                                      ).withValues(alpha: 0.12)
+                                    : NBROColors.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -833,7 +903,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: isAdminRole ? const Color(0xFF4A148C) : NBROColors.primary,
+                                  color: isAdminRole
+                                      ? const Color(0xFF4A148C)
+                                      : NBROColors.primary,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -858,7 +930,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                                     height: 6,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: isActive ? NBROColors.success : NBROColors.error,
+                                      color: isActive
+                                          ? NBROColors.success
+                                          : NBROColors.error,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
@@ -867,7 +941,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: isActive ? NBROColors.success : NBROColors.error,
+                                      color: isActive
+                                          ? NBROColors.success
+                                          : NBROColors.error,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -882,7 +958,10 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                   // Interactive Toggle Action Button
                   if (isProtectedAdmin)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -914,14 +993,21 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isActive ? NBROColors.error : NBROColors.success,
+                          color: isActive
+                              ? NBROColors.error
+                              : NBROColors.success,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: isActive ? NBROColors.error : NBROColors.success,
+                          color: isActive
+                              ? NBROColors.error
+                              : NBROColors.success,
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -949,7 +1035,9 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
 
     final appBarSubtitle = isSuperAdmin
         ? 'View & create Administrator accounts'
-        : (isMainAdmin ? 'Manage Officers & Regional Admins' : 'Manage Officers under your branch');
+        : (isMainAdmin
+              ? 'Manage Officers & Regional Admins'
+              : 'Manage Officers under your branch');
 
     return DefaultTabController(
       length: 2,
@@ -969,7 +1057,11 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary).withValues(alpha: 0.3),
+                    color:
+                        (isSuperAdmin
+                                ? const Color(0xFF4A148C)
+                                : NBROColors.primary)
+                            .withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1002,22 +1094,36 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
+                            color: isSuperAdmin
+                                ? const Color(0xFFFFD700)
+                                : NBROColors.white,
                           ),
                         ),
                         Text(
                           appBarSubtitle,
-                          style: const TextStyle(fontSize: 11, color: NBROColors.white),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: NBROColors.white,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   TabBar(
-                    indicatorColor: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
+                    indicatorColor: isSuperAdmin
+                        ? const Color(0xFFFFD700)
+                        : NBROColors.white,
                     indicatorWeight: 3,
-                    labelColor: isSuperAdmin ? const Color(0xFFFFD700) : NBROColors.white,
-                    unselectedLabelColor: NBROColors.white.withValues(alpha: 0.65),
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    labelColor: isSuperAdmin
+                        ? const Color(0xFFFFD700)
+                        : NBROColors.white,
+                    unselectedLabelColor: NBROColors.white.withValues(
+                      alpha: 0.65,
+                    ),
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                     tabs: [
                       Tab(
                         child: Row(
@@ -1068,11 +1174,18 @@ class _AdminOfficersScreenState extends State<AdminOfficersScreen> {
               _showAddUserDialog(targetRole: 'officer');
             }
           },
-          backgroundColor: isSuperAdmin ? const Color(0xFF4A148C) : NBROColors.primary,
+          backgroundColor: isSuperAdmin
+              ? const Color(0xFF4A148C)
+              : NBROColors.primary,
           icon: const Icon(Icons.person_add, color: Colors.white),
           label: Text(
-            isSuperAdmin ? 'Add Admin' : (isMainAdmin ? 'Add User' : 'Add Officer'),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            isSuperAdmin
+                ? 'Add Admin'
+                : (isMainAdmin ? 'Add User' : 'Add Officer'),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

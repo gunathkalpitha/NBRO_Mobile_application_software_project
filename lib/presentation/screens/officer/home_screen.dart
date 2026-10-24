@@ -39,7 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkUserRole();
     // Dispatch load event immediately & trigger offline sync
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('[HomeScreen] PostFrameCallback - Dispatching LoadInspectionsEvent & SyncService');
+      debugPrint(
+        '[HomeScreen] PostFrameCallback - Dispatching LoadInspectionsEvent & SyncService',
+      );
       context.read<InspectionBloc>().add(const LoadInspectionsEvent());
       SyncService.instance.triggerSync();
     });
@@ -73,7 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final userEmail = user.email?.toLowerCase() ?? '';
-        bool isAdmin = role.contains('admin') ||
+        bool isAdmin =
+            role.contains('admin') ||
             userEmail == 'mainadminnbro@gmail.com' ||
             userEmail == 'admin@gmail.com' ||
             userEmail.startsWith('admin.');
@@ -110,11 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isCheckingRole) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Show admin dashboard if user is admin
@@ -183,7 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 3. Already on Main Dashboard: Double Press Back to Exit App
     final now = DateTime.now();
-    if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+    if (_lastBackPressTime == null ||
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
       _lastBackPressTime = now;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -192,14 +192,19 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Icon(Icons.exit_to_app, color: Colors.white, size: 18),
               SizedBox(width: 10),
-              Text('Press back again to exit app', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(
+                'Press back again to exit app',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
             ],
           ),
           backgroundColor: const Color(0xFF263238),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;

@@ -102,10 +102,7 @@ class _InspectionsScreenState extends State<InspectionsScreen>
               ),
               Text(
                 'Manage & Review Pre-Crack Survey Reports',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: NBROColors.white,
-                ),
+                style: TextStyle(fontSize: 11, color: NBROColors.white),
               ),
             ],
           ),
@@ -175,9 +172,9 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                       const SizedBox(height: 32),
                       ElevatedButton.icon(
                         onPressed: () {
-                          context
-                              .read<InspectionBloc>()
-                              .add(const LoadInspectionsEvent());
+                          context.read<InspectionBloc>().add(
+                            const LoadInspectionsEvent(),
+                          );
                         },
                         icon: const Icon(Icons.refresh),
                         label: const Text('Try Again'),
@@ -198,18 +195,10 @@ class _InspectionsScreenState extends State<InspectionsScreen>
               return TabBarView(
                 children: [
                   // Tab 0: Recent Inspections (Last 5) - DEFAULT
-                  _buildInspectionsList(
-                    context,
-                    state,
-                    isRecentOnly: true,
-                  ),
+                  _buildInspectionsList(context, state, isRecentOnly: true),
 
                   // Tab 1: All Inspections
-                  _buildInspectionsList(
-                    context,
-                    state,
-                    isRecentOnly: false,
-                  ),
+                  _buildInspectionsList(context, state, isRecentOnly: false),
                 ],
               );
             }
@@ -294,13 +283,15 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                         _FilterChip(
                           label: 'Synced',
                           isSelected: _selectedFilter == 'synced',
-                          onTap: () => setState(() => _selectedFilter = 'synced'),
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'synced'),
                         ),
                         const SizedBox(width: 8),
                         _FilterChip(
                           label: 'Pending',
                           isSelected: _selectedFilter == 'pending',
-                          onTap: () => setState(() => _selectedFilter = 'pending'),
+                          onTap: () =>
+                              setState(() => _selectedFilter = 'pending'),
                         ),
                       ],
                     ),
@@ -322,16 +313,16 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                         ? 'Showing Recent 5 Records'
                         : 'Total Records: ${filtered.length}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: NBROColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: NBROColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'Synced: ${state.inspections.length - state.pendingCount}',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: NBROColors.success,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: NBROColors.success,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -364,16 +355,16 @@ class _InspectionsScreenState extends State<InspectionsScreen>
                     Text(
                       'No inspections found',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: NBROColors.darkGrey,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        color: NBROColors.darkGrey,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Try adjusting your search or filters',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: NBROColors.grey,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: NBROColors.grey),
                     ),
                   ],
                 ),
@@ -383,27 +374,25 @@ class _InspectionsScreenState extends State<InspectionsScreen>
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = filtered[index];
-                    return _InspectionListItem(
-                      inspection: item,
-                      onTap: () async {
-                        final result = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => InspectionDetailScreen(
-                              inspection: item,
-                            ),
-                          ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final item = filtered[index];
+                  return _InspectionListItem(
+                    inspection: item,
+                    onTap: () async {
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              InspectionDetailScreen(inspection: item),
+                        ),
+                      );
+                      if (result == true && context.mounted) {
+                        context.read<InspectionBloc>().add(
+                          const LoadInspectionsEvent(),
                         );
-                        if (result == true && context.mounted) {
-                          context.read<InspectionBloc>().add(const LoadInspectionsEvent());
-                        }
-                      },
-                    );
-                  },
-                  childCount: filtered.length,
-                ),
+                      }
+                    },
+                  );
+                }, childCount: filtered.length),
               ),
             ),
 
@@ -419,12 +408,14 @@ class _InspectionsScreenState extends State<InspectionsScreen>
     String filter,
   ) {
     var filtered = inspections.where((inspection) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           inspection.siteAddress.toLowerCase().contains(query.toLowerCase()) ||
           inspection.ownerName.toLowerCase().contains(query.toLowerCase()) ||
           inspection.id.toLowerCase().contains(query.toLowerCase());
 
-      final matchesFilter = filter == 'all' ||
+      final matchesFilter =
+          filter == 'all' ||
           (filter == 'synced' && inspection.syncStatus == SyncStatus.synced) ||
           (filter == 'pending' && inspection.syncStatus != SyncStatus.synced);
 
@@ -472,10 +463,7 @@ class _InspectionListItem extends StatelessWidget {
   final Inspection inspection;
   final VoidCallback onTap;
 
-  const _InspectionListItem({
-    required this.inspection,
-    required this.onTap,
-  });
+  const _InspectionListItem({required this.inspection, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -657,11 +645,7 @@ class _InspectionListItem extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.edit,
-                      size: 14,
-                      color: NBROColors.info,
-                    ),
+                    const Icon(Icons.edit, size: 14, color: NBROColors.info),
                     const SizedBox(width: 6),
                     Text(
                       'Modified: ${dateFormatter.format(inspection.updatedAt!)} at ${timeFormatter.format(inspection.updatedAt!)}',
@@ -691,24 +675,21 @@ class _StatusBadge extends StatelessWidget {
     final color = status == SyncStatus.synced
         ? NBROColors.success
         : status == SyncStatus.syncing
-            ? NBROColors.warning
-            : NBROColors.error;
+        ? NBROColors.warning
+        : NBROColors.error;
 
     final icon = status == SyncStatus.synced
         ? Icons.check_circle
         : status == SyncStatus.syncing
-            ? Icons.sync
-            : Icons.cloud_off;
+        ? Icons.sync
+        : Icons.cloud_off;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

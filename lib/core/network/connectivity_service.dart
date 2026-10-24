@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 /// Network & Internet Reachability Monitoring Service
 class ConnectivityService {
   static ConnectivityService? _instance;
-  final StreamController<bool> _connectivityController = StreamController<bool>.broadcast();
+  final StreamController<bool> _connectivityController =
+      StreamController<bool>.broadcast();
   Timer? _pollingTimer;
   bool _isOnline = false;
 
@@ -33,8 +34,9 @@ class ConnectivityService {
   Future<bool> checkActualConnectivity() async {
     // 1. Try instant OS socket DNS lookup (Works reliably on Mobile Data & Wi-Fi)
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
         _updateOnlineStatus(true);
         return true;
@@ -62,7 +64,9 @@ class ConnectivityService {
     if (_isOnline != online) {
       _isOnline = online;
       _connectivityController.add(online);
-      debugPrint('[ConnectivityService] Network status changed: online = $online');
+      debugPrint(
+        '[ConnectivityService] Network status changed: online = $online',
+      );
     }
   }
 

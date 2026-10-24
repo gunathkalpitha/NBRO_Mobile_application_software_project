@@ -5,7 +5,8 @@ import 'package:nbro_mobile_application/data/repositories/profile_repository.dar
 import 'package:nbro_mobile_application/domain/models/user_profile.dart';
 
 class ProfileStateService {
-  static final ValueNotifier<UserProfile?> notifier = ValueNotifier<UserProfile?>(null);
+  static final ValueNotifier<UserProfile?> notifier =
+      ValueNotifier<UserProfile?>(null);
   static final ProfileRepository _repository = ProfileRepository();
 
   static Future<void> refresh() async {

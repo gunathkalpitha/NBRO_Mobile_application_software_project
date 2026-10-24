@@ -3,14 +3,14 @@ import 'package:nbro_mobile_application/core/theme/app_theme.dart';
 import 'package:nbro_mobile_application/presentation/widgets/branding.dart';
 import 'package:nbro_mobile_application/presentation/widgets/app_shell.dart';
 
-class Task_managerScreen extends StatefulWidget {
-  const Task_managerScreen({super.key});
+class TaskmanagerScreen extends StatefulWidget {
+  const TaskmanagerScreen({super.key});
 
   @override
-  State<Task_managerScreen> createState() => _Task_managerScreenState();
+  State<TaskmanagerScreen> createState() => _TaskmanagerScreenState();
 }
 
-class _Task_managerScreenState extends State<Task_managerScreen> {
+class _TaskmanagerScreenState extends State<TaskmanagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,9 +87,9 @@ class _Task_managerScreenState extends State<Task_managerScreen> {
               const SizedBox(height: 16),
               Text(
                 'We\'re working on planning. Assign the work to officers.Stay tuned!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: NBROColors.grey,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: NBROColors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -105,18 +105,14 @@ class _Task_managerScreenState extends State<Task_managerScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: NBROColors.info,
-                      size: 24,
-                    ),
+                    Icon(Icons.info_outline, color: NBROColors.info, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Future features will include customizable  officer task and  activities.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: NBROColors.info,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: NBROColors.info),
                       ),
                     ),
                   ],

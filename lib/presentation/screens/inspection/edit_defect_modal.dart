@@ -9,11 +9,7 @@ class EditDefectModal extends StatefulWidget {
   final Defect? defect;
   final Function(Defect) onSave;
 
-  const EditDefectModal({
-    super.key,
-    this.defect,
-    required this.onSave,
-  });
+  const EditDefectModal({super.key, this.defect, required this.onSave});
 
   @override
   State<EditDefectModal> createState() => _EditDefectModalState();
@@ -37,8 +33,12 @@ class _EditDefectModalState extends State<EditDefectModal> {
 
   void _initializeControllers() {
     final defect = widget.defect;
-    _lengthController = TextEditingController(text: defect?.lengthMm.toString() ?? '');
-    _widthController = TextEditingController(text: defect?.widthMm?.toString() ?? '');
+    _lengthController = TextEditingController(
+      text: defect?.lengthMm.toString() ?? '',
+    );
+    _widthController = TextEditingController(
+      text: defect?.widthMm?.toString() ?? '',
+    );
     _remarksController = TextEditingController(text: defect?.remarks ?? '');
     _selectedNotation = defect?.notation.code;
     _selectedCategory = defect?.category.name;
@@ -65,9 +65,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
       }
     }
   }
@@ -77,7 +77,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Red dotted-line annotation is not supported on web.'),
+            content: Text(
+              'Red dotted-line annotation is not supported on web.',
+            ),
           ),
         );
       }
@@ -87,11 +89,14 @@ class _EditDefectModalState extends State<EditDefectModal> {
     String? imagePathForAnnotation = _photoPath;
 
     if (imagePathForAnnotation == null && _photoUrl != null) {
-      if (_photoUrl!.startsWith('http://') || _photoUrl!.startsWith('https://')) {
+      if (_photoUrl!.startsWith('http://') ||
+          _photoUrl!.startsWith('https://')) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please pick this image again from gallery to add red dotted markings.'),
+              content: Text(
+                'Please pick this image again from gallery to add red dotted markings.',
+              ),
             ),
           );
         }
@@ -103,7 +108,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
     if (imagePathForAnnotation == null || imagePathForAnnotation.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Select a photo first to mark defects.')),
+          const SnackBar(
+            content: Text('Select a photo first to mark defects.'),
+          ),
         );
       }
       return;
@@ -114,7 +121,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Local image not found. Please pick again from gallery/camera.'),
+            content: Text(
+              'Local image not found. Please pick again from gallery/camera.',
+            ),
           ),
         );
       }
@@ -159,7 +168,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
       ),
       floorLevel: _selectedFloorLevel,
       lengthMm: double.parse(_lengthController.text),
-      widthMm: _widthController.text.isEmpty ? null : double.parse(_widthController.text),
+      widthMm: _widthController.text.isEmpty
+          ? null
+          : double.parse(_widthController.text),
       photoPath: _photoPath ?? _photoUrl ?? '',
       remarks: _remarksController.text.isEmpty ? null : _remarksController.text,
       createdAt: widget.defect?.createdAt ?? DateTime.now(),
@@ -186,9 +197,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
               // Defect Photo
               Text(
                 'Defect Photo (with red marking)',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               if (_photoPath != null || _photoUrl != null) ...[
@@ -196,8 +207,18 @@ class _EditDefectModalState extends State<EditDefectModal> {
                   borderRadius: BorderRadius.circular(12),
                   child: _photoPath != null
                       ? (kIsWeb
-                          ? Image.network(_photoPath!, height: 200, width: double.infinity, fit: BoxFit.cover)
-                          : Image.file(File(_photoPath!), height: 200, width: double.infinity, fit: BoxFit.cover))
+                            ? Image.network(
+                                _photoPath!,
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.file(
+                                File(_photoPath!),
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ))
                       : Image.network(
                           _photoUrl!,
                           height: 200,
@@ -211,7 +232,11 @@ class _EditDefectModalState extends State<EditDefectModal> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Center(
-                                child: Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                                child: Icon(
+                                  Icons.error_outline,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
                               ),
                             );
                           },
@@ -279,7 +304,10 @@ class _EditDefectModalState extends State<EditDefectModal> {
                     });
                   },
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                  label: const Text(
+                    'Remove Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
@@ -294,10 +322,12 @@ class _EditDefectModalState extends State<EditDefectModal> {
                   border: OutlineInputBorder(),
                 ),
                 items: DefectNotation.values
-                    .map((n) => DropdownMenuItem(
-                      value: n.code,
-                      child: Text(n.code, overflow: TextOverflow.ellipsis),
-                    ))
+                    .map(
+                      (n) => DropdownMenuItem(
+                        value: n.code,
+                        child: Text(n.code, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() => _selectedNotation = value);
@@ -315,10 +345,15 @@ class _EditDefectModalState extends State<EditDefectModal> {
                   border: OutlineInputBorder(),
                 ),
                 items: DefectCategory.values
-                    .map((c) => DropdownMenuItem(
-                      value: c.name,
-                      child: Text(c.displayName, overflow: TextOverflow.ellipsis),
-                    ))
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c.name,
+                        child: Text(
+                          c.displayName,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   setState(() => _selectedCategory = value);
@@ -335,7 +370,8 @@ class _EditDefectModalState extends State<EditDefectModal> {
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Ground, First, etc.',
                 ),
-                onChanged: (value) => _selectedFloorLevel = value.isEmpty ? null : value,
+                onChanged: (value) =>
+                    _selectedFloorLevel = value.isEmpty ? null : value,
               ),
               const SizedBox(height: 16),
 
@@ -384,7 +420,9 @@ class _EditDefectModalState extends State<EditDefectModal> {
                 child: ElevatedButton.icon(
                   onPressed: _saveDefect,
                   icon: const Icon(Icons.check_circle),
-                  label: Text(widget.defect == null ? 'Add Defect' : 'Update Defect'),
+                  label: Text(
+                    widget.defect == null ? 'Add Defect' : 'Update Defect',
+                  ),
                 ),
               ),
             ],

@@ -32,10 +32,7 @@ class AddDefectEvent extends InspectionEvent {
   final String inspectionId;
   final Defect defect;
 
-  const AddDefectEvent({
-    required this.inspectionId,
-    required this.defect,
-  });
+  const AddDefectEvent({required this.inspectionId, required this.defect});
 }
 
 class SyncInspectionsEvent extends InspectionEvent {
@@ -77,10 +74,7 @@ class InspectionSyncing extends InspectionState {
   final int syncdCount;
   final int totalCount;
 
-  const InspectionSyncing({
-    required this.syncdCount,
-    required this.totalCount,
-  });
+  const InspectionSyncing({required this.syncdCount, required this.totalCount});
 }
 
 /// InspectionBloc - Business Logic Component
@@ -89,8 +83,8 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
   final List<Inspection> _inspections = [];
 
   InspectionBloc({InspectionRepository? repository})
-      : _repository = repository ?? InspectionRepository(),
-        super(const InspectionInitial()) {
+    : _repository = repository ?? InspectionRepository(),
+      super(const InspectionInitial()) {
     on<LoadInspectionsEvent>(_onLoadInspections);
     on<CreateInspectionEvent>(_onCreateInspection);
     on<UpdateInspectionEvent>(_onUpdateInspection);
@@ -107,16 +101,20 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
   ) async {
     try {
       debugPrint('[InspectionBloc] Loading inspections from database...');
-      
+
       // Load from Supabase
       final inspections = await _repository.getInspections();
       _inspections.clear();
       _inspections.addAll(inspections);
-      
-      final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
-      
-      debugPrint('[InspectionBloc] Loaded ${_inspections.length} inspections. Pending: $pendingCount');
-      
+
+      final pendingCount = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .length;
+
+      debugPrint(
+        '[InspectionBloc] Loaded ${_inspections.length} inspections. Pending: $pendingCount',
+      );
+
       emit(
         InspectionLoaded(
           inspections: List.unmodifiable(_inspections),
@@ -138,24 +136,37 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
 
       debugPrint('[InspectionBloc] Inspection created: ${newInspection.id}');
       debugPrint('[InspectionBloc] Attempting to save to database...');
-      debugPrint('[InspectionBloc] Defects count: ${newInspection.defects.length}');
-      debugPrint('[InspectionBloc] Building photo path: ${event.buildingPhotoPath}');
-      
+      debugPrint(
+        '[InspectionBloc] Defects count: ${newInspection.defects.length}',
+      );
+      debugPrint(
+        '[InspectionBloc] Building photo path: ${event.buildingPhotoPath}',
+      );
+
       // Save to Supabase with building photo
-      await _repository.createInspection(newInspection, buildingPhotoPath: event.buildingPhotoPath);
-      
-      debugPrint('[InspectionBloc] ✅ Inspection saved successfully to database');
-      
+      await _repository.createInspection(
+        newInspection,
+        buildingPhotoPath: event.buildingPhotoPath,
+      );
+
+      debugPrint(
+        '[InspectionBloc] ✅ Inspection saved successfully to database',
+      );
+
       // Reload all inspections from database to ensure consistency
       debugPrint('[InspectionBloc] Reloading inspections from database...');
       final inspections = await _repository.getInspections();
       _inspections.clear();
       _inspections.addAll(inspections);
-      
-      debugPrint('[InspectionBloc] Inspection created and reloaded: ${newInspection.id}');
-      
+
+      debugPrint(
+        '[InspectionBloc] Inspection created and reloaded: ${newInspection.id}',
+      );
+
       // Emit updated state
-      final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
+      final pendingCount = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .length;
       emit(
         InspectionLoaded(
           inspections: List.unmodifiable(_inspections),
@@ -177,10 +188,14 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
       final index = _inspections.indexWhere((i) => i.id == event.inspection.id);
       if (index >= 0) {
         _inspections[index] = event.inspection;
-        debugPrint('[InspectionBloc] Inspection updated: ${event.inspection.id}');
+        debugPrint(
+          '[InspectionBloc] Inspection updated: ${event.inspection.id}',
+        );
       }
-      
-      final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
+
+      final pendingCount = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .length;
       emit(
         InspectionLoaded(
           inspections: List.unmodifiable(_inspections),
@@ -202,10 +217,14 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
         final inspection = _inspections[index];
         final updatedDefects = [...inspection.defects, event.defect];
         _inspections[index] = inspection.copyWith(defects: updatedDefects);
-        debugPrint('[InspectionBloc] Defect added to inspection: ${event.inspectionId}');
+        debugPrint(
+          '[InspectionBloc] Defect added to inspection: ${event.inspectionId}',
+        );
       }
-      
-      final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
+
+      final pendingCount = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .length;
       emit(
         InspectionLoaded(
           inspections: List.unmodifiable(_inspections),
@@ -222,26 +241,42 @@ class InspectionBloc extends Bloc<InspectionEvent, InspectionState> {
     Emitter<InspectionState> emit,
   ) async {
     try {
-      final pendingInspections = _inspections.where((i) => i.syncStatus == SyncStatus.pending).toList();
-      
+      final pendingInspections = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .toList();
+
       for (int i = 0; i < pendingInspections.length; i++) {
-        emit(InspectionSyncing(syncdCount: i, totalCount: pendingInspections.length));
-        
-       
-        debugPrint('[InspectionBloc] Syncing inspection ${i + 1}/${pendingInspections.length}');
+        emit(
+          InspectionSyncing(
+            syncdCount: i,
+            totalCount: pendingInspections.length,
+          ),
+        );
+
+        debugPrint(
+          '[InspectionBloc] Syncing inspection ${i + 1}/${pendingInspections.length}',
+        );
         // Instant sync - no artificial delay
-        
-        final index = _inspections.indexWhere((x) => x.id == pendingInspections[i].id);
+
+        final index = _inspections.indexWhere(
+          (x) => x.id == pendingInspections[i].id,
+        );
         if (index >= 0) {
-          _inspections[index] = _inspections[index].copyWith(syncStatus: SyncStatus.synced);
+          _inspections[index] = _inspections[index].copyWith(
+            syncStatus: SyncStatus.synced,
+          );
         }
       }
 
-      final pendingCount = _inspections.where((i) => i.syncStatus == SyncStatus.pending).length;
+      final pendingCount = _inspections
+          .where((i) => i.syncStatus == SyncStatus.pending)
+          .length;
       emit(
         InspectionLoaded(
           inspections: List.unmodifiable(_inspections),
-          overallSyncStatus: pendingCount == 0 ? SyncStatus.synced : SyncStatus.pending,
+          overallSyncStatus: pendingCount == 0
+              ? SyncStatus.synced
+              : SyncStatus.pending,
           pendingCount: pendingCount,
         ),
       );

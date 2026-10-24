@@ -26,19 +26,26 @@ class UserProfile {
   });
 
   bool isSuperAdmin(String? email) {
-    return role == 'super_admin' || (email != null && email.toLowerCase() == 'admin@gmail.com');
+    return role == 'super_admin' ||
+        (email != null && email.toLowerCase() == 'admin@gmail.com');
   }
 
   bool isMainAdmin(String? email) {
-    return role == 'main_admin' || (email != null && email.toLowerCase() == 'mainadminnbro@gmail.com');
+    return role == 'main_admin' ||
+        (email != null && email.toLowerCase() == 'mainadminnbro@gmail.com');
   }
 
   bool isSubAdmin(String? email) {
-    return (role == 'admin' || role == 'sub_admin') && !isSuperAdmin(email) && !isMainAdmin(email);
+    return (role == 'admin' || role == 'sub_admin') &&
+        !isSuperAdmin(email) &&
+        !isMainAdmin(email);
   }
 
   bool isOfficer(String? email) {
-    return role == 'officer' && !isSuperAdmin(email) && !isMainAdmin(email) && !isSubAdmin(email);
+    return role == 'officer' &&
+        !isSuperAdmin(email) &&
+        !isMainAdmin(email) &&
+        !isSubAdmin(email);
   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
@@ -112,17 +119,14 @@ class UserProfile {
   }
 
   int completionPercentage({required String email}) {
-    return completionPercentageFromMap(
-      {
-        'full_name': fullName,
-        'phone_number': phoneNumber,
-        'position_title': positionTitle,
-        'employee_id': employeeId,
-        'work_role': workRole,
-        'avatar_url': avatarUrl,
-      },
-      email: email,
-    );
+    return completionPercentageFromMap({
+      'full_name': fullName,
+      'phone_number': phoneNumber,
+      'position_title': positionTitle,
+      'employee_id': employeeId,
+      'work_role': workRole,
+      'avatar_url': avatarUrl,
+    }, email: email);
   }
 
   bool isProfileComplete({required String email}) {

@@ -41,15 +41,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Security Settings'),
-      ),
+      appBar: AppBar(title: const Text('Security Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -78,7 +74,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                             ),
                           );
                           setState(() => _biometricEnabled = false);
-                          await SessionSecurityService.setBiometricEnabled(false);
+                          await SessionSecurityService.setBiometricEnabled(
+                            false,
+                          );
                           return;
                         }
                       }
@@ -97,28 +95,38 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         ),
                       );
                     },
-              secondary: const Icon(Icons.fingerprint, color: NBROColors.primary),
+              secondary: const Icon(
+                Icons.fingerprint,
+                color: NBROColors.primary,
+              ),
             ),
           ),
           if (_fingerprintAvailable && _biometricEnabled) ...[
             const SizedBox(height: 12),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.lock_clock, color: NBROColors.primary),
+                leading: const Icon(
+                  Icons.lock_clock,
+                  color: NBROColors.primary,
+                ),
                 title: const Text('Lock App After'),
                 subtitle: Text(_lockDelayText(_appLockTimeoutMinutes)),
                 trailing: DropdownButton<int>(
                   value: _appLockTimeoutMinutes,
                   items: const [0, 30, 120]
-                      .map((m) => DropdownMenuItem<int>(
-                            value: m,
-                            child: Text(_lockDelayText(m)),
-                          ))
+                      .map(
+                        (m) => DropdownMenuItem<int>(
+                          value: m,
+                          child: Text(_lockDelayText(m)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) async {
                     if (value == null) return;
                     setState(() => _appLockTimeoutMinutes = value);
-                    await SessionSecurityService.setAppLockTimeoutMinutes(value);
+                    await SessionSecurityService.setAppLockTimeoutMinutes(
+                      value,
+                    );
                   },
                 ),
               ),
@@ -128,29 +136,39 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           Card(
             child: SwitchListTile(
               title: const Text('Stay Signed In'),
-              subtitle: const Text('Keep account logged in for a selected period.'),
+              subtitle: const Text(
+                'Keep account logged in for a selected period.',
+              ),
               value: _staySignedInEnabled,
               onChanged: (value) async {
                 setState(() => _staySignedInEnabled = value);
                 await SessionSecurityService.setStaySignedInEnabled(value);
               },
-              secondary: const Icon(Icons.lock_clock, color: NBROColors.primary),
+              secondary: const Icon(
+                Icons.lock_clock,
+                color: NBROColors.primary,
+              ),
             ),
           ),
           if (_staySignedInEnabled) ...[
             const SizedBox(height: 12),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.timer_outlined, color: NBROColors.primary),
+                leading: const Icon(
+                  Icons.timer_outlined,
+                  color: NBROColors.primary,
+                ),
                 title: const Text('Session Validity Period'),
                 subtitle: Text('$_staySignedInHours hours'),
                 trailing: DropdownButton<int>(
                   value: _staySignedInHours,
                   items: const [1, 2, 4, 8, 12, 24]
-                      .map((h) => DropdownMenuItem<int>(
-                            value: h,
-                            child: Text('$h hours'),
-                          ))
+                      .map(
+                        (h) => DropdownMenuItem<int>(
+                          value: h,
+                          child: Text('$h hours'),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) async {
                     if (value == null) return;

@@ -22,7 +22,10 @@ class ProfileRepository {
     if (row == null) {
       final fallback = {
         'id': user.id,
-        'full_name': user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? 'User',
+        'full_name':
+            user.userMetadata?['full_name'] ??
+            user.email?.split('@').first ??
+            'User',
         'role': user.userMetadata?['role'] ?? 'officer',
         'is_active': true,
       };
@@ -45,14 +48,18 @@ class ProfileRepository {
     required String userId,
     required Uint8List bytes,
   }) async {
-    final filePath = '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final filePath =
+        '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
     await _client.storage
         .from('profile-images')
         .uploadBinary(
           filePath,
           bytes,
-          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ),
         );
 
     return _client.storage.from('profile-images').getPublicUrl(filePath);
